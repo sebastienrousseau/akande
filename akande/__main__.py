@@ -26,7 +26,6 @@ from reportlab.platypus import (
 )
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
-from reportlab.lib.utils import ImageReader
 
 
 # Load environment variables
