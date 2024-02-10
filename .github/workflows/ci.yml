@@ -97,12 +97,16 @@ jobs:
 
       # Install system dependencies required by PyAudio
       - name: ❯ Install system dependencies 🛠️
-        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev
+        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev python-all-dev
 
       # Install Python dependencies
       - name: ❯ Install dependencies 📦
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
+          python -m pip install --global-option='build_ext' \
+          --global-option='-I/usr/local/include' \
+          --global-option='-L/usr/local/lib' \
+          pyaudio
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install -r requirements.txt
 
