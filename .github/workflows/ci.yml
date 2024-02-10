@@ -95,7 +95,11 @@ jobs:
         with:
           python-version: "3.9"
 
-      # Install dependencies
+      # Install system dependencies required by PyAudio
+      - name: ❯ Install system dependencies 🛠️
+        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev
+
+      # Install Python dependencies
       - name: ❯ Install dependencies 📦
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
