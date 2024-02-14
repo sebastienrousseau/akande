@@ -18,8 +18,24 @@ with requirements_txt_path.open("r") as file:
 config = ConfigParser()
 config.read(setup_cfg_path)
 
-# Update install_requires in setup.cfg
-config["options"]["install_requires"] = "\n    ".join(requirements)
+# Prepare the formatted string for install_requires, ensuring correct
+# indentation. The first requirement starts on the same line, so it's
+# not indented.
+install_requires_formatted = "\n".join(
+    requirements
+)  # Adjusted indentation here if needed
+
+# In case there are no requirements, avoid adding the section
+if requirements:
+    if "options" not in config:
+        config["options"] = {}
+    config.set(
+        "options", "install_requires", install_requires_formatted
+    )
+else:
+    # Handle the case where there are no install_requires to specify
+    if "options" in config and "install_requires" in config["options"]:
+        config.remove_option("options", "install_requires")
 
 # Save the updated setup.cfg
 with setup_cfg_path.open("w") as configfile:

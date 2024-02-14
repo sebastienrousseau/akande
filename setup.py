@@ -22,7 +22,7 @@ setup(
     long_description_content_type="text/markdown",
     license="Apache Software License",
     name="akande",
-    version="0.0.1",
+    version="0.0.2",
     url="https://github.com/sebastienrousseau/akande",
     packages=find_packages(),
     install_requires=requirements,

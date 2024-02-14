@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "akande"
-version = "0.0.1"
+version = "0.0.2"
 description = "An innovative, open-source voice assistant powered by OpenAI's GPT-3, designed to provide interactive, conversational experiences through both voice and text inputs."
 authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
 license = "Apache Software License"
@@ -9,16 +9,12 @@ repository = "https://github.com/sebastienrousseau/akande"
 homepage = "https://akande.co"
 
 [tool.poetry.dependencies]
-gTTS = "2.5.1"
-numpy = "1.26.4"
 openai = "1.12.0"
-pyaudio = "0.2.14"
-pydub = "0.25.1"
 python = "^3.9"
 python-dotenv = "1.0.1"
+pyttsx4 = "3.0.15"
 reportlab = "4.1.0"
-requests = "2.31.0"
-SpeechRecognition = "3.10.1"
+speechrecognition = "3.10.1"
 
 [build-system]
 requires = ["poetry-core"]
