@@ -1,3 +1,18 @@
+# Copyright (C) 2024 Sebastien Rousseau.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 import csv
 from typing import Optional
 from reportlab.lib.pagesizes import letter
@@ -11,6 +26,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT
 from pathlib import Path
 import datetime
+import logging
 import re
 
 
@@ -23,10 +39,10 @@ def validate_api_key(api_key: Optional[str]) -> bool:
     plausible format.
 
     Parameters:
-    - api_key (Optional[str]): The API key to validate.
+    api_key (Optional[str]): The API key to validate.
 
     Returns:
-    - bool: True if the API key is valid, False otherwise.
+    bool: True if the API key is valid, False otherwise.
     """
     return api_key is not None and len(api_key) > 20
 
@@ -37,18 +53,24 @@ async def generate_pdf(question: str, response: str) -> None:
 
     The PDF will be saved in the current directory.
 
-    Parameters:
-    - question (str): The question to be included in the PDF.
-    - response (str): The response to the question, to be included in the PDF.
+    Parameters
+    ----------
+    question : str
+        The question to be included in the PDF.
+    response : str
+        The response to the question, to be included in the PDF.
 
-    Returns:
-    - None: The function creates a PDF file but does not return any value. It
-    prints the filename of the generated PDF.
+    Returns
+    -------
+    None
+        The function creates a PDF file but does not return any value. It
+        prints the filename of the generated PDF.
 
-    Notes:
+    Notes
+    -----
     - The PDF file is saved in a directory corresponding to the current date
     within the current working directory.
-    The directory and file names are based on the current date and time.
+    - The directory and file names are based on the current date and time.
     - If an error occurs during speech synthesis, it is logged as an error.
     - The PDF is generated using the reportlab library, which must be installed
     for this function to work.
@@ -143,7 +165,7 @@ async def generate_pdf(question: str, response: str) -> None:
             flowables.append(Spacer(1, 6))
 
     doc.build(flowables)
-    print(f"PDF generated: {file_path}")
+    logging.info(f"PDF file generated: {file_path}")
 
 
 async def generate_csv(question: str, response: str) -> None:
@@ -155,17 +177,17 @@ async def generate_csv(question: str, response: str) -> None:
     contains two columns: one for the question and one for the response.
 
     Parameters:
-    - question (str): The question to be included in the first column of
+    question (str): The question to be included in the first column of
     the CSV.
-    - response (str): The response to the question, to be included in
+    response (str): The response to the question, to be included in
     the second column of the CSV.
 
     Returns:
-    - None: The function creates a CSV file but does not return any value.
+    None: The function creates a CSV file but does not return any value.
     It prints the filename of the generated CSV.
 
     Notes:
-    - The CSV file is saved in a directory corresponding to the current date
+    The CSV file is saved in a directory corresponding to the current date
     within the current working directory.
     The directory and file names are based on the current date and time.
     """
@@ -192,4 +214,4 @@ async def generate_csv(question: str, response: str) -> None:
         # Write the question and response
         csv_writer.writerow([question, response])
 
-    print(f"CSV generated: {file_path}")
+    logging.info(f"CSV file generated: {file_path}")

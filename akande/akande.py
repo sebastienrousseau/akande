@@ -1,20 +1,36 @@
-import asyncio
+# Copyright (C) 2024 Sebastien Rousseau.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+from .cache import SQLiteCache
+from .config import OPENAI_DEFAULT_MODEL
+from .services import OpenAIService
+from .utils import generate_pdf, generate_csv
 from concurrent.futures import ThreadPoolExecutor
-import speech_recognition as sr
-import pyttsx4
-import hashlib
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from .services import OpenAIService
-from .cache import SQLiteCache
-from .utils import generate_pdf, generate_csv
-from .config import OPENAI_DEFAULT_MODEL
+import asyncio
+import hashlib
 import logging
+import pyttsx4
+import speech_recognition as sr
 
 
 class Akande:
-    """The Akande voice assistant.
+    """
+    The Akande voice assistant.
 
     This class represents the voice assistant capable of understanding and
     responding to user queries. It integrates speech recognition and synthesis,
@@ -24,24 +40,56 @@ class Akande:
     def __init__(self, openai_service: OpenAIService):
         """
         Initialize the voice assistant with necessary services and settings.
+
+        Args:
+            openai_service (OpenAIService): The OpenAI service for
+            generating responses.
         """
+        # Create a directory path with the current date
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        directory_path = Path(date_str)
+        # Ensure the directory exists
+        directory_path.mkdir(parents=True, exist_ok=True)
+
+        # Create the WAV filename with timestamp
+        filename = (
+            datetime.now().strftime("%Y-%m-%d-%H-%M-Akande_Cache")
+            + ".db"
+        )
+        file_path = directory_path / filename
+
         self.openai_service = openai_service
         self.recognizer = sr.Recognizer()
-        self.cache = SQLiteCache("akande_cache.db")
+        self.cache = SQLiteCache(file_path)
         self.executor = ThreadPoolExecutor(max_workers=4)
 
     def hash_prompt(self, prompt: str) -> str:
-        """Hash the prompt for caching."""
+        """
+        Hash the prompt for caching.
+
+        Args:
+            prompt (str): The prompt to be hashed.
+
+        Returns:
+            str: The hashed prompt.
+
+        """
         return hashlib.sha256(prompt.encode("utf-8")).hexdigest()
 
     async def speak(self, text: str) -> None:
         """
         Speak the given text using pyttsx3 in an asynchronous manner.
+
         This method utilizes a ThreadPoolExecutor to run pyttsx3's blocking
         operations in a separate thread, allowing the asyncio event loop to
         remain responsive.
-        """
 
+        Args:
+            text (str): The text to be spoken.
+
+        Returns:
+            None: This function does not return any values.
+        """
         def tts_engine_run(text: str):
             """
             Generates a WAV file from the given text using pyttsx3.
@@ -53,15 +101,10 @@ class Akande:
             The filename is timestamped to ensure uniqueness.
 
             Parameters:
-            - text (str): The text to be converted to speech.
+            text (str): The text to be converted to speech.
 
-            Notes:
-            - The WAV file is saved in a directory corresponding to the
-            current date within the current working directory.
-            The directory and file names are based on the current date and
-            time.
-            - If an error occurs during speech synthesis, it is logged as an
-            error.
+            Raises:
+            Exception: If an error occurs during speech synthesis, it is raised as an exception.
             """
             # Create a directory path with the current date
             date_str = datetime.now().strftime("%Y-%m-%d")
@@ -74,16 +117,14 @@ class Akande:
                 datetime.now().strftime("%Y-%m-%d-%H-%M-Akande")
                 + ".wav"
             )
-            file_path = (
-                directory_path / filename
-            )  # This is the full path for the new WAV file
-
+            file_path = directory_path / filename
             try:
                 engine = pyttsx4.init()
                 engine.setProperty("rate", 161)
                 engine.say(text)
                 engine.save_to_file(text, str(file_path))
                 engine.runAndWait()
+                logging.info(f"WAV file generated: {file_path}")
             except Exception as e:
                 logging.error(
                     f"Error using pyttsx3 for speech synthesis: {e}"
@@ -118,13 +159,15 @@ class Akande:
     async def run_interaction(self) -> None:
         """Main interaction loop of the voice assistant."""
         while True:
-            welcome_msg = "\nWelcome to Àkàndé, your AI voice assistant.\n"
-            instructions = "\nPress Enter to use voice or type " \
+            welcome_msg = (
+                "\nWelcome to Àkàndé, your AI voice assistant.\n"
+            )
+            instructions = (
+                "\nPress Enter to use voice or type "
                 "your question and press Enter:\n"
+            )
             choice = (
-                input(welcome_msg + instructions)
-                .strip()
-                .lower()
+                input(welcome_msg + instructions).strip().lower()
             )  # Normalize input to lower case immediately
 
             if choice == "stop":
@@ -137,7 +180,7 @@ class Akande:
                 print("Listening...")
                 prompt = (
                     await self.listen()
-                ).lower()  # Normalize prompt to lower case
+                ).lower()
                 if prompt == "stop":
                     print("\nGoodbye!")
                     break
@@ -156,16 +199,31 @@ class Akande:
                 break
 
     async def generate_response(self, prompt: str) -> str:
-        """Generate a response using the OpenAI service or cache."""
-        prompt_hash = self.hash_prompt(prompt)
-        cached_response = self.cache.get(prompt_hash)
-        if cached_response:
-            logging.info(f"Cache hit for prompt: {prompt}")
-            return cached_response
-        else:
-            logging.info(f"Cache miss for prompt: {prompt}")
-            response = await self.openai_service.generate_response(
-                prompt, OPENAI_DEFAULT_MODEL, {}
-            )
-            self.cache.set(prompt_hash, response)
-            return response
+            """
+            Generate a response using the OpenAI service or cache.
+
+            Args:
+                prompt (str): The prompt for generating the response.
+
+            Returns:
+                str: The generated response.
+
+            """
+            prompt_hash = self.hash_prompt(prompt)
+            cached_response = self.cache.get(prompt_hash)
+            if cached_response:
+                logging.info(f"Cache hit for prompt: {prompt}")
+                return cached_response
+            else:
+                logging.info(f"Cache miss for prompt: {prompt}")
+                response = await self.openai_service.generate_response(
+                    prompt, OPENAI_DEFAULT_MODEL, {}
+                )
+                # Correctly access response attributes for Pydantic models
+                text_response = (
+                    response.choices[0].message.content.strip()
+                    if response.choices
+                    else ""
+                )
+                self.cache.set(prompt_hash, text_response)
+                return text_response

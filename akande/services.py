@@ -1,43 +1,52 @@
+# Copyright (C) 2024 Sebastien Rousseau.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 from abc import ABC, abstractmethod
-import time
+import asyncio
+import logging
 from typing import Any, Dict
 import openai
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-import logging
-from .config import OPENAI_DEFAULT_MODEL
-from .utils import validate_api_key
+from .config import OPENAI_API_KEY, OPENAI_DEFAULT_MODEL
 
 
 class OpenAIService(ABC):
-    """Base class for all OpenAI services."""
+    """Base class for OpenAI services."""
 
     @abstractmethod
     async def generate_response(
-        self, prompt: str, model: str, parameters: Dict[str, Any]
-    ) -> str:
+        self, prompt: str, model: str, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
         pass
 
 
-class OpenAIServiceImpl(OpenAIService):
-    """Implementation of the OpenAI service."""
+class OpenAIImpl(OpenAIService):
+    """OpenAI API client implementation."""
 
-    def __init__(self, api_key: str, rate_limit: int = 60) -> None:
-        self.api_key = api_key
-        self.rate_limit = rate_limit
-        openai.api_key = api_key
-        self.requests_count = 0
-        self.backoff_factor = 1
-        self.executor = ThreadPoolExecutor(max_workers=4)
+    def __init__(self):
+        self.client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
     async def generate_response(
         self,
-        prompt: str,
+        user_prompt: str,
         model: str = OPENAI_DEFAULT_MODEL,
-        parameters: Dict[str, Any] = None,
-    ) -> str:
-        if parameters is None:
-            parameters = {}
+        params: Dict[str, Any] = None,
+    ) -> Dict[str, Any]:
+        if not params:
+            params = {}
+
+        # Pre-prompt text to guide the AI's response
         pre_prompt = """
         As "Àkàndé," an AI assistant, your mission is to support users by
         providing accurate information on various topics, condensed into a
@@ -66,47 +75,22 @@ class OpenAIServiceImpl(OpenAIService):
         delivering value by prioritizing essential information relevant to the
         user's needs within 150 words.
         """
-        combined_prompt = pre_prompt + "\n\n" + prompt
 
-        if "max_tokens" not in parameters:
-            parameters["max_tokens"] = 1024
-        if not validate_api_key(self.api_key):
-            logging.error(
-                "Invalid API Key: %s", {"api_key": self.api_key}
-            )
-            return "Invalid API Key."
-        if self.requests_count >= self.rate_limit:
-            wait_time = 60 * self.backoff_factor
-            logging.warning(
-                "Rate limit reached, waiting %s",
-                {"wait_time": wait_time},
-            )
-            await asyncio.sleep(wait_time)
-            self.backoff_factor = min(self.backoff_factor * 2, 64)
-            self.requests_count = 0
+        # Combine the pre-prompt with the user's prompt
+        full_prompt = pre_prompt + "\n" + user_prompt
+
         try:
-            start_time = time.time()
-            response = await asyncio.get_event_loop().run_in_executor(
-                self.executor,
-                lambda: openai.Completion.create(
-                    engine=model, prompt=combined_prompt, **parameters
+            # Specify the correct method for chat completions
+            loop = asyncio.get_running_loop()
+            response = await loop.run_in_executor(
+                None,  # Uses default executor
+                lambda: self.client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": full_prompt}],
+                    **params,
                 ),
             )
-            latency = (
-                time.time() - start_time
-            ) * 1000  # Convert to milliseconds
-            logging.info(
-                f"OpenAI API response latency: {latency:.2f} ms"
-            )
-            response_text = response.choices[0].text.strip()
-            self.requests_count += 1
-            self.backoff_factor = 1
-            return response_text
-        except asyncio.TimeoutError:
-            logging.error("OpenAI API call timed out")
-            return "Sorry, the request timed out. Please try again."
-        except openai.OpenAIError as e:
-            logging.error("OpenAI API error %s", {"error": str(e)})
-            return (
-                "Sorry, I'm having some trouble connecting right now."
-            )
+            return response
+        except Exception as exc:
+            logging.error("OpenAI API error: %s", exc)
+            return {"error": str(exc)}
