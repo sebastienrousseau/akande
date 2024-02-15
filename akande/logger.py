@@ -26,7 +26,5 @@ def basic_config(filename: str, level: int, log_format: str) -> None:
     :return: None
     """
     logging.basicConfig(
-        filename=filename,
-        level=level,
-        format=log_format
+        filename=filename, level=level, format=log_format
     )

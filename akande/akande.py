@@ -90,6 +90,7 @@ class Akande:
         Returns:
             None: This function does not return any values.
         """
+
         def tts_engine_run(text: str):
             """
             Generates a WAV file from the given text using pyttsx3.
@@ -104,7 +105,8 @@ class Akande:
             text (str): The text to be converted to speech.
 
             Raises:
-            Exception: If an error occurs during speech synthesis, it is raised as an exception.
+            Exception: If an error occurs during speech synthesis, it is
+            raised as an exception.
             """
             # Create a directory path with the current date
             date_str = datetime.now().strftime("%Y-%m-%d")
@@ -178,9 +180,7 @@ class Akande:
                 prompt = choice
             else:
                 print("Listening...")
-                prompt = (
-                    await self.listen()
-                ).lower()
+                prompt = (await self.listen()).lower()
                 if prompt == "stop":
                     print("\nGoodbye!")
                     break
@@ -199,31 +199,31 @@ class Akande:
                 break
 
     async def generate_response(self, prompt: str) -> str:
-            """
-            Generate a response using the OpenAI service or cache.
+        """
+        Generate a response using the OpenAI service or cache.
 
-            Args:
-                prompt (str): The prompt for generating the response.
+        Args:
+            prompt (str): The prompt for generating the response.
 
-            Returns:
-                str: The generated response.
+        Returns:
+            str: The generated response.
 
-            """
-            prompt_hash = self.hash_prompt(prompt)
-            cached_response = self.cache.get(prompt_hash)
-            if cached_response:
-                logging.info(f"Cache hit for prompt: {prompt}")
-                return cached_response
-            else:
-                logging.info(f"Cache miss for prompt: {prompt}")
-                response = await self.openai_service.generate_response(
-                    prompt, OPENAI_DEFAULT_MODEL, {}
-                )
-                # Correctly access response attributes for Pydantic models
-                text_response = (
-                    response.choices[0].message.content.strip()
-                    if response.choices
-                    else ""
-                )
-                self.cache.set(prompt_hash, text_response)
-                return text_response
+        """
+        prompt_hash = self.hash_prompt(prompt)
+        cached_response = self.cache.get(prompt_hash)
+        if cached_response:
+            logging.info(f"Cache hit for prompt: {prompt}")
+            return cached_response
+        else:
+            logging.info(f"Cache miss for prompt: {prompt}")
+            response = await self.openai_service.generate_response(
+                prompt, OPENAI_DEFAULT_MODEL, {}
+            )
+            # Correctly access response attributes for Pydantic models
+            text_response = (
+                response.choices[0].message.content.strip()
+                if response.choices
+                else ""
+            )
+            self.cache.set(prompt_hash, text_response)
+            return text_response

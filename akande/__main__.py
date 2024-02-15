@@ -54,17 +54,16 @@ if __name__ == "__main__":
     directory_path.mkdir(parents=True, exist_ok=True)
 
     # Create the WAV filename with timestamp
-    filename = (
-        datetime.now().strftime("%Y-%m-%d-%H-%M-Akande")
-        + ".log"
-    )
+    filename = datetime.now().strftime("%Y-%m-%d-%H-%M-Akande") + ".log"
     file_path = directory_path / filename
 
     # Setup logging configuration
     log_file = file_path
     log_level = logging.DEBUG
     log_format = "%(asctime)s - %(levelname)s - %(message)s"
-    basic_config(filename=log_file, level=log_level, log_format=log_format)
+    basic_config(
+        filename=log_file, level=log_level, log_format=log_format
+    )
 
     # Run the main async function
     asyncio.run(main())
