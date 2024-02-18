@@ -43,7 +43,13 @@ async def main():
 
     openai_service = OpenAIImpl()
     akande = Akande(openai_service=openai_service)
-    await akande.run_interaction()
+    try:
+        await akande.run_interaction()
+    except KeyboardInterrupt:
+        logging.info("Keyboard interrupt detected. Exiting...")
+        # Perform any necessary cleanup tasks here
+        # For example, stop the CherryPy server if it's running
+        await akande.stop_server()
 
 
 if __name__ == "__main__":

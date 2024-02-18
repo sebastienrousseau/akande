@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from abc import ABC, abstractmethod
+from abc import ABC
 import asyncio
 import logging
 from typing import Any, Dict
@@ -24,7 +24,6 @@ from .config import OPENAI_API_KEY, OPENAI_DEFAULT_MODEL
 class OpenAIService(ABC):
     """Base class for OpenAI services."""
 
-    @abstractmethod
     async def generate_response(
         self, prompt: str, model: str, params: Dict[str, Any]
     ) -> Dict[str, Any]:
@@ -94,3 +93,12 @@ class OpenAIImpl(OpenAIService):
         except Exception as exc:
             logging.error("OpenAI API error: %s", exc)
             return {"error": str(exc)}
+
+    def generate_response_sync(
+        self, user_prompt, model=OPENAI_DEFAULT_MODEL, params=None
+    ):
+        response = asyncio.run(
+            self.generate_response(user_prompt, model, params)
+        )
+        logging.info(f"Generated response: {response}")
+        return response
