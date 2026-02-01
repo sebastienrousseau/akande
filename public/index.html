@@ -49,7 +49,9 @@
 			--radius-md: 0.5rem;
 			--radius-lg: 0.875rem;
 			--radius-xl: 1.25rem;
+			--radius-tight: 0.3125rem;
 			--radius-full: 50%;
+			--border-thin: 0.5px;
 			--sidebar-width: 18.75rem;
 			--font: -apple-system, BlinkMacSystemFont, "SF Pro Text",
 				"Helvetica Neue", system-ui, sans-serif;
@@ -136,7 +138,7 @@
 			min-width: var(--sidebar-width);
 			height: 100%;
 			background: var(--bg-secondary);
-			border-right: 0.5px solid var(--border-primary);
+			border-right: var(--border-thin) solid var(--border-primary);
 			display: flex;
 			flex-direction: column;
 			transition: transform 250ms ease-out, background-color 180ms ease;
@@ -144,7 +146,7 @@
 
 		.sidebar-header {
 			padding: var(--space-md);
-			border-bottom: 0.5px solid var(--border-secondary);
+			border-bottom: var(--border-thin) solid var(--border-secondary);
 			display: flex;
 			flex-direction: column;
 			gap: var(--space-sm);
@@ -245,7 +247,7 @@
 			flex-direction: column;
 			padding: 0.625rem 0.75rem;
 			cursor: pointer;
-			border-bottom: 0.5px solid var(--border-secondary);
+			border-bottom: var(--border-thin) solid var(--border-secondary);
 			transition: background-color 100ms ease;
 		}
 
@@ -299,7 +301,7 @@
 
 		.sidebar-footer {
 			padding: 0.5rem 0.75rem;
-			border-top: 0.5px solid var(--border-secondary);
+			border-top: var(--border-thin) solid var(--border-secondary);
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
@@ -351,7 +353,7 @@
 			background: var(--surface-overlay);
 			backdrop-filter: saturate(180%) blur(20px);
 			-webkit-backdrop-filter: saturate(180%) blur(20px);
-			border-bottom: 0.5px solid var(--border-primary);
+			border-bottom: var(--border-thin) solid var(--border-primary);
 			padding: 0.75rem 1rem;
 			display: flex;
 			align-items: center;
@@ -454,6 +456,10 @@
 			.mic-btn.recording {
 				animation: none;
 			}
+			.typing span {
+				animation: none;
+				opacity: 0.6;
+			}
 			.send-btn,
 			.btn-circle,
 			.icon-btn {
@@ -465,7 +471,7 @@
 			align-self: flex-end;
 			background: var(--message-user);
 			color: var(--text-on-filled);
-			border-radius: var(--radius-xl) var(--radius-xl) 0.3125rem var(--radius-xl);
+			border-radius: var(--radius-xl) var(--radius-xl) var(--radius-tight) var(--radius-xl);
 			margin-top: 0.75rem;
 		}
 
@@ -473,7 +479,7 @@
 			align-self: flex-start;
 			background: var(--message-assistant);
 			color: var(--text-primary);
-			border-radius: 1.25rem 1.25rem 1.25rem 0.3125rem;
+			border-radius: var(--radius-xl) var(--radius-xl) var(--radius-xl) var(--radius-tight);
 		}
 
 		.message.error {
@@ -523,7 +529,7 @@
 			background: var(--surface-overlay);
 			backdrop-filter: saturate(180%) blur(20px);
 			-webkit-backdrop-filter: saturate(180%) blur(20px);
-			border-top: 0.5px solid var(--border-primary);
+			border-top: var(--border-thin) solid var(--border-primary);
 			padding: 0.5rem 0.625rem;
 			padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 			display: flex;
