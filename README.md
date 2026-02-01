@@ -76,6 +76,12 @@ PDF/CSV. No technical knowledge required once deployed.
 ### Installation
 
 ```bash
+# Install system dependencies (required for PyAudio and audio conversion)
+# Ubuntu/Debian:
+sudo apt install portaudio19-dev ffmpeg
+# macOS:
+brew install portaudio ffmpeg
+
 git clone https://github.com/sebastienrousseau/akande
 cd akande
 python -m venv venv && source venv/bin/activate
@@ -190,8 +196,7 @@ output directory.
 
 ## Contributing
 
-Pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for
-guidelines.
+Pull requests are welcome.
 
 ![divider][divider]
 
