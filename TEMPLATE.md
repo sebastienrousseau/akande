@@ -3,15 +3,16 @@
 <img
 src="https://kura.pro/akande/images/logos/akande.webp"
 align="right"
-alt="Akande Voice Assistant Logo"
+alt="Àkàndé Voice Assistant Logo"
 height="261"
 width="261"
 />
 
 <!-- markdownlint-enable MD033 MD041 -->
 
-# Akande - A Python-based Voice Assistant
+# Àkàndé Voice Assistant
 
-Akande is an advanced voice assistant built in Python, leveraging OpenAI's GPT models for natural language understanding and response generation. It is designed to be a powerful, extensible, and easy-to-use voice assistant that can be used for a wide range of tasks, from simple web searches to complex data analysis and automation.
+Àkàndé is a self-hosted, provider-agnostic voice assistant that delivers structured executive briefings via voice or text from 10 LLM providers. Ask a question by voice, text, or web UI and receive a concise Overview / Solution / Conclusion / Recommendations briefing with automatic PDF and CSV artefact generation.
 
 ## Changelog
+
