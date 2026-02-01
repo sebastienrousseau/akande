@@ -75,6 +75,7 @@
 			--space-micro: 0.1875rem;
 			--blur-overlay: 20px;
 			--outline-width: 2px;
+			--content-max: 78%;
 			--sidebar-width: 18.75rem;
 			--font: -apple-system, BlinkMacSystemFont, "SF Pro Text",
 				"Helvetica Neue", system-ui, sans-serif;
@@ -239,7 +240,6 @@
 
 		.search-input:focus {
 			border-color: var(--blue);
-			box-shadow: 0 0 0 var(--focus-ring) var(--blue-ring);
 		}
 
 		.search-input::placeholder {
@@ -450,7 +450,7 @@
 		/* Messages */
 
 		.message {
-			max-width: 78%;
+			max-width: var(--content-max);
 			padding: var(--space-item) var(--font-base);
 			margin-bottom: var(--space-micro);
 			font-size: var(--font-base);
@@ -630,7 +630,6 @@
 
 		.text-input:focus {
 			border-color: var(--blue);
-			box-shadow: 0 0 0 var(--focus-ring) var(--blue-ring);
 		}
 
 		.text-input:disabled { background: var(--bg-primary); opacity: 0.7; }
@@ -872,6 +871,7 @@
 		.text-input:focus-visible {
 			outline: var(--outline-width) solid var(--blue);
 			outline-offset: calc(-1 * var(--outline-width));
+			box-shadow: 0 0 0 var(--focus-ring) var(--blue-ring);
 		}
 	</style>
 </head>
