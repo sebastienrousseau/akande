@@ -76,6 +76,14 @@
 			--blur-overlay: 20px;
 			--outline-width: 2px;
 			--content-max: 78%;
+			--duration-fast: 100ms;
+			--duration-normal: 150ms;
+			--duration-slow: 180ms;
+			--duration-enter: 200ms;
+			--duration-sidebar: 250ms;
+			--font-weight-normal: 400;
+			--font-weight-semibold: 600;
+			--font-weight-bold: 700;
 			--sidebar-width: 18.75rem;
 			--font: -apple-system, BlinkMacSystemFont, "SF Pro Text",
 				"Helvetica Neue", system-ui, sans-serif;
@@ -123,7 +131,7 @@
 			-webkit-font-smoothing: antialiased;
 			background: var(--bg-primary);
 			color: var(--text-primary);
-			transition: background-color 180ms ease, color 180ms ease;
+			transition: background-color var(--duration-slow) ease, color var(--duration-slow) ease;
 		}
 
 		body {
@@ -165,7 +173,7 @@
 			border-right: var(--border-thin) solid var(--border-primary);
 			display: flex;
 			flex-direction: column;
-			transition: transform 250ms ease-out, background-color 180ms ease;
+			transition: transform var(--duration-sidebar) ease-out, background-color var(--duration-slow) ease;
 		}
 
 		.sidebar-header {
@@ -184,7 +192,7 @@
 
 		.sidebar-title {
 			font-size: var(--font-xl);
-			font-weight: 700;
+			font-weight: var(--font-weight-bold);
 			letter-spacing: var(--tracking-tight);
 		}
 
@@ -204,7 +212,7 @@
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			transition: background-color 100ms ease;
+			transition: background-color var(--duration-fast) ease;
 			flex-shrink: 0;
 		}
 
@@ -234,8 +242,8 @@
 			background: var(--bg-tertiary);
 			color: var(--text-primary);
 			outline: none;
-			transition: border-color 150ms ease, box-shadow 150ms ease,
-				background-color 180ms ease;
+			transition: border-color var(--duration-normal) ease, box-shadow var(--duration-normal) ease,
+				background-color var(--duration-slow) ease;
 		}
 
 		.search-input:focus {
@@ -271,7 +279,7 @@
 			padding: var(--space-item) var(--space-md);
 			cursor: pointer;
 			border-bottom: var(--border-thin) solid var(--border-secondary);
-			transition: background-color 100ms ease;
+			transition: background-color var(--duration-fast) ease;
 		}
 
 		.conv-item:hover {
@@ -297,7 +305,7 @@
 
 		.conv-title {
 			font-size: var(--font-md);
-			font-weight: 600;
+			font-weight: var(--font-weight-semibold);
 			white-space: nowrap;
 			overflow: hidden;
 			text-overflow: ellipsis;
@@ -341,7 +349,7 @@
 			gap: var(--radius-sm);
 			padding: var(--space-xs) var(--space-sm);
 			border-radius: var(--radius-sm);
-			transition: background-color 100ms ease, color 180ms ease;
+			transition: background-color var(--duration-fast) ease, color var(--duration-slow) ease;
 			font-family: var(--font);
 		}
 
@@ -364,7 +372,7 @@
 			flex-direction: column;
 			min-width: 0;
 			background: var(--bg-primary);
-			transition: background-color 180ms ease;
+			transition: background-color var(--duration-slow) ease;
 		}
 
 		/* Main header */
@@ -382,7 +390,7 @@
 			align-items: center;
 			justify-content: space-between;
 			gap: var(--space-sm);
-			transition: background-color 180ms ease;
+			transition: background-color var(--duration-slow) ease;
 		}
 
 		.main-header-left {
@@ -398,7 +406,7 @@
 
 		.main-title {
 			font-size: var(--font-xl);
-			font-weight: 600;
+			font-weight: var(--font-weight-semibold);
 			letter-spacing: var(--tracking-tight);
 			white-space: nowrap;
 			overflow: hidden;
@@ -436,7 +444,7 @@
 
 		.welcome h2 {
 			font-size: var(--font-2xl);
-			font-weight: 600;
+			font-weight: var(--font-weight-semibold);
 			letter-spacing: var(--tracking-tight);
 		}
 
@@ -457,7 +465,7 @@
 			line-height: 1.45;
 			word-wrap: break-word;
 			white-space: pre-wrap;
-			animation: msgAppear 200ms ease-out both;
+			animation: msgAppear var(--duration-enter) ease-out both;
 		}
 
 		@keyframes msgAppear {
@@ -467,7 +475,7 @@
 
 		@media (prefers-reduced-motion: reduce) {
 			.message {
-				animation: msgFade 100ms ease both;
+				animation: msgFade var(--duration-fast) ease both;
 			}
 			@keyframes msgFade {
 				from { opacity: 0; }
@@ -523,7 +531,7 @@
 			display: none;
 			gap: 0.3rem;
 			margin-top: var(--radius-sm);
-			animation: msgAppear 200ms ease-out both;
+			animation: msgAppear var(--duration-enter) ease-out both;
 		}
 
 		.typing.visible { display: flex; }
@@ -558,7 +566,7 @@
 			display: flex;
 			align-items: center;
 			gap: var(--radius-sm);
-			transition: background-color 180ms ease;
+			transition: background-color var(--duration-slow) ease;
 		}
 
 		.btn-circle {
@@ -571,8 +579,8 @@
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			transition: background 180ms ease, transform 180ms ease,
-				opacity 180ms ease;
+			transition: background var(--duration-slow) ease, transform var(--duration-slow) ease,
+				opacity var(--duration-slow) ease;
 		}
 
 		.btn-circle:active { transform: scale(0.9); }
@@ -623,8 +631,8 @@
 			background: var(--bg-secondary);
 			color: var(--text-primary);
 			outline: none;
-			transition: border-color 150ms ease, box-shadow 150ms ease,
-				background-color 180ms ease;
+			transition: border-color var(--duration-normal) ease, box-shadow var(--duration-normal) ease,
+				background-color var(--duration-slow) ease;
 			-webkit-appearance: none;
 		}
 
@@ -645,7 +653,7 @@
 			display: none;
 			align-items: center;
 			justify-content: center;
-			animation: fadeIn 150ms ease;
+			animation: fadeIn var(--duration-normal) ease;
 		}
 
 		.modal-overlay.visible {
@@ -665,8 +673,8 @@
 			max-width: 22.5rem;
 			width: 90%;
 			box-shadow: var(--shadow-modal);
-			animation: modalIn 200ms ease-out;
-			transition: background-color 180ms ease;
+			animation: modalIn var(--duration-enter) ease-out;
+			transition: background-color var(--duration-slow) ease;
 		}
 
 		@keyframes modalIn {
@@ -682,7 +690,7 @@
 
 		.modal h3 {
 			font-size: var(--font-lg);
-			font-weight: 600;
+			font-weight: var(--font-weight-semibold);
 			margin-bottom: var(--space-md);
 		}
 
@@ -699,7 +707,7 @@
 			cursor: pointer;
 			text-align: left;
 			margin-bottom: var(--space-sm);
-			transition: background-color 100ms ease;
+			transition: background-color var(--duration-fast) ease;
 		}
 
 		.modal-btn:hover {
