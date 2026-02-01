@@ -3,513 +3,1663 @@
 
 <head>
 	<meta charset="utf-8" />
-	<meta itemprop="datePublished" content="2024-02-05T06:06:06Z" id="date">
-	<meta itemprop="dateModified" content="2024-02-05T06:06:06Z" id="last-modified">
-
-	<title>Àkàndé - AI Voice Assistant</title>
-	<meta content="The Àkàndé Voice Assistant Team" name="author">
-	<meta
-		content="Àkàndé is a self-hosted, provider-agnostic AI voice assistant that delivers structured executive briefings via voice or text, with automatic PDF and CSV generation, supporting 10 LLM providers including local inference."
+	<title>Akande</title>
+	<meta content="Akande is a self-hosted AI voice assistant that delivers structured executive briefings."
 		name="description">
-	<meta
-		content="Àkàndé, voice assistant, AI technology, multi-provider LLM, natural language understanding, PDF summaries, efficient caching, SQLite, speech recognition, text-to-speech, Python"
-		name="keywords">
-	<meta content="https://akande.co" name="permalink">
-	<meta content="general" name="rating">
 	<meta content="no-referrer" name="referrer">
-	<meta content="7 days" name="revisit-after">
-	<meta content="index, follow" name="robots">
-	<meta content="telephone=no" name="format-detection">
-	<meta content="en-GB" name="language">
-	<meta content="#0066CC" name="theme-color"> <!-- Corrected theme-color format -->
-	<meta content="width=device-width,initial-scale=1,shrink-to-fit=no" name="viewport">
-	<meta content="https://kura.pro/akande/images/logos/akande.webp" name="og:image">
-	<meta content="Àkàndé: Advanced AI Voice Assistant for All" name="og:image:alt">
-	<meta content="161.8" name="og:image:height">
-	<meta content="161.8" name="og:image:width">
-	<meta content="en_GB" name="og:locale">
-	<meta content="Àkàndé: Advanced AI Voice Assistant for All" name="og:title">
-	<meta content="website" name="og:type">
-	<meta content="https://akande.co" name="og:url">
-	<meta content="ARIA, fullKeyboardControl, noFlashingHazard" name="accessibility">
-	<meta content="portrait" name="apple_mobile_web_app_orientations">
-	<meta content="192x192" name="apple_touch_icon_sizes">
-	<meta content="yes" name="apple-mobile-web-app-capable">
-	<meta content="black" name="apple-mobile-web-app-status-bar-style">
-	<meta content="Àkàndé: Advanced AI Voice Assistant for All" name="apple-mobile-web-app-title">
-	<meta content="yes" name="apple-touch-fullscreen">
-
-	<!-- CSP is set via server HTTP header (SecurityHeadersTool) -->
-
-	<meta content="rgb(255, 39, 34)" name="msapplication-navbutton-color">
-	<meta content="summary" name="twitter:card">
-	<meta content="@AkandeAI" name="twitter:creator">
-	<meta content="Àkàndé: Advanced AI Voice Assistant for All" name="twitter:title">
-	<meta
-		content="Àkàndé is a self-hosted, provider-agnostic AI voice assistant that delivers structured executive briefings via voice or text, with automatic PDF and CSV generation, supporting 10 LLM providers including local inference."
-		name="twitter:description">
-	<meta content="https://akande.co" name="twitter:url">
-	<meta content="https://kura.pro/akande/images/logos/akande.webp" name="twitter:image">
-	<meta content="Àkàndé: Advanced AI Voice Assistant for All" name="twitter:image:alt">
-	<meta content="161.8" name="twitter:image:height">
-	<meta content="161.8" name="twitter:image:width">
-
-	<!-- Links -->
-	<link rel="alternate" href="https://akande.co" hreflang="en" />
-	<link rel="canonical" href="https://akande.co/index.html" />
+	<meta content="#f2f2f7" name="theme-color" id="themeColor">
+	<meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport">
 	<link rel="icon" type="image/x-icon" href="https://kura.pro/akande/images/favicon.ico" sizes="16x16 32x32" />
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-		integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
-	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.5.1/css/all.css"
-		integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
-		crossorigin="anonymous">
+	<style nonce="__CSP_NONCE__">
+		/* ── Design Tokens ── */
 
-	<!-- Corrected Bootstrap CSS link -->
-	<link rel="apple-touch-icon" href="https://kura.pro/akande/images/icons/192x192.png" sizes="192x192" />
-
-	<!-- Styles -->
-	<style>
-		/* Canvas */
-		canvas {
-			height: 33vh !important;
-			width: 66vw !important;
+		:root {
+			--blue: #0056d6;
+			--blue-hover: #004bb8;
+			--bg-primary: #f2f2f7;
+			--bg-secondary: #ffffff;
+			--bg-tertiary: #f8f9fa;
+			--surface-overlay: rgba(255,255,255,0.95);
+			--border-primary: #d1d1d6;
+			--border-secondary: #e5e5ea;
+			--text-primary: #1c1c1e;
+			--text-secondary: #6d6d78;
+			--text-tertiary: #6d6d78;
+			--message-user: #0056d6;
+			--message-assistant: #e5e5ea;
+			--status-error: #ff3b30;
+			--status-success: #30d158;
+			--error-bg: #fff0f0;
+			--sidebar-width: 300px;
+			--font: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+				"Helvetica Neue", system-ui, sans-serif;
 		}
 
-		/* Icon */
-		.icon {
-			width: 3rem;
-			height: 3rem;
+		:root.dark {
+			--bg-primary: #1c1c1e;
+			--bg-secondary: #2c2c2e;
+			--bg-tertiary: #3a3a3c;
+			--surface-overlay: rgba(28,28,30,0.95);
+			--border-primary: #48484a;
+			--border-secondary: #38383a;
+			--text-primary: #f5f5f7;
+			--text-secondary: #98989d;
+			--text-tertiary: #636366;
+			--message-user: #0a84ff;
+			--message-assistant: #3a3a3c;
+			--status-error: #ff453a;
+			--status-success: #32d74b;
+			--error-bg: #3a2020;
+			--blue: #0a84ff;
+			--blue-hover: #0070e6;
 		}
 
-		/* Overlay */
-		.overlay {
-			display: none;
-			justify-content: center;
-			align-items: center;
-			position: fixed;
-			top: 0;
-			left: 0;
+		/* ── Reset ── */
+
+		*, *::before, *::after {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		html, body {
+			height: 100%;
+			font-family: var(--font);
+			-webkit-font-smoothing: antialiased;
+			background: var(--bg-primary);
+			color: var(--text-primary);
+			transition: background-color 180ms ease, color 180ms ease;
+		}
+
+		body {
+			display: flex;
+			overflow: hidden;
+		}
+
+		/* ── Skip link ── */
+
+		.skip-link {
+			position: absolute;
+			top: -100%;
+			left: 0.5rem;
+			background: var(--blue);
+			color: #fff;
+			padding: 0.5rem 1rem;
+			border-radius: 1rem;
+			z-index: 9999;
+			text-decoration: none;
+			font-size: 0.8125rem;
+		}
+		.skip-link:focus { top: 0.5rem; }
+
+		/* ── App Layout (sidebar + main) ── */
+
+		.app {
+			display: flex;
 			width: 100%;
 			height: 100%;
-			z-index: 1050;
 		}
 
-		/* Card */
-		.card {
-			font-size: 1.2618vw;
-			display: none;
-			min-width: 66vw;
-			max-height: 81vh;
-			overflow-y: auto;
-			position: relative;
-			/* Needed for absolute positioning of the close button */
-			overflow: hidden;
-			/* Keeps the content within bounds */
-		}
+		/* ── Sidebar ── */
 
-		/* Slide-in Animation */
-		@keyframes slideInFromBottom {
-			0% {
-				transform: translateY(100%);
-				opacity: 0;
-			}
-
-			100% {
-				transform: translateY(0);
-				opacity: 1;
-			}
-		}
-
-		.card-slide-in {
-			animation: slideInFromBottom 0.5s ease-out 0s 1 forwards;
-			z-index: 1000;
-		}
-
-		/* Loader */
-		.loader {
-			width: 2vw;
-			height: 2vw;
-			border: 5px solid;
-			border-color: #ff7ef7 transparent;
-			border-radius: 50%;
-			display: none;
-			box-sizing: border-box;
-			animation: rotation 1s linear infinite;
-			position: relative;
-			vertical-align: middle;
-			margin-top: 0.75vh;
-			z-index: 1000;
-		}
-
-		@keyframes rotation {
-			from {
-				transform: rotate(0deg);
-			}
-
-			to {
-				transform: rotate(360deg);
-			}
-		}
-
-		/* Close Button */
-		#closeButton {
-			border: 2px solid white;
-			border-radius: 50%;
-			background-color: black;
-			color: white;
-			font-size: 2vw;
-			width: 2vw;
+		.sidebar {
+			width: var(--sidebar-width);
+			min-width: var(--sidebar-width);
+			height: 100%;
+			background: var(--bg-secondary);
+			border-right: 0.5px solid var(--border-primary);
 			display: flex;
-			justify-content: center;
-			align-items: center;
-			top: 0;
-			right: 0;
-			position: absolute;
+			flex-direction: column;
+			transition: transform 250ms ease-out, background-color 180ms ease;
 		}
 
-		/* Microphone Icon */
-		button li.microphone-ico {
+		.sidebar-header {
+			padding: 0.75rem;
+			border-bottom: 0.5px solid var(--border-secondary);
+			display: flex;
+			flex-direction: column;
+			gap: 0.5rem;
+		}
+
+		.sidebar-header-row {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+		}
+
+		.sidebar-title {
+			font-size: 1.0625rem;
+			font-weight: 700;
+			letter-spacing: -0.022em;
+		}
+
+		.sidebar-actions {
+			display: flex;
+			gap: 0.25rem;
+		}
+
+		.icon-btn {
+			width: 1.75rem;
+			height: 1.75rem;
+			border-radius: 0.375rem;
+			border: none;
+			background: transparent;
+			color: var(--blue);
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			transition: background-color 100ms ease;
+			flex-shrink: 0;
+		}
+
+		.icon-btn:hover {
+			background: var(--bg-tertiary);
+		}
+
+		.icon-btn svg {
+			width: 1rem;
+			height: 1rem;
+			fill: currentColor;
+		}
+
+		/* Search */
+
+		.search-box {
+			position: relative;
+		}
+
+		.search-input {
+			width: 100%;
+			border: 1px solid var(--border-secondary);
+			border-radius: 0.5rem;
+			padding: 0.375rem 0.5rem 0.375rem 1.75rem;
+			font-size: 0.8125rem;
+			font-family: var(--font);
+			background: var(--bg-tertiary);
+			color: var(--text-primary);
+			outline: none;
+			transition: border-color 150ms ease, background-color 180ms ease;
+		}
+
+		.search-input:focus {
+			border-color: var(--blue);
+		}
+
+		.search-input::placeholder {
+			color: var(--text-tertiary);
+		}
+
+		.search-icon {
 			position: absolute;
-			right: 10px;
-			top: 8px;
+			left: 0.5rem;
+			top: 50%;
+			transform: translateY(-50%);
+			width: 0.75rem;
+			height: 0.75rem;
+			fill: var(--text-tertiary);
+			pointer-events: none;
+		}
+
+		/* Conversation list */
+
+		.conversation-list {
+			flex: 1;
+			overflow-y: auto;
+			-webkit-overflow-scrolling: touch;
+		}
+
+		.conv-item {
+			display: flex;
+			flex-direction: column;
+			padding: 0.625rem 0.75rem;
+			cursor: pointer;
+			border-bottom: 0.5px solid var(--border-secondary);
+			transition: background-color 100ms ease;
+		}
+
+		.conv-item:hover {
+			background: var(--bg-tertiary);
+		}
+
+		.conv-item.active {
+			background: var(--blue);
+			color: #fff;
+		}
+
+		.conv-item.active .conv-preview,
+		.conv-item.active .conv-time {
+			color: rgba(255,255,255,0.7);
+		}
+
+		.conv-item-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: baseline;
+			gap: 0.5rem;
+		}
+
+		.conv-title {
+			font-size: 0.875rem;
+			font-weight: 600;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			flex: 1;
+			min-width: 0;
+		}
+
+		.conv-time {
+			font-size: 0.6875rem;
+			color: var(--text-tertiary);
+			flex-shrink: 0;
+		}
+
+		.conv-preview {
+			font-size: 0.75rem;
+			color: var(--text-secondary);
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			margin-top: 0.125rem;
+		}
+
+		/* Sidebar footer */
+
+		.sidebar-footer {
+			padding: 0.5rem 0.75rem;
+			border-top: 0.5px solid var(--border-secondary);
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+		}
+
+		.theme-toggle {
+			font-size: 0.75rem;
+			color: var(--text-secondary);
+			background: none;
+			border: none;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			gap: 0.375rem;
+			padding: 0.25rem 0.5rem;
+			border-radius: 0.375rem;
+			transition: background-color 100ms ease, color 180ms ease;
+			font-family: var(--font);
+		}
+
+		.theme-toggle:hover {
+			background: var(--bg-tertiary);
+			color: var(--text-primary);
+		}
+
+		.theme-toggle svg {
+			width: 0.875rem;
+			height: 0.875rem;
+			fill: currentColor;
+		}
+
+		/* ── Main panel ── */
+
+		.main {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			min-width: 0;
+			background: var(--bg-primary);
+			transition: background-color 180ms ease;
+		}
+
+		/* Main header */
+
+		.main-header {
+			position: sticky;
+			top: 0;
+			z-index: 100;
+			background: var(--surface-overlay);
+			backdrop-filter: saturate(180%) blur(20px);
+			-webkit-backdrop-filter: saturate(180%) blur(20px);
+			border-bottom: 0.5px solid var(--border-primary);
+			padding: 0.75rem 1rem;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 0.5rem;
+			transition: background-color 180ms ease;
+		}
+
+		.main-header-left {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			min-width: 0;
+		}
+
+		.sidebar-toggle {
+			display: none;
+		}
+
+		.main-title {
+			font-size: 1.0625rem;
+			font-weight: 600;
+			letter-spacing: -0.022em;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.main-header-actions {
+			display: flex;
+			gap: 0.25rem;
+			flex-shrink: 0;
+		}
+
+		/* ── Chat area ── */
+
+		.chat-area {
+			flex: 1;
+			overflow-y: auto;
+			-webkit-overflow-scrolling: touch;
+			padding: 1rem 1rem 0.5rem;
+			display: flex;
+			flex-direction: column;
+		}
+
+		/* Welcome */
+
+		.welcome {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			text-align: center;
+			gap: 0.375rem;
+		}
+
+		.welcome h2 {
+			font-size: 1.5rem;
+			font-weight: 600;
+			letter-spacing: -0.022em;
+		}
+
+		.welcome p {
+			font-size: 0.9375rem;
+			color: var(--text-secondary);
+		}
+
+		.welcome.hidden { display: none; }
+
+		/* Messages */
+
+		.message {
+			max-width: 78%;
+			padding: 0.625rem 0.9375rem;
+			margin-bottom: 0.1875rem;
+			font-size: 0.9375rem;
+			line-height: 1.45;
+			word-wrap: break-word;
+			white-space: pre-wrap;
+			animation: msgAppear 200ms ease-out both;
+		}
+
+		@keyframes msgAppear {
+			from { opacity: 0; transform: translateY(0.5rem) scale(0.98); }
+			to   { opacity: 1; transform: translateY(0) scale(1); }
+		}
+
+		@media (prefers-reduced-motion: reduce) {
+			.message {
+				animation: msgFade 100ms ease both;
+			}
+			@keyframes msgFade {
+				from { opacity: 0; }
+				to   { opacity: 1; }
+			}
+			.sidebar {
+				transition: none;
+			}
+		}
+
+		.message.user {
+			align-self: flex-end;
+			background: var(--message-user);
+			color: #fff;
+			border-radius: 1.25rem 1.25rem 0.3125rem 1.25rem;
+			margin-top: 0.75rem;
+		}
+
+		.message.assistant {
+			align-self: flex-start;
+			background: var(--message-assistant);
+			color: var(--text-primary);
+			border-radius: 1.25rem 1.25rem 1.25rem 0.3125rem;
+		}
+
+		.message.error {
+			align-self: flex-start;
+			background: var(--error-bg);
+			color: var(--status-error);
+			border-radius: 1.25rem;
+			font-size: 0.875rem;
+		}
+
+		/* Typing indicator */
+
+		.typing {
+			align-self: flex-start;
+			background: var(--message-assistant);
+			border-radius: 1.25rem;
+			padding: 0.6875rem 1rem;
+			display: none;
+			gap: 0.3rem;
+			margin-top: 0.375rem;
+			animation: msgAppear 200ms ease-out both;
+		}
+
+		.typing.visible { display: flex; }
+
+		.typing span {
+			width: 0.4375rem;
+			height: 0.4375rem;
+			border-radius: 50%;
+			background: var(--text-secondary);
+			animation: dot 1.4s ease-in-out infinite both;
+		}
+		.typing span:nth-child(2) { animation-delay: 0.16s; }
+		.typing span:nth-child(3) { animation-delay: 0.32s; }
+
+		@keyframes dot {
+			0%, 80%, 100% { transform: scale(0.5); opacity: 0.35; }
+			40%            { transform: scale(1);   opacity: 1; }
+		}
+
+		/* ── Input bar ── */
+
+		.input-bar {
+			position: sticky;
+			bottom: 0;
+			z-index: 100;
+			background: var(--surface-overlay);
+			backdrop-filter: saturate(180%) blur(20px);
+			-webkit-backdrop-filter: saturate(180%) blur(20px);
+			border-top: 0.5px solid var(--border-primary);
+			padding: 0.5rem 0.625rem;
+			padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+			display: flex;
+			align-items: center;
+			gap: 0.375rem;
+			transition: background-color 180ms ease;
+		}
+
+		.btn-circle {
+			flex-shrink: 0;
+			width: 2.125rem;
+			height: 2.125rem;
+			border-radius: 50%;
+			border: none;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			transition: background 180ms ease, transform 180ms ease,
+				opacity 180ms ease;
+		}
+
+		.btn-circle:active { transform: scale(0.9); }
+
+		.btn-circle svg {
+			width: 1rem;
+			height: 1rem;
+			fill: currentColor;
+		}
+
+		.mic-btn {
+			background: transparent;
+			color: var(--text-secondary);
+		}
+		.mic-btn:hover { color: var(--text-primary); }
+		.mic-btn.recording {
+			background: var(--status-error);
+			color: #fff;
+			animation: pulse 1.4s ease-in-out infinite;
+		}
+
+		@keyframes pulse {
+			0%, 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.35); }
+			50%       { box-shadow: 0 0 0 7px rgba(255, 59, 48, 0); }
+		}
+
+		.send-btn {
+			background: var(--blue);
+			color: #fff;
+			transform: scale(0);
+			opacity: 0;
+		}
+		.send-btn.visible {
+			transform: scale(1);
+			opacity: 1;
+		}
+		.send-btn:hover { background: var(--blue-hover); }
+
+		.text-input {
+			flex: 1;
+			min-width: 0;
+			border: 1px solid var(--border-primary);
+			border-radius: 1.25rem;
+			padding: 0.4375rem 0.875rem;
+			font-size: 1rem;
+			font-family: var(--font);
+			line-height: 1.4;
+			background: var(--bg-secondary);
+			color: var(--text-primary);
+			outline: none;
+			transition: border-color 150ms ease, box-shadow 150ms ease,
+				background-color 180ms ease;
+			-webkit-appearance: none;
+		}
+
+		.text-input:focus {
+			border-color: var(--blue);
+			box-shadow: 0 0 0 3.5px rgba(0, 86, 214, 0.12);
+		}
+
+		.text-input:disabled { background: var(--bg-primary); opacity: 0.7; }
+		.text-input::placeholder { color: var(--text-tertiary); }
+
+		/* ── Export / Context menu modal ── */
+
+		.modal-overlay {
+			position: fixed;
+			inset: 0;
+			background: rgba(0,0,0,0.4);
+			z-index: 500;
+			display: none;
+			align-items: center;
+			justify-content: center;
+			animation: fadeIn 150ms ease;
+		}
+
+		.modal-overlay.visible {
+			display: flex;
+		}
+
+		@keyframes fadeIn {
+			from { opacity: 0; }
+			to   { opacity: 1; }
+		}
+
+		.modal {
+			background: var(--bg-secondary);
+			border-radius: 0.875rem;
+			padding: 1.25rem;
+			min-width: 280px;
+			max-width: 360px;
+			width: 90%;
+			box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+			animation: modalIn 200ms ease-out;
+			transition: background-color 180ms ease;
+		}
+
+		@keyframes modalIn {
+			from { opacity: 0; transform: scale(0.95); }
+			to   { opacity: 1; transform: scale(1); }
+		}
+
+		@media (prefers-reduced-motion: reduce) {
+			.modal-overlay, .modal {
+				animation: none;
+			}
+		}
+
+		.modal h3 {
+			font-size: 1rem;
+			font-weight: 600;
+			margin-bottom: 0.75rem;
+		}
+
+		.modal-btn {
+			display: block;
+			width: 100%;
+			padding: 0.625rem 0.75rem;
+			border: 1px solid var(--border-secondary);
+			border-radius: 0.5rem;
+			background: var(--bg-tertiary);
+			color: var(--text-primary);
+			font-size: 0.875rem;
+			font-family: var(--font);
+			cursor: pointer;
+			text-align: left;
+			margin-bottom: 0.5rem;
+			transition: background-color 100ms ease;
+		}
+
+		.modal-btn:hover {
+			background: var(--border-secondary);
+		}
+
+		.modal-btn.danger {
+			color: var(--status-error);
+			border-color: var(--status-error);
+		}
+
+		.modal-btn.danger:hover {
+			background: var(--error-bg);
+		}
+
+		.modal-cancel {
+			display: block;
+			width: 100%;
+			padding: 0.5rem;
+			border: none;
+			background: transparent;
+			color: var(--blue);
+			font-size: 0.875rem;
+			font-family: var(--font);
+			cursor: pointer;
+			margin-top: 0.25rem;
+		}
+
+		/* ── Empty state ── */
+
+		.empty-state {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			color: var(--text-tertiary);
+			font-size: 0.8125rem;
+			text-align: center;
+			padding: 2rem;
+		}
+
+		/* ── Responsive ── */
+
+		@media (max-width: 768px) {
+			.sidebar {
+				position: fixed;
+				top: 0;
+				left: 0;
+				bottom: 0;
+				z-index: 200;
+				transform: translateX(-100%);
+			}
+
+			.sidebar.open {
+				transform: translateX(0);
+			}
+
+			.sidebar-backdrop {
+				position: fixed;
+				inset: 0;
+				background: rgba(0,0,0,0.3);
+				z-index: 199;
+				display: none;
+			}
+
+			.sidebar-backdrop.visible {
+				display: block;
+			}
+
+			.sidebar-toggle {
+				display: flex;
+			}
+		}
+
+		@media (min-width: 769px) {
+			.chat-area {
+				max-width: 48rem;
+				width: 100%;
+				margin: 0 auto;
+				padding: 1.25rem 1.5rem 0.5rem;
+			}
+			.input-bar {
+				max-width: 48rem;
+				margin: 0 auto;
+			}
+			.message { max-width: 70%; }
+		}
+
+		/* ── Context menu ── */
+
+		.context-menu {
+			position: fixed;
+			z-index: 600;
+			background: var(--bg-secondary);
+			border: 1px solid var(--border-primary);
+			border-radius: 0.5rem;
+			box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+			min-width: 160px;
+			padding: 0.25rem 0;
+			display: none;
+		}
+
+		.context-menu.visible {
+			display: block;
+		}
+
+		.context-menu button {
+			display: block;
+			width: 100%;
+			padding: 0.5rem 0.75rem;
+			border: none;
+			background: transparent;
+			color: var(--text-primary);
+			font-size: 0.8125rem;
+			font-family: var(--font);
+			text-align: left;
+			cursor: pointer;
+		}
+
+		.context-menu button:hover {
+			background: var(--bg-tertiary);
+		}
+
+		.context-menu button.danger {
+			color: var(--status-error);
+		}
+
+		/* ── Focus indicators (WCAG 2.4.7) ── */
+
+		.icon-btn:focus-visible {
+			outline: 2px solid var(--blue);
+			outline-offset: 2px;
+		}
+
+		.conv-item:focus-visible {
+			outline: 2px solid var(--blue);
+			outline-offset: -2px;
+		}
+
+		.theme-toggle:focus-visible {
+			outline: 2px solid var(--blue);
+			outline-offset: 2px;
+		}
+
+		.modal-btn:focus-visible,
+		.modal-cancel:focus-visible {
+			outline: 2px solid var(--blue);
+			outline-offset: 2px;
+		}
+
+		.btn-circle:focus-visible {
+			outline: 2px solid var(--blue);
+			outline-offset: 2px;
+		}
+
+		.context-menu button:focus-visible {
+			outline: 2px solid var(--blue);
+			outline-offset: -2px;
+			background: var(--bg-tertiary);
 		}
 	</style>
 </head>
 
-<body id="page-top" itemscope itemtype="http://schema.org/WebPage"
-	class="fw-light text-center bg-white text-start fs-6 fade-in">
+<body>
+	<a href="#chat-input" class="skip-link">Skip to input</a>
 
-	<div class="position-absolute top-50 start-50 translate-middle text-center py-3">
-		<div id="container">
-			<img alt="Logo of Àkàndé Voice Assistant" class="w-10 h-10 img-fluid rounded-circle"
-				title="Image of Àkàndé Voice Assistant" aria-labelledby="imageTitle" height="66" loading="lazy"
-				src="https://kura.pro/akande/images/logos/akande.webp" width="66">
-			<canvas id="waves"></canvas>
-			<h1 class="fs-2">Hi, I'm Àkàndé, Your Executive Virtual Assistant</h1>
-			<p> Quickly understand complex information through concise, executive summaries tailored to your needs.</p>
-			<h2 class="fs-4">How can I help?</h2>
-			<div class="input-group mb-3">
-				<input type="text" id="search" aria-label="Type your question" placeholder="Type and press Enter"
-					class="form-control">
-				<button class="btn" type="button" id="micButton" aria-label="Speak now">
-					<i class="fa fa-microphone microphone-ico"></i>
-				</button>
-				<div class="input-group-append">
-					<span id="loader" class="loader"></span>
+	<div class="app" role="application" aria-label="Akande Chat Application">
+
+		<!-- Sidebar backdrop for mobile -->
+		<div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
+
+		<!-- Sidebar -->
+		<nav class="sidebar" id="sidebar" aria-label="Conversations">
+			<div class="sidebar-header">
+				<div class="sidebar-header-row">
+					<span class="sidebar-title">Akande</span>
+					<div class="sidebar-actions">
+						<button type="button" class="icon-btn" id="newChatBtn"
+							aria-label="New conversation" title="New conversation">
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+						</button>
+					</div>
+				</div>
+				<div class="search-box">
+					<svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+					<input type="search" class="search-input" id="searchInput"
+						placeholder="Search conversations..." aria-label="Search conversations" />
 				</div>
 			</div>
-			<div class="overlay">
-				<div class="card">
-					<button id="closeButton" class="btn-close" aria-label="Close">X</button>
-					<div id="response" class="text-start bg-white p-5 rounded-3" style="white-space: pre-wrap;"></div>
+
+			<div class="conversation-list" id="convList" role="listbox"
+				aria-label="Conversation list">
+				<!-- populated by JS -->
+			</div>
+
+			<div class="sidebar-footer">
+				<button type="button" class="theme-toggle" id="themeToggle"
+					aria-label="Switch theme">
+					<svg id="themeIconSun" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0-5a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1zm0 18a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zm9-9a1 1 0 0 1 0 2h-1a1 1 0 1 1 0-2h1zM4 11a1 1 0 0 1 0 2H3a1 1 0 1 1 0-2h1zm14.36-5.64a1 1 0 0 1 0 1.41l-.7.71a1 1 0 1 1-1.42-1.42l.71-.7a1 1 0 0 1 1.41 0zM7.05 16.95a1 1 0 0 1 0 1.41l-.7.71a1 1 0 1 1-1.42-1.42l.71-.7a1 1 0 0 1 1.41 0zm11.31 0a1 1 0 0 1 0 1.41l-.7.71a1 1 0 1 1-1.42-1.42l.71-.7a1 1 0 0 1 1.41 0zM7.05 5.36a1 1 0 0 1 0 1.41l-.7.71A1 1 0 1 1 4.93 6.06l.71-.7a1 1 0 0 1 1.41 0z"/></svg>
+					<svg id="themeIconMoon" viewBox="0 0 24 24" aria-hidden="true" style="display:none"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.39 5.39 0 0 1-4.4 2.26 5.4 5.4 0 0 1-3.14-9.8C13.06 3.04 12.54 3 12 3z"/></svg>
+					<span id="themeLabel">Dark mode</span>
+				</button>
+				<span style="font-size:0.6875rem;color:var(--text-tertiary)" id="convCount"></span>
+			</div>
+		</nav>
+
+		<!-- Main panel -->
+		<div class="main">
+			<header class="main-header">
+				<div class="main-header-left">
+					<button type="button" class="icon-btn sidebar-toggle" id="sidebarToggle"
+						aria-label="Open conversations">
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+					</button>
+					<h1 class="main-title" id="mainTitle">Akande</h1>
 				</div>
+				<div class="main-header-actions">
+					<button type="button" class="icon-btn" id="exportBtn"
+						aria-label="Export conversation" title="Export conversation">
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+					</button>
+					<button type="button" class="icon-btn" id="moreBtn"
+						aria-label="More options" title="More options">
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+					</button>
+				</div>
+			</header>
+
+			<div class="chat-area" id="chatArea" role="log"
+				aria-live="polite" aria-label="Conversation messages">
+				<div class="welcome" id="welcome">
+					<h2>Akande</h2>
+					<p>Type a question below or tap the microphone to ask by voice.</p>
+				</div>
+
+				<div class="typing" id="typing" aria-live="polite"
+					aria-label="AI is responding">
+					<span></span><span></span><span></span>
+				</div>
+			</div>
+
+			<div class="input-bar">
+				<button type="button" class="btn-circle mic-btn" id="micBtn"
+					aria-label="Record voice question" aria-pressed="false">
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm-1-9a1 1 0 1 1 2 0v6a1 1 0 1 1-2 0V5zm6 6a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V20H8v2h8v-2h-3v-2.07A7 7 0 0 0 19 11h-2z"/></svg>
+				</button>
+
+				<input type="text" class="text-input" id="chat-input"
+					placeholder="Ask me anything..." autocomplete="off"
+					aria-label="Type your question" />
+
+				<button type="button" class="btn-circle send-btn" id="sendBtn"
+					aria-label="Send">
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z"/></svg>
+				</button>
 			</div>
 		</div>
 	</div>
 
+	<!-- Export modal -->
+	<div class="modal-overlay" id="exportModal" role="dialog"
+		aria-modal="true" aria-labelledby="exportModalTitle">
+		<div class="modal">
+			<h3 id="exportModalTitle">Export Conversation</h3>
+			<button type="button" class="modal-btn" id="exportPdf">
+				Export as PDF
+			</button>
+			<button type="button" class="modal-btn" id="exportCsv">
+				Export as CSV
+			</button>
+			<button type="button" class="modal-cancel" id="exportCancel">
+				Cancel
+			</button>
+		</div>
+	</div>
 
-	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
-		integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
-		crossorigin="anonymous"></script>
+	<!-- Context menu -->
+	<div class="context-menu" id="contextMenu" role="menu">
+		<button type="button" role="menuitem" id="ctxRename">Rename</button>
+		<button type="button" role="menuitem" id="ctxExport">Export</button>
+		<button type="button" role="menuitem" class="danger" id="ctxDelete">Delete</button>
+	</div>
 
-	<!-- Include Google Tag Manager (gtag.js) -->
-	<script async src="https://www.googletagmanager.com/gtag/js?id=G-4HKZ6N3QSC"></script>
+	<noscript>
+		<style>.input-bar,.typing,.sidebar{display:none}.welcome p::after{content:" JavaScript is required for interactive features.";font-weight:600}</style>
+	</noscript>
 
-	<!-- Define sine wave generator script -->
-	<script src="/static/sine-wave-generator.js"></script>
-
-	<!-- Initialize Google Tag Manager -->
-	<script>
-		/**
-		 * Initialize Google Tag Manager.
-		 * @param {Date} date - The current date.
-		 */
-		function initializeGtag(date) {
-			window.dataLayer = window.dataLayer || [];
-			/**
-			 * Function for Google Tag Manager.
-			 * @param {any} arguments - The arguments to be pushed to dataLayer.
-			 */
-			function gtag() {
-				dataLayer.push(arguments);
-			}
-			gtag('js', date);
-			gtag('config', 'G-4HKZ6N3QSC');
-		}
-
-		// Call initializeGtag function
-		initializeGtag(new Date());
-	</script>
-	<script>
-		/**
-		 * Function to show the response card.
-		 */
-		function showResponseCard() {
-			/** @type {HTMLElement} */
-			const overlay = document.querySelector('.overlay'); // Ensure the overlay is targeted correctly
-			/** @type {HTMLElement} */
-			const card = document.querySelector('.card'); // Define the card variable correctly
-			overlay.style.display = 'flex'; // Use 'flex' to center the card if that's your layout choice
-			card.style.display = 'block'; // Make sure the card is set to display
-			card.classList.add('card-slide-in'); // Add the animation class
-		}
-
-		/**
-		 * Update the UI with the response and show the response card.
-		 * @param {string} responseText - The response text to display.
-		 */
-		function updateUI(responseText) {
-			/** @type {HTMLElement} */
-			let responseDiv = document.getElementById('response');
-			responseDiv.textContent = '';
-			let div = document.createElement('div');
-			div.className = 'response';
-			div.textContent = responseText;
-			responseDiv.appendChild(div);
-			showResponseCard();
-		}
-
-		/**
-		 * Handle error responses by displaying the error in the UI.
-		 * @param {string} errorMessage - The error message to display.
-		 */
-		function handleErrorResponse(errorMessage) {
-			let responseDiv = document.getElementById('response');
-			responseDiv.textContent = '';
-			let div = document.createElement('div');
-			div.className = 'response';
-			div.textContent = 'Error: ' + errorMessage;
-			responseDiv.appendChild(div);
-			showResponseCard();
-			let loader = document.getElementById('loader');
-			if (loader) loader.style.display = 'none';
-		}
-
-		// Event listener for closing the response card
-		document.getElementById('closeButton').addEventListener('click', function () {
-			let overlay = document.querySelector('.overlay');
-			let card = document.querySelector('.card');
-			overlay.style.display = 'none';
-			card.style.display = 'none';
-			card.classList.remove('card-slide-in');
-			document.getElementById('response').textContent = '';
-			document.getElementById('search').value = '';
-		});
-
-		// Function to check if the browser is Safari
-		function isSafari() {
-			const userAgent = navigator.userAgent.toLowerCase();
-			return userAgent.includes('safari') && !userAgent.includes('chrome');
-		}
-
-		/**
-		 * Function to process the audio question.
-		 */
-		async function processAudioQuestion() {
-			try {
-				// Capture audio data
-				const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-				const mimeType = isSafari() ? 'audio/mp4' : 'audio/webm';
-				const audioRecorder = new MediaRecorder(audioStream, { mimeType });
-				const audioChunks = [];
-
-				// Event listener for when audio recording is stopped
-				audioRecorder.addEventListener('dataavailable', (event) => {
-					audioChunks.push(event.data);
-				});
-
-				// Event listener for when audio recording is ended
-				audioRecorder.addEventListener('stop', async () => {
-					if (audioChunks.length) {
-						// Convert audio data to a blob
-						const audioBlob = new Blob(audioChunks);
-
-						/** @type {HTMLElement} */
-						const loader = document.getElementById('loader');
-
-						// Make the API call to process the audio question
-						const response = await fetch('/process_audio_question', {
-							method: 'POST',
-							body: audioBlob
-						});
-
-						// Handle the response
-						if (response.ok) {
-							const responseData = await response.json();
-							// Update UI with response and show response card
-							updateUI(responseData.response);
-							loader.style.display = 'none';
-							audioStream.getTracks().forEach(track => track.stop());
-						} else {
-							// Handle server error
-							handleErrorResponse('Server Error');
-							loader.style.display = 'none';
-						}
-					} else {
-						// Handle case where no audio data was captured
-						handleErrorResponse('No audio data captured');
-					}
-				});
-
-				// Start recording
-				loader.style.display = 'inline-block';
-				audioRecorder.start();
-
-				// Stop recording after 5 seconds (adjust as needed)
-				setTimeout(() => {
-					audioRecorder.stop();
-				}, 5000);
-			} catch (error) {
-				// Handle error
-				handleErrorResponse(error.message || 'Unknown error occurred');
-			}
-		}
-
-		// JavaScript functions to call the APIs and link to the UI elements
-		document.addEventListener('DOMContentLoaded', () => {
-			/** @type {HTMLInputElement} */
-			const searchInput = document.getElementById('search');
-			/** @type {HTMLElement} */
-			const micButton = document.getElementById('micButton');
-
-			/**
-			 * Function to process the typed question.
-			 */
-			const processTypedQuestion = () => {
-				const question = searchInput.value;
-				/** @type {HTMLElement} */
-				const loader = document.getElementById('loader');
-				loader.style.display = 'inline-block'; // Show the loader
-
-				fetch('/process_question', {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({ question })
-				})
-					.then(response => {
-						if (!response.ok) {
-							throw new Error('Network response was not ok');
-						}
-						return response.json();
-					})
-					.then(data => {
-						updateUI(data.response);
-					})
-					.catch(error => {
-						handleErrorResponse('Failed to process question');
-					})
-					.finally(() => {
-						loader.style.display = 'none'; // Hide the loader
-					});
-			};
-
-			// Event listener for processing the typed question
-			searchInput.addEventListener('change', processTypedQuestion);
-
-			// Event listener for processing the audio question
-			micButton.addEventListener('click', processAudioQuestion);
-		});
-	</script>
-
-	<script>
+	<script nonce="__CSP_NONCE__">
 		'use strict';
 
-		document.addEventListener("DOMContentLoaded", function () {
-			/**
-			 * Ease functions for smooth animations.
-			 * @namespace Ease
-			 */
-			const Ease = {
-				/**
-				 * Provides smooth easing in and out animation.
-				 * @param {number} time - The time parameter.
-				 * @param {number} amplitude - The amplitude of the wave.
-				 * @returns {number} - The eased value.
-				 */
-				sineInOut: (time, amplitude) =>
-					(amplitude * (Math.sin(time * Math.PI) + 1)) / 2,
-				/**
-				 * Provides eased sine animation.
-				 * @param {number} percent - The percentage of the animation.
-				 * @param {number} amplitude - The amplitude of the wave.
-				 * @returns {number} - The eased value.
-				 */
-				easedSine: (percent, amplitude) => {
-					let value;
-					const goldenSection = (1 - 1 / 1.618033988749895) / 2;
-					if (percent < goldenSection) {
-						value = 0;
-					} else if (percent > 1 - goldenSection) {
-						value = 0;
+		(function () {
+
+			/* ── DOM refs ── */
+			var chatArea = document.getElementById('chatArea');
+			var welcome = document.getElementById('welcome');
+			var typing = document.getElementById('typing');
+			var input = document.getElementById('chat-input');
+			var sendBtn = document.getElementById('sendBtn');
+			var micBtn = document.getElementById('micBtn');
+			var sidebar = document.getElementById('sidebar');
+			var sidebarBackdrop = document.getElementById('sidebarBackdrop');
+			var sidebarToggle = document.getElementById('sidebarToggle');
+			var newChatBtn = document.getElementById('newChatBtn');
+			var searchInput = document.getElementById('searchInput');
+			var convList = document.getElementById('convList');
+			var mainTitle = document.getElementById('mainTitle');
+			var exportBtn = document.getElementById('exportBtn');
+			var exportModal = document.getElementById('exportModal');
+			var exportPdf = document.getElementById('exportPdf');
+			var exportCsv = document.getElementById('exportCsv');
+			var exportCancel = document.getElementById('exportCancel');
+			var moreBtn = document.getElementById('moreBtn');
+			var contextMenu = document.getElementById('contextMenu');
+			var ctxRename = document.getElementById('ctxRename');
+			var ctxExport = document.getElementById('ctxExport');
+			var ctxDelete = document.getElementById('ctxDelete');
+			var themeToggle = document.getElementById('themeToggle');
+			var themeLabel = document.getElementById('themeLabel');
+			var themeIconSun = document.getElementById('themeIconSun');
+			var themeIconMoon = document.getElementById('themeIconMoon');
+			var themeColor = document.getElementById('themeColor');
+			var convCount = document.getElementById('convCount');
+
+			var isProcessing = false;
+			var mediaRecorder = null;
+			var audioStream = null;
+			var recordTimer = null;
+			var RECORD_MAX = 10;
+			var ctxConvId = null;
+
+			/* ── Storage ── */
+
+			var STORE_KEY = 'akande_conversations';
+
+			function loadConversations() {
+				try {
+					return JSON.parse(localStorage.getItem(STORE_KEY)) || [];
+				} catch (_) { return []; }
+			}
+
+			function saveConversations(convs) {
+				try {
+					localStorage.setItem(STORE_KEY, JSON.stringify(convs));
+				} catch (_) {}
+			}
+
+			function genId() {
+				return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+			}
+
+			var conversations = loadConversations();
+			var activeConvId = null;
+
+			/* ── Theme ── */
+
+			function getTheme() {
+				return localStorage.getItem('akande_theme') || 'light';
+			}
+
+			function applyTheme(t) {
+				var isDark = t === 'dark';
+				document.documentElement.classList.toggle('dark', isDark);
+				themeIconSun.style.display = isDark ? 'none' : '';
+				themeIconMoon.style.display = isDark ? '' : 'none';
+				themeLabel.textContent = isDark ? 'Light mode' : 'Dark mode';
+				themeToggle.setAttribute('aria-label',
+					isDark ? 'Switch to light theme' : 'Switch to dark theme');
+				themeColor.setAttribute('content', isDark ? '#1c1c1e' : '#f2f2f7');
+				localStorage.setItem('akande_theme', t);
+			}
+
+			applyTheme(getTheme());
+
+			themeToggle.addEventListener('click', function () {
+				applyTheme(getTheme() === 'dark' ? 'light' : 'dark');
+			});
+
+			/* ── Sidebar toggle (mobile) ── */
+
+			function openSidebar() {
+				sidebar.classList.add('open');
+				sidebarBackdrop.classList.add('visible');
+			}
+
+			function closeSidebar() {
+				sidebar.classList.remove('open');
+				sidebarBackdrop.classList.remove('visible');
+			}
+
+			sidebarToggle.addEventListener('click', openSidebar);
+			sidebarBackdrop.addEventListener('click', closeSidebar);
+
+			/* ── Conversation list rendering ── */
+
+			function timeAgo(ts) {
+				var diff = Date.now() - ts;
+				var s = Math.floor(diff / 1000);
+				if (s < 60) return 'now';
+				var m = Math.floor(s / 60);
+				if (m < 60) return m + 'm';
+				var h = Math.floor(m / 60);
+				if (h < 24) return h + 'h';
+				var d = Math.floor(h / 24);
+				if (d < 7) return d + 'd';
+				return new Date(ts).toLocaleDateString();
+			}
+
+			function renderConvList(filter) {
+				var q = (filter || '').toLowerCase();
+				convList.innerHTML = '';
+				var filtered = conversations.filter(function (c) {
+					if (!q) return true;
+					if (c.title.toLowerCase().includes(q)) return true;
+					return c.messages.some(function (m) {
+						return m.content.toLowerCase().includes(q);
+					});
+				});
+
+				if (!filtered.length) {
+					var empty = document.createElement('div');
+					empty.className = 'empty-state';
+					empty.textContent = q
+						? 'No matching conversations.'
+						: 'No conversations yet.';
+					convList.appendChild(empty);
+				}
+
+				filtered.forEach(function (c) {
+					var item = document.createElement('div');
+					item.className = 'conv-item' + (c.id === activeConvId ? ' active' : '');
+					item.setAttribute('role', 'option');
+					item.setAttribute('aria-selected', c.id === activeConvId ? 'true' : 'false');
+					item.setAttribute('tabindex', '0');
+
+					var lastMsg = c.messages.length
+						? c.messages[c.messages.length - 1]
+						: null;
+
+					item.innerHTML =
+						'<div class="conv-item-header">' +
+							'<span class="conv-title">' + escHtml(c.title) + '</span>' +
+							'<span class="conv-time">' + timeAgo(c.updatedAt) + '</span>' +
+						'</div>' +
+						'<div class="conv-preview">' +
+							(lastMsg ? escHtml(lastMsg.content.slice(0, 60)) : 'Empty') +
+						'</div>';
+
+					item.addEventListener('click', function () {
+						switchConversation(c.id);
+						closeSidebar();
+					});
+
+					item.addEventListener('keydown', function (e) {
+						if (e.key === 'Enter' || e.key === ' ') {
+							e.preventDefault();
+							switchConversation(c.id);
+							closeSidebar();
+						}
+						if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
+							e.preventDefault();
+							var rect = item.getBoundingClientRect();
+							showContextMenu({
+								clientX: rect.left + rect.width / 2,
+								clientY: rect.top + rect.height / 2
+							}, c.id);
+						}
+					});
+
+					item.addEventListener('contextmenu', function (e) {
+						e.preventDefault();
+						showContextMenu(e, c.id);
+					});
+
+					convList.appendChild(item);
+				});
+
+				convCount.textContent = conversations.length + ' conversation' +
+					(conversations.length !== 1 ? 's' : '');
+			}
+
+			function escHtml(s) {
+				var d = document.createElement('div');
+				d.textContent = s;
+				return d.innerHTML;
+			}
+
+			/* ── Conversation management ── */
+
+			function createConversation() {
+				var conv = {
+					id: genId(),
+					title: 'New Conversation',
+					messages: [],
+					createdAt: Date.now(),
+					updatedAt: Date.now()
+				};
+				conversations.unshift(conv);
+				saveConversations(conversations);
+				switchConversation(conv.id);
+				renderConvList(searchInput.value);
+				return conv;
+			}
+
+			function getConversation(id) {
+				return conversations.find(function (c) { return c.id === id; });
+			}
+
+			function switchConversation(id) {
+				activeConvId = id;
+				var conv = getConversation(id);
+				if (!conv) return;
+
+				mainTitle.textContent = conv.title;
+				renderMessages(conv);
+				renderConvList(searchInput.value);
+				input.focus();
+			}
+
+			function renderMessages(conv) {
+				// Clear existing messages but keep welcome and typing
+				var existing = chatArea.querySelectorAll('.message');
+				existing.forEach(function (el) { el.remove(); });
+
+				if (!conv.messages.length) {
+					welcome.classList.remove('hidden');
+					welcome.style.display = '';
+				} else {
+					welcome.classList.add('hidden');
+					conv.messages.forEach(function (m) {
+						var el = document.createElement('div');
+						el.className = 'message ' + m.role;
+						el.textContent = m.content;
+						chatArea.insertBefore(el, typing);
+					});
+					scrollToBottom();
+				}
+			}
+
+			function deleteConversation(id) {
+				conversations = conversations.filter(function (c) {
+					return c.id !== id;
+				});
+				saveConversations(conversations);
+				if (activeConvId === id) {
+					if (conversations.length) {
+						switchConversation(conversations[0].id);
 					} else {
-						const adjustedPercent =
-							(percent - goldenSection) / (1 - 2 * goldenSection);
-						value = Math.sin(adjustedPercent * Math.PI) * amplitude;
+						activeConvId = null;
+						mainTitle.textContent = 'Akande';
+						var existing = chatArea.querySelectorAll('.message');
+						existing.forEach(function (el) { el.remove(); });
+						welcome.classList.remove('hidden');
+						welcome.style.display = '';
 					}
-					return value;
-				},
-			};
+				}
+				renderConvList(searchInput.value);
+			}
 
-			// Constants
-			const FIBONACCI = 1.618033988749895;
-			const DEFAULT_AMPLITUDE = 10;
-			const DEFAULT_WAVELENGTH = 100;
-			const DEFAULT_STROKE_STYLE = "rgba(255,255,255,0.2)";
-			const DEFAULT_SEGMENT_LENGTH = 10;
-			const LINE_WIDTH = 2;
-			const SPEED = FIBONACCI;
+			function renameConversation(id) {
+				var conv = getConversation(id);
+				if (!conv) return;
+				var name = prompt('Rename conversation:', conv.title);
+				if (name && name.trim()) {
+					conv.title = name.trim().slice(0, 100);
+					conv.updatedAt = Date.now();
+					saveConversations(conversations);
+					if (activeConvId === id) {
+						mainTitle.textContent = conv.title;
+					}
+					renderConvList(searchInput.value);
+				}
+			}
 
-			// Example 2: Multiple Waves with Different Configurations
-			const canvas = document.getElementById("canvas");
-			const waveGenerator = new SineWaveGenerator({ el: waves });
-			waveGenerator.start();
+			/* ── Init: load or create first conversation ── */
 
-			// To add a wave dynamically:
-			waveGenerator.addWave({
-				speed: 0.6,
-				amplitude: 50,
-				wavelength: 150,
-				strokeStyle: DEFAULT_STROKE_STYLE
+			if (conversations.length) {
+				switchConversation(conversations[0].id);
+			} else {
+				createConversation();
+			}
+			renderConvList('');
+
+			/* ── New chat button ── */
+
+			newChatBtn.addEventListener('click', function () {
+				createConversation();
+				closeSidebar();
 			});
-			waveGenerator.addWave({
-				speed: 0.8,
-				amplitude: 40,
-				wavelength: 130,
-				strokeStyle: DEFAULT_STROKE_STYLE
+
+			/* ── Search ── */
+
+			searchInput.addEventListener('input', function () {
+				renderConvList(searchInput.value);
 			});
-			waveGenerator.addWave({
-				speed: 0.5,
-				amplitude: 60,
-				wavelength: 170,
-				strokeStyle: DEFAULT_STROKE_STYLE
+
+			/* ── Helpers ── */
+
+			function scrollToBottom() {
+				requestAnimationFrame(function () {
+					chatArea.scrollTop = chatArea.scrollHeight;
+				});
+			}
+
+			function addMessage(role, content) {
+				welcome.classList.add('hidden');
+				var el = document.createElement('div');
+				el.className = 'message ' + role;
+				el.textContent = content;
+				chatArea.insertBefore(el, typing);
+				scrollToBottom();
+
+				// Persist
+				var conv = getConversation(activeConvId);
+				if (conv) {
+					conv.messages.push({
+						role: role,
+						content: content,
+						timestamp: new Date().toISOString()
+					});
+					conv.updatedAt = Date.now();
+
+					// Auto-title from first user message
+					if (role === 'user' && conv.messages.length === 1) {
+						conv.title = content.slice(0, 40) +
+							(content.length > 40 ? '...' : '');
+						mainTitle.textContent = conv.title;
+					}
+					saveConversations(conversations);
+					renderConvList(searchInput.value);
+				}
+
+				return el;
+			}
+
+			function showTyping() {
+				typing.classList.add('visible');
+				scrollToBottom();
+			}
+
+			function hideTyping() {
+				typing.classList.remove('visible');
+			}
+
+			function setProcessing(on) {
+				isProcessing = on;
+				input.disabled = on;
+				micBtn.disabled = on;
+			}
+
+			/* ── Send button visibility ── */
+
+			input.addEventListener('input', function () {
+				sendBtn.classList.toggle('visible', input.value.trim().length > 0);
 			});
-			waveGenerator.addWave({
-				speed: 0.7,
-				amplitude: 30,
-				wavelength: 110,
-				strokeStyle: DEFAULT_STROKE_STYLE
+
+			/* ── Submit ── */
+
+			async function submitQuestion(question) {
+				question = (question || '').trim();
+				if (!question || isProcessing) return;
+
+				// Ensure we have an active conversation
+				if (!activeConvId) createConversation();
+
+				addMessage('user', question);
+				input.value = '';
+				sendBtn.classList.remove('visible');
+				setProcessing(true);
+				showTyping();
+
+				try {
+					var res = await fetch('/process_question', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-Requested-With': 'AkandeApp'
+						},
+						body: JSON.stringify({ question: question })
+					});
+					var data = await res.json();
+					hideTyping();
+					if (res.ok && data.response) {
+						addMessage('assistant', data.response);
+					} else {
+						addMessage('error', data.error || 'Something went wrong.');
+					}
+				} catch (_) {
+					hideTyping();
+					addMessage('error', 'Unable to connect. Check your network.');
+				} finally {
+					setProcessing(false);
+					input.focus();
+				}
+			}
+
+			input.addEventListener('keydown', function (e) {
+				if (e.key === 'Enter' && !e.shiftKey) {
+					e.preventDefault();
+					submitQuestion(input.value);
+				}
 			});
-			waveGenerator.addWave({
-				speed: 0.9,
-				amplitude: 20,
-				wavelength: 90,
-				strokeStyle: DEFAULT_STROKE_STYLE
+
+			sendBtn.addEventListener('click', function () {
+				submitQuestion(input.value);
 			});
-			waveGenerator.addWave({
-				speed: 0.4,
-				amplitude: 70,
-				wavelength: 190,
-				strokeStyle: DEFAULT_STROKE_STYLE
+
+			/* ── Voice ── */
+
+			function isSafari() {
+				var ua = navigator.userAgent.toLowerCase();
+				return ua.includes('safari') && !ua.includes('chrome');
+			}
+
+			function setRecordingUI(on) {
+				micBtn.classList.toggle('recording', on);
+				micBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+				micBtn.setAttribute('aria-label',
+					on ? 'Stop recording' : 'Record voice question');
+			}
+
+			async function startRecording() {
+				if (isProcessing) return;
+				try {
+					audioStream = await navigator.mediaDevices.getUserMedia({
+						audio: true
+					});
+				} catch (_) {
+					addMessage('error', 'Microphone access denied.');
+					return;
+				}
+
+				var mime = isSafari() ? 'audio/mp4' : 'audio/webm';
+				try {
+					mediaRecorder = new MediaRecorder(audioStream, { mimeType: mime });
+				} catch (_) {
+					audioStream.getTracks().forEach(function (t) { t.stop(); });
+					addMessage('error', 'Audio recording is not supported.');
+					return;
+				}
+
+				var chunks = [];
+
+				mediaRecorder.addEventListener('dataavailable', function (e) {
+					if (e.data && e.data.size) chunks.push(e.data);
+				});
+
+				mediaRecorder.addEventListener('stop', async function () {
+					clearTimeout(recordTimer);
+					setRecordingUI(false);
+					audioStream.getTracks().forEach(function (t) { t.stop(); });
+					mediaRecorder = null;
+					audioStream = null;
+
+					if (!chunks.length) return;
+
+					if (!activeConvId) createConversation();
+
+					setProcessing(true);
+					showTyping();
+
+					try {
+						var blob = new Blob(chunks, { type: mime });
+						var res = await fetch('/process_audio_question', {
+							method: 'POST',
+							headers: {
+								'Content-Type': mime,
+								'X-Requested-With': 'AkandeApp'
+							},
+							body: blob
+						});
+						var data = await res.json();
+						hideTyping();
+						if (res.ok && data.response) {
+							addMessage('assistant', data.response);
+						} else {
+							addMessage('error', data.error || 'Audio processing failed.');
+						}
+					} catch (_) {
+						hideTyping();
+						addMessage('error', 'Unable to connect. Check your network.');
+					} finally {
+						setProcessing(false);
+						input.focus();
+					}
+				});
+
+				mediaRecorder.start();
+				setRecordingUI(true);
+
+				recordTimer = setTimeout(function () {
+					if (mediaRecorder && mediaRecorder.state === 'recording') {
+						mediaRecorder.stop();
+					}
+				}, RECORD_MAX * 1000);
+			}
+
+			function stopRecording() {
+				clearTimeout(recordTimer);
+				if (mediaRecorder && mediaRecorder.state === 'recording') {
+					mediaRecorder.stop();
+				}
+			}
+
+			micBtn.addEventListener('click', function () {
+				if (mediaRecorder && mediaRecorder.state === 'recording') {
+					stopRecording();
+				} else {
+					startRecording();
+				}
 			});
-			waveGenerator.addWave({
-				speed: 0.3,
-				amplitude: 80,
-				wavelength: 210,
-				strokeStyle: DEFAULT_STROKE_STYLE
+
+			/* ── Export ── */
+
+			/* ── Export modal with focus trap ── */
+
+			var _exportReturnFocus = null;
+
+			function openExportModal() {
+				var conv = getConversation(activeConvId);
+				if (!conv || !conv.messages.length) return;
+				_exportReturnFocus = document.activeElement;
+				exportModal.classList.add('visible');
+				exportPdf.focus();
+			}
+
+			function closeExportModal() {
+				exportModal.classList.remove('visible');
+				if (_exportReturnFocus) {
+					_exportReturnFocus.focus();
+					_exportReturnFocus = null;
+				}
+			}
+
+			function trapModalFocus(e) {
+				if (e.key !== 'Tab') return;
+				var focusable = exportModal.querySelectorAll('button');
+				var first = focusable[0];
+				var last = focusable[focusable.length - 1];
+				if (e.shiftKey) {
+					if (document.activeElement === first) {
+						e.preventDefault();
+						last.focus();
+					}
+				} else {
+					if (document.activeElement === last) {
+						e.preventDefault();
+						first.focus();
+					}
+				}
+			}
+
+			exportModal.addEventListener('keydown', trapModalFocus);
+
+			exportBtn.addEventListener('click', function () {
+				openExportModal();
 			});
-		});
+
+			exportCancel.addEventListener('click', function () {
+				closeExportModal();
+			});
+
+			exportModal.addEventListener('click', function (e) {
+				if (e.target === exportModal) {
+					closeExportModal();
+				}
+			});
+
+			async function doExport(fmt) {
+				var conv = getConversation(activeConvId);
+				if (!conv) return;
+				closeExportModal();
+
+				try {
+					var res = await fetch('/export_conversation', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-Requested-With': 'AkandeApp'
+						},
+						body: JSON.stringify({
+							format: fmt,
+							title: conv.title,
+							messages: conv.messages
+						})
+					});
+
+					if (!res.ok) {
+						var err = await res.json();
+						addMessage('error', err.error || 'Export failed.');
+						return;
+					}
+
+					var blob = await res.blob();
+					var ext = fmt === 'pdf' ? '.pdf' : '.csv';
+					var filename = 'Akande_' + conv.title.replace(/[^a-zA-Z0-9]/g, '_') + ext;
+					var url = URL.createObjectURL(blob);
+					var a = document.createElement('a');
+					a.href = url;
+					a.download = filename;
+					document.body.appendChild(a);
+					a.click();
+					a.remove();
+					URL.revokeObjectURL(url);
+				} catch (_) {
+					addMessage('error', 'Export failed. Check your connection.');
+				}
+			}
+
+			exportPdf.addEventListener('click', function () { doExport('pdf'); });
+			exportCsv.addEventListener('click', function () { doExport('csv'); });
+
+			/* ── Context menu ── */
+
+			var _ctxReturnFocus = null;
+
+			function showContextMenu(e, convId) {
+				ctxConvId = convId;
+				_ctxReturnFocus = document.activeElement;
+				// Show off-screen first to measure
+				contextMenu.style.top = '0px';
+				contextMenu.style.left = '0px';
+				contextMenu.classList.add('visible');
+				var rect = contextMenu.getBoundingClientRect();
+				var vw = window.innerWidth;
+				var vh = window.innerHeight;
+				var x = e.clientX;
+				var y = e.clientY;
+				// Clamp so the menu stays within the viewport
+				if (x + rect.width > vw) x = vw - rect.width - 8;
+				if (y + rect.height > vh) y = vh - rect.height - 8;
+				if (x < 8) x = 8;
+				if (y < 8) y = 8;
+				contextMenu.style.top = y + 'px';
+				contextMenu.style.left = x + 'px';
+				contextMenu.querySelector('button').focus();
+			}
+
+			function hideContextMenu() {
+				contextMenu.classList.remove('visible');
+				ctxConvId = null;
+				if (_ctxReturnFocus) {
+					_ctxReturnFocus.focus();
+					_ctxReturnFocus = null;
+				}
+			}
+
+			// Arrow key navigation inside context menu
+			contextMenu.addEventListener('keydown', function (e) {
+				var items = contextMenu.querySelectorAll('button');
+				var idx = Array.prototype.indexOf.call(items, document.activeElement);
+				if (e.key === 'ArrowDown') {
+					e.preventDefault();
+					items[(idx + 1) % items.length].focus();
+				} else if (e.key === 'ArrowUp') {
+					e.preventDefault();
+					items[(idx - 1 + items.length) % items.length].focus();
+				} else if (e.key === 'Tab') {
+					e.preventDefault();
+					hideContextMenu();
+				}
+			});
+
+			document.addEventListener('click', function () {
+				hideContextMenu();
+			});
+
+			ctxRename.addEventListener('click', function () {
+				if (ctxConvId) renameConversation(ctxConvId);
+				hideContextMenu();
+			});
+
+			ctxExport.addEventListener('click', function () {
+				if (ctxConvId) {
+					switchConversation(ctxConvId);
+					openExportModal();
+				}
+				hideContextMenu();
+			});
+
+			ctxDelete.addEventListener('click', function () {
+				if (ctxConvId && confirm('Delete this conversation?')) {
+					deleteConversation(ctxConvId);
+				}
+				hideContextMenu();
+			});
+
+			/* ── More button (header) ── */
+
+			moreBtn.addEventListener('click', function (e) {
+				e.stopPropagation();
+				if (activeConvId) {
+					showContextMenu(e, activeConvId);
+				}
+			});
+
+			/* ── Keyboard shortcuts ── */
+
+			document.addEventListener('keydown', function (e) {
+				// Escape: close modals/menus/recording
+				if (e.key === 'Escape') {
+					if (exportModal.classList.contains('visible')) {
+						closeExportModal();
+					} else if (contextMenu.classList.contains('visible')) {
+						hideContextMenu();
+					} else if (mediaRecorder && mediaRecorder.state === 'recording') {
+						stopRecording();
+					} else if (sidebar.classList.contains('open')) {
+						closeSidebar();
+					}
+				}
+
+				// Ctrl/Cmd + N: new conversation
+				if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+					e.preventDefault();
+					createConversation();
+				}
+
+				// Ctrl/Cmd + K: focus search
+				if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+					e.preventDefault();
+					if (window.innerWidth <= 768) openSidebar();
+					searchInput.focus();
+				}
+			});
+
+		})();
 	</script>
 </body>
 

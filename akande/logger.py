@@ -15,7 +15,9 @@
 #
 import json
 import logging
+import math
 import sys
+import threading
 import traceback
 from datetime import datetime, timezone
 
@@ -61,9 +63,14 @@ class JSONFormatter(logging.Formatter):
         return json.dumps(log_entry, default=str)
 
 
-def basic_config(filename: str, level: int, log_format: str) -> None:
+def basic_config(
+    filename: str,
+    level: int,
+    log_format: str,
+    console: bool = True,
+) -> None:
     """
-    Configure logging with both file and console handlers.
+    Configure logging with file and optional console handlers.
 
     Uses JSON structured logging for file output and a human-readable
     format for console output.
@@ -72,6 +79,9 @@ def basic_config(filename: str, level: int, log_format: str) -> None:
     :param level: The logging level.
     :param log_format: The format of the log messages (used for
         console output).
+    :param console: Whether to add a console (stdout) handler.
+        Set to False when running inside a TUI to prevent log
+        lines from corrupting the display.
     :return: None
     """
     root = logging.getLogger()
@@ -88,9 +98,61 @@ def basic_config(filename: str, level: int, log_format: str) -> None:
     file_handler.setFormatter(json_formatter)
     root.addHandler(file_handler)
 
-    # Console handler uses human-readable format
-    console_formatter = logging.Formatter(log_format)
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(console_formatter)
-    root.addHandler(console_handler)
+    if console:
+        # Console handler uses human-readable format
+        console_formatter = logging.Formatter(log_format)
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(logging.INFO)
+        console_handler.setFormatter(console_formatter)
+        root.addHandler(console_handler)
+
+
+class MetricsCollector:
+    """Thread-safe collector for pipeline stage latencies.
+
+    Each stage (e.g. ``"tts"``, ``"llm"``) accumulates a list of
+    latency samples in milliseconds.  The :meth:`summary` method
+    returns per-stage statistics (count, mean, p95, max).
+    """
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._data: dict[str, list[float]] = {}
+
+    def record(self, stage: str, latency_ms: float) -> None:
+        """Record a latency sample for *stage*."""
+        with self._lock:
+            self._data.setdefault(stage, []).append(
+                latency_ms
+            )
+
+    def summary(self) -> dict[str, dict[str, float]]:
+        """Return per-stage statistics.
+
+        Returns a dict mapping stage names to dicts with keys
+        ``count``, ``mean``, ``p95``, and ``max``.
+        """
+        with self._lock:
+            result: dict[str, dict[str, float]] = {}
+            for stage, samples in self._data.items():
+                if not samples:
+                    continue
+                sorted_s = sorted(samples)
+                count = len(sorted_s)
+                mean = sum(sorted_s) / count
+                p95_idx = min(
+                    math.ceil(count * 0.95) - 1,
+                    count - 1,
+                )
+                result[stage] = {
+                    "count": count,
+                    "mean": round(mean, 2),
+                    "p95": round(sorted_s[p95_idx], 2),
+                    "max": round(sorted_s[-1], 2),
+                }
+            return result
+
+    def reset(self) -> None:
+        """Clear all recorded data."""
+        with self._lock:
+            self._data.clear()

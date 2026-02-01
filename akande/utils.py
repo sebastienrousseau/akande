@@ -28,6 +28,7 @@ from reportlab.lib.enums import TA_LEFT
 from pathlib import Path
 import datetime
 import logging
+import os
 import re
 
 # Module-level cached styles for PDF generation
@@ -61,6 +62,35 @@ _paragraph_style.fontName = "Helvetica"
 _paragraph_style.fontSize = 12
 _paragraph_style.leading = 14
 _paragraph_style.alignment = TA_LEFT
+
+
+def strip_markdown(text: str) -> str:
+    """
+    Remove common markdown formatting from text.
+
+    Strips bold, italic, headings, inline code, and link syntax
+    so that text reads cleanly for TTS, PDF, and plain-text output.
+
+    Parameters
+    ----------
+    text : str
+        The markdown-formatted text.
+
+    Returns
+    -------
+    str
+        Plain text with markdown syntax removed.
+    """
+    # Remove heading prefixes (e.g. "## Heading")
+    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+    # Remove bold/italic markers (**, __, *, _)
+    text = re.sub(r"\*{1,2}(.+?)\*{1,2}", r"\1", text)
+    text = re.sub(r"_{1,2}(.+?)_{1,2}", r"\1", text)
+    # Remove inline code backticks
+    text = re.sub(r"`(.+?)`", r"\1", text)
+    # Convert [text](url) links to just text
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    return text
 
 
 def get_output_directory() -> Path:
@@ -120,16 +150,56 @@ def validate_api_key(api_key: Optional[str]) -> bool:
     return api_key.startswith(valid_prefixes)
 
 
-def generate_pdf(question: str, response: str) -> None:
+def _markdown_inline_to_reportlab(text: str) -> str:
+    """
+    Convert inline markdown to ReportLab XML markup.
+
+    Handles bold, italic, inline code, and links.  The input
+    must already be XML-escaped so that user content cannot
+    inject ReportLab tags.
+
+    Parameters
+    ----------
+    text : str
+        An XML-escaped line of text that may contain markdown.
+
+    Returns
+    -------
+    str
+        Text with markdown replaced by ReportLab markup.
+    """
+    # Bold: **text** or __text__
+    text = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", text)
+    text = re.sub(r"__(.+?)__", r"<b>\1</b>", text)
+    # Italic: *text* or _text_  (single markers)
+    text = re.sub(r"\*(.+?)\*", r"<i>\1</i>", text)
+    text = re.sub(r"(?<!\w)_(.+?)_(?!\w)", r"<i>\1</i>", text)
+    # Inline code: `text`
+    text = re.sub(
+        r"`(.+?)`",
+        r'<font name="Courier">\1</font>',
+        text,
+    )
+    # Links: [text](url) → text
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    return text
+
+
+def generate_pdf(question: str, response: str) -> str:
     """
     Generates a PDF document containing a question and response.
+
+    Markdown in *response* is converted to proper ReportLab
+    formatting: headings become styled headings, bold/italic
+    become ``<b>``/``<i>`` tags, and bullet lists use the list
+    item style.
 
     Parameters
     ----------
     question : str
         The question to be included in the PDF.
     response : str
-        The response to the question.
+        The response to the question (may contain markdown).
     """
     try:
         directory_path = get_output_directory()
@@ -140,7 +210,7 @@ def generate_pdf(question: str, response: str) -> None:
         flowables = []
 
         # Optional: Add a logo at the top if the file exists
-        logo_path = Path("./512x512.png")
+        logo_path = Path(__file__).resolve().parent.parent / "512x512.png"
         if logo_path.exists():
             logo = Image(str(logo_path), width=48, height=48)
             logo.hAlign = "RIGHT"
@@ -158,8 +228,26 @@ def generate_pdf(question: str, response: str) -> None:
         # Process and format the response content
         paragraphs = response.split("\n")
         for para in paragraphs:
-            safe_para = xml_escape(para)
-            if para.startswith(
+            stripped = para.strip()
+            if not stripped:
+                continue
+
+            # Detect markdown heading (## …)
+            heading_match = re.match(
+                r"^#{1,6}\s+(.*)", stripped
+            )
+            if heading_match:
+                heading_text = xml_escape(
+                    heading_match.group(1)
+                )
+                flowables.append(
+                    Paragraph(heading_text, _heading2_style)
+                )
+                flowables.append(Spacer(1, 6))
+                continue
+
+            # Detect known section keywords as headings
+            if stripped.startswith(
                 (
                     "Overview",
                     "Solution",
@@ -167,27 +255,53 @@ def generate_pdf(question: str, response: str) -> None:
                     "Recommendations",
                 )
             ):
+                safe_para = _markdown_inline_to_reportlab(
+                    xml_escape(stripped)
+                )
                 flowables.append(
                     Paragraph(safe_para, _heading2_style)
                 )
                 flowables.append(Spacer(1, 6))
-            elif re.match(r"^-?\d", para):
-                formatted_text = (
-                    "- " + safe_para
-                    if not safe_para.startswith("-")
-                    else safe_para
+                continue
+
+            # Detect bullet / numbered list items
+            if re.match(r"^[-*]\s", stripped):
+                item_text = stripped[2:]
+                safe_item = _markdown_inline_to_reportlab(
+                    xml_escape(item_text)
                 )
                 flowables.append(
-                    Paragraph(formatted_text, _list_item_style)
+                    Paragraph(
+                        "- " + safe_item, _list_item_style
+                    )
                 )
                 flowables.append(Spacer(1, 6))
-            else:
+                continue
+
+            if re.match(r"^\d+[.)]\s", stripped):
+                safe_para = _markdown_inline_to_reportlab(
+                    xml_escape(stripped)
+                )
                 flowables.append(
-                    Paragraph(safe_para, _paragraph_style)
+                    Paragraph(safe_para, _list_item_style)
                 )
                 flowables.append(Spacer(1, 6))
+                continue
+
+            # Regular paragraph — convert inline markdown
+            safe_para = _markdown_inline_to_reportlab(
+                xml_escape(stripped)
+            )
+            flowables.append(
+                Paragraph(safe_para, _paragraph_style)
+            )
+            flowables.append(Spacer(1, 6))
 
         doc.build(flowables)
+        try:
+            os.chmod(str(file_path), 0o600)
+        except OSError:
+            pass
         logging.info(
             "PDF generated",
             extra={
@@ -195,15 +309,17 @@ def generate_pdf(question: str, response: str) -> None:
                 "extra_data": {"file_path": str(file_path)},
             },
         )
+        return str(file_path)
     except Exception as e:
         logging.error(
             f"PDF generation failed: {type(e).__name__}: {e}",
             exc_info=True,
             extra={"event": "Export:PDFFailed"},
         )
+        return ""
 
 
-def generate_csv(question: str, response: str) -> None:
+def generate_csv(question: str, response: str) -> str:
     """
     Generates a CSV document containing a question and response.
 
@@ -226,6 +342,10 @@ def generate_csv(question: str, response: str) -> None:
             csv_writer.writerow(["Question", "Response"])
             csv_writer.writerow([question, response])
 
+        try:
+            os.chmod(str(file_path), 0o600)
+        except OSError:
+            pass
         logging.info(
             "CSV generated",
             extra={
@@ -233,9 +353,11 @@ def generate_csv(question: str, response: str) -> None:
                 "extra_data": {"file_path": str(file_path)},
             },
         )
+        return str(file_path)
     except Exception as e:
         logging.error(
             f"CSV generation failed: {type(e).__name__}: {e}",
             exc_info=True,
             extra={"event": "Export:CSVFailed"},
         )
+        return ""

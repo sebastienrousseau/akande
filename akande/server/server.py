@@ -1,9 +1,26 @@
+# Copyright (C) 2024 Sebastien Rousseau.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 import cherrypy
 import hashlib
 import json
 import logging
 import os
 import io
+import re
+import secrets
 import tempfile
 import time
 import threading
@@ -18,11 +35,15 @@ from akande.config import (
     OPENAI_API_KEY,
     OPENAI_DEFAULT_MODEL,
 )
+from akande.akande import _friendly_llm_error
+from akande.logger import MetricsCollector
 from akande.providers import get_provider
 from akande.services import SYSTEM_PROMPT, OpenAIImpl
 from akande.utils import (
     validate_api_key,
     get_output_directory,
+    get_output_filename,
+    strip_markdown,
 )
 
 ALLOWED_STATIC_FILES = {"sine-wave-generator.js"}
@@ -71,6 +92,19 @@ class RateLimiter:
         now = time.time()
         cutoff = now - self.window
         with self._lock:
+            # Periodic cleanup every 100 calls
+            self._call_count = getattr(
+                self, "_call_count", 0
+            ) + 1
+            if self._call_count % 100 == 0:
+                stale = [
+                    k
+                    for k, ts in self._requests.items()
+                    if not any(t > cutoff for t in ts)
+                ]
+                for k in stale:
+                    del self._requests[k]
+
             timestamps = self._requests.get(ip, [])
             timestamps = [t for t in timestamps if t > cutoff]
             if len(timestamps) >= self.max_requests:
@@ -98,6 +132,24 @@ def _hash_ip(ip: str) -> str:
     return hashlib.sha256(ip.encode()).hexdigest()[:12]
 
 
+def _csv_safe(value: str) -> str:
+    """Prevent CSV formula injection.
+
+    Cells starting with ``=``, ``+``, ``-``, ``@``, ``\\t``,
+    or ``\\r`` can be interpreted as formulas by spreadsheet
+    applications.  Prefixing with a single-quote neutralises
+    this without altering the visible content in most apps.
+    """
+    if value and value[0] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + value
+    return value
+
+
+def _sanitise_filename(name: str) -> str:
+    """Strip characters that could enable header injection."""
+    return re.sub(r'["\r\n\\]', "_", name)
+
+
 class SecurityHeadersTool(cherrypy.Tool):
     """CherryPy tool to add security headers to all responses."""
 
@@ -115,28 +167,24 @@ class SecurityHeadersTool(cherrypy.Tool):
         )
         h["Permissions-Policy"] = "microphone=(self)"
         h["X-XSS-Protection"] = "1; mode=block"
+        nonce = getattr(
+            cherrypy.request, "_csp_nonce", None
+        )
+        if nonce:
+            script_src = f"'nonce-{nonce}'"
+            style_src = f"'nonce-{nonce}'"
+        else:
+            script_src = "'self'"
+            style_src = "'self'"
         h["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' "
-            "*.google-analytics.com "
-            "https://cdn.jsdelivr.net "
-            "www.googletagmanager.com "
-            "x.clarity.ms "
-            "https://www.googletagmanager.com "
-            "https://www.google.com "
-            "https://www.gstatic.com; "
-            "frame-src 'self' https://www.google.com; "
-            "connect-src 'self' www.googletagmanager.com "
-            "https://region1.google-analytics.com; "
-            "img-src 'self' data: https: blob: kura.pro "
-            "www.googletagmanager.com; "
-            "style-src 'self' 'unsafe-inline' "
-            "https://cdn.jsdelivr.net "
-            "https://fonts.googleapis.com "
-            "https://cdnjs.cloudflare.com "
-            "https://use.fontawesome.com; "
-            "font-src 'self' https://use.fontawesome.com/; "
-            "media-src 'self';"
+            f"script-src 'self' {script_src}; "
+            f"style-src 'self' {style_src}; "
+            "img-src 'self' data: blob: https://kura.pro; "
+            "connect-src 'self'; "
+            "media-src 'self' blob:; "
+            "frame-src 'none'; "
+            "font-src 'self';"
         )
 
 
@@ -168,6 +216,7 @@ class AkandeServer:
                 provider_name
             )
         self.logger = logging.getLogger(__name__)
+        self._metrics = MetricsCollector()
         self.public_dir = (
             Path(__file__).resolve().parent.parent.parent
             / "public"
@@ -193,6 +242,24 @@ class AkandeServer:
             "X-Request-Id", str(uuid.uuid4())
         )
 
+    @staticmethod
+    def _check_csrf():
+        """Verify CSRF protection via custom header.
+
+        Browsers prevent cross-origin requests from setting
+        custom headers without a CORS preflight.  Since we
+        do not set Access-Control-Allow-* headers, any
+        cross-origin POST with X-Requested-With will be
+        blocked by the browser.
+        """
+        header = cherrypy.request.headers.get(
+            "X-Requested-With", ""
+        )
+        if header != "AkandeApp":
+            raise cherrypy.HTTPError(
+                403, "Missing or invalid CSRF header"
+            )
+
     def _check_rate_limit(self):
         ip = cherrypy.request.remote.ip
         if not self._rate_limiter.is_allowed(ip):
@@ -213,22 +280,40 @@ class AkandeServer:
                 429, "Rate limit exceeded. Try again later."
             )
 
+    @staticmethod
+    def _json_response(data: dict) -> bytes:
+        """Encode a dict as a UTF-8 JSON response."""
+        cherrypy.response.headers["Content-Type"] = (
+            "application/json; charset=utf-8"
+        )
+        return json.dumps(data).encode("utf-8")
+
     @cherrypy.expose
     def health(self):
         """Health check endpoint."""
-        cherrypy.response.headers["Content-Type"] = (
-            "application/json"
-        )
-        return json.dumps(
+        return self._json_response(
             {"status": "ok", "service": "akande"}
-        ).encode("utf-8")
+        )
+
+    @cherrypy.expose
+    def metrics(self):
+        """Return collected timing metrics as JSON."""
+        return self._json_response(
+            self._metrics.summary()
+        )
 
     @cherrypy.expose
     def index(self):
+        cherrypy.response.headers["Content-Type"] = (
+            "text/html; charset=utf-8"
+        )
         index_path = self.public_dir / "index.html"
         if not index_path.is_file():
             raise cherrypy.HTTPError(404, "Index page not found")
-        return index_path.read_text(encoding="utf-8")
+        nonce = secrets.token_urlsafe(16)
+        cherrypy.request._csp_nonce = nonce
+        html = index_path.read_text(encoding="utf-8")
+        return html.replace("__CSP_NONCE__", nonce)
 
     @cherrypy.expose
     def static(self, path):
@@ -255,17 +340,31 @@ class AkandeServer:
             raise cherrypy.HTTPError(403, "Forbidden")
         if not resolved.is_file():
             raise cherrypy.HTTPError(404, "File not found")
+        ext = resolved.suffix.lower()
+        mime_map = {
+            ".js": "application/javascript",
+            ".css": "text/css",
+            ".json": "application/json",
+            ".svg": "image/svg+xml",
+        }
+        content_type = mime_map.get(ext, "text/plain")
+        cherrypy.response.headers["Content-Type"] = (
+            f"{content_type}; charset=utf-8"
+        )
         return resolved.read_text(encoding="utf-8")
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=["POST"])
     def process_question(self):
+        self._check_csrf()
         self._check_rate_limit()
         correlation_id = self._get_correlation_id()
         start_time = time.time()
         try:
             request_data = json.loads(
-                cherrypy.request.body.read()
+                cherrypy.request.body.read(
+                    MAX_QUESTION_LENGTH * 4
+                )
             )
             question = request_data.get("question", "")
 
@@ -274,7 +373,7 @@ class AkandeServer:
                 or not question.strip()
             ):
                 cherrypy.response.status = 400
-                return json.dumps(
+                return self._json_response(
                     {
                         "error": (
                             "Question must be a "
@@ -305,6 +404,9 @@ class AkandeServer:
             cached = self.cache.get(prompt_hash)
             if cached:
                 latency = (time.time() - start_time) * 1000
+                self._metrics.record(
+                    "process_question", latency
+                )
                 self.logger.info(
                     "Served from cache",
                     extra={
@@ -317,7 +419,9 @@ class AkandeServer:
                         },
                     },
                 )
-                return json.dumps({"response": cached})
+                return self._json_response(
+                    {"response": strip_markdown(cached)}
+                )
 
             response_object = (
                 self.openai_service.generate_response_sync(
@@ -327,13 +431,16 @@ class AkandeServer:
                     None,
                 )
             )
-            message_content = (
+            raw_content = (
                 response_object.choices[0].message.content
             )
-            # Store in cache
-            self.cache.set(prompt_hash, message_content)
+            # Store raw markdown in cache
+            self.cache.set(prompt_hash, raw_content)
 
             latency = (time.time() - start_time) * 1000
+            self._metrics.record(
+                "process_question", latency
+            )
             self.logger.info(
                 "Text question processed",
                 extra={
@@ -346,7 +453,9 @@ class AkandeServer:
                     },
                 },
             )
-            return json.dumps({"response": message_content})
+            return self._json_response(
+                {"response": strip_markdown(raw_content)}
+            )
 
         except json.JSONDecodeError:
             self.logger.warning(
@@ -357,7 +466,9 @@ class AkandeServer:
                 },
             )
             cherrypy.response.status = 400
-            return json.dumps({"error": "Invalid JSON"})
+            return self._json_response(
+                {"error": "Invalid JSON"}
+            )
         except Exception as e:
             latency = (time.time() - start_time) * 1000
             self.logger.error(
@@ -373,13 +484,14 @@ class AkandeServer:
                 },
             )
             cherrypy.response.status = 500
-            return json.dumps(
-                {"response": "An error occurred"}
+            return self._json_response(
+                {"error": _friendly_llm_error(e)}
             )
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=["POST"])
     def process_audio_question(self):
+        self._check_csrf()
         self._check_rate_limit()
         correlation_id = self._get_correlation_id()
         start_time = time.time()
@@ -388,13 +500,13 @@ class AkandeServer:
 
             if len(audio_data) > MAX_AUDIO_SIZE:
                 cherrypy.response.status = 400
-                return json.dumps(
+                return self._json_response(
                     {"error": "Audio file too large"}
                 )
 
             if len(audio_data) == 0:
                 cherrypy.response.status = 400
-                return json.dumps(
+                return self._json_response(
                     {"error": "No audio data received"}
                 )
 
@@ -426,7 +538,7 @@ class AkandeServer:
                 )
 
                 if not processed_result.get("success"):
-                    return json.dumps(
+                    return self._json_response(
                         {
                             "error": processed_result.get(
                                 "error",
@@ -437,7 +549,7 @@ class AkandeServer:
 
                 question = processed_result.get("text", "")
                 if not question:
-                    return json.dumps(
+                    return self._json_response(
                         {"error": "No speech detected"}
                     )
 
@@ -450,6 +562,9 @@ class AkandeServer:
                     latency = (
                         time.time() - start_time
                     ) * 1000
+                    self._metrics.record(
+                        "process_audio_question", latency
+                    )
                     self.logger.info(
                         "Audio question served from cache",
                         extra={
@@ -466,8 +581,8 @@ class AkandeServer:
                             },
                         },
                     )
-                    return json.dumps(
-                        {"response": cached}
+                    return self._json_response(
+                        {"response": strip_markdown(cached)}
                     )
 
                 response_object = (
@@ -478,12 +593,17 @@ class AkandeServer:
                         None,
                     )
                 )
-                message_content = (
-                    response_object.choices[0].message.content
+                raw_content = (
+                    response_object.choices[
+                        0
+                    ].message.content
                 )
-                self.cache.set(prompt_hash, message_content)
+                self.cache.set(prompt_hash, raw_content)
 
                 latency = (time.time() - start_time) * 1000
+                self._metrics.record(
+                    "process_audio_question", latency
+                )
                 self.logger.info(
                     "Audio question processed",
                     extra={
@@ -496,8 +616,12 @@ class AkandeServer:
                         },
                     },
                 )
-                return json.dumps(
-                    {"response": message_content}
+                return self._json_response(
+                    {
+                        "response": strip_markdown(
+                            raw_content
+                        )
+                    }
                 )
             finally:
                 if os.path.exists(wav_file_path):
@@ -518,9 +642,201 @@ class AkandeServer:
                 },
             )
             cherrypy.response.status = 500
-            return json.dumps(
-                {"error": "Failed to process audio"}
-            ).encode("utf-8")
+            return self._json_response(
+                {"error": _friendly_llm_error(e)}
+            )
+
+    @cherrypy.expose
+    @cherrypy.tools.allow(methods=["POST"])
+    def export_conversation(self):
+        """Export a conversation as PDF or CSV and return the file."""
+        self._check_csrf()
+        self._check_rate_limit()
+        correlation_id = self._get_correlation_id()
+        try:
+            body = json.loads(
+                cherrypy.request.body.read(1024 * 1024)
+            )
+            fmt = body.get("format", "pdf")
+            title = (body.get("title") or "Conversation")[:200]
+            messages = body.get("messages", [])
+
+            if fmt not in ("pdf", "csv"):
+                cherrypy.response.status = 400
+                return self._json_response(
+                    {"error": "Format must be pdf or csv"}
+                )
+
+            if not messages or not isinstance(messages, list):
+                cherrypy.response.status = 400
+                return self._json_response(
+                    {"error": "No messages to export"}
+                )
+
+            # Sanitise messages
+            clean = []
+            for m in messages[:500]:
+                role = str(m.get("role", ""))[:20]
+                content = str(m.get("content", ""))[:10000]
+                ts = str(m.get("timestamp", ""))[:30]
+                if role and content:
+                    clean.append(
+                        {"role": role, "content": content,
+                         "timestamp": ts}
+                    )
+
+            if not clean:
+                cherrypy.response.status = 400
+                return self._json_response(
+                    {"error": "No valid messages"}
+                )
+
+            directory_path = get_output_directory()
+
+            if fmt == "csv":
+                import csv as csv_mod
+
+                filename = get_output_filename(".csv")
+                file_path = directory_path / filename
+                with open(
+                    file_path, "w", newline="",
+                    encoding="utf-8",
+                ) as f:
+                    w = csv_mod.writer(f)
+                    w.writerow([
+                        "timestamp", "role", "content",
+                        "conversation_title",
+                    ])
+                    for m in clean:
+                        w.writerow([
+                            m["timestamp"], m["role"],
+                            _csv_safe(m["content"]),
+                            _csv_safe(title),
+                        ])
+                try:
+                    os.chmod(str(file_path), 0o600)
+                except OSError:
+                    pass
+
+                safe_fn = _sanitise_filename(filename)
+                cherrypy.response.headers["Content-Type"] = (
+                    "text/csv; charset=utf-8"
+                )
+                cherrypy.response.headers[
+                    "Content-Disposition"
+                ] = (
+                    f"attachment; filename=\"{safe_fn}\""
+                )
+                return file_path.read_bytes()
+
+            # PDF
+            from reportlab.lib.pagesizes import letter
+            from reportlab.lib.styles import (
+                getSampleStyleSheet,
+                ParagraphStyle,
+            )
+            from reportlab.platypus import (
+                SimpleDocTemplate,
+                Paragraph,
+                Spacer,
+            )
+            from reportlab.lib.enums import TA_LEFT, TA_RIGHT
+            from xml.sax.saxutils import escape as xml_escape
+
+            filename = get_output_filename(".pdf")
+            file_path = directory_path / filename
+            doc = SimpleDocTemplate(
+                str(file_path), pagesize=letter
+            )
+            styles = getSampleStyleSheet()
+            title_style = ParagraphStyle(
+                "ConvTitle",
+                parent=styles["Heading1"],
+                fontSize=16,
+                spaceAfter=12,
+            )
+            user_style = ParagraphStyle(
+                "UserMsg",
+                parent=styles["Normal"],
+                fontSize=10,
+                textColor="#0056d6",
+                alignment=TA_RIGHT,
+                spaceAfter=4,
+            )
+            asst_style = ParagraphStyle(
+                "AsstMsg",
+                parent=styles["Normal"],
+                fontSize=10,
+                alignment=TA_LEFT,
+                spaceAfter=4,
+            )
+            ts_style = ParagraphStyle(
+                "Timestamp",
+                parent=styles["Normal"],
+                fontSize=7,
+                textColor="#8e8e93",
+                spaceAfter=8,
+            )
+
+            flowables = [
+                Paragraph(xml_escape(title), title_style),
+                Spacer(1, 12),
+            ]
+            for m in clean:
+                role = m["role"]
+                content = xml_escape(m["content"])
+                ts = xml_escape(m["timestamp"])
+                style = (
+                    user_style if role == "user"
+                    else asst_style
+                )
+                label = "You" if role == "user" else "Akande"
+                flowables.append(
+                    Paragraph(
+                        f"<b>{label}:</b> {content}",
+                        style,
+                    )
+                )
+                if ts:
+                    flowables.append(
+                        Paragraph(ts, ts_style)
+                    )
+
+            doc.build(flowables)
+            try:
+                os.chmod(str(file_path), 0o600)
+            except OSError:
+                pass
+
+            safe_fn = _sanitise_filename(filename)
+            cherrypy.response.headers["Content-Type"] = (
+                "application/pdf"
+            )
+            cherrypy.response.headers[
+                "Content-Disposition"
+            ] = (
+                f"attachment; filename=\"{safe_fn}\""
+            )
+            return file_path.read_bytes()
+
+        except json.JSONDecodeError:
+            cherrypy.response.status = 400
+            return self._json_response(
+                {"error": "Invalid JSON"}
+            )
+        except Exception as e:
+            self.logger.error(
+                f"Export failed: {type(e).__name__}",
+                exc_info=True,
+                extra={
+                    "event": "Server:ExportFailed",
+                    "correlation_id": correlation_id,
+                },
+            )
+            cherrypy.response.status = 500
+            return self._json_response(
+                {"error": "Export failed"}
+            )
 
     @staticmethod
     def convert_to_wav(
@@ -590,6 +906,7 @@ class AkandeServer:
                 suffix=".wav", delete=False
             )
             tmp.close()
+            os.chmod(tmp.name, 0o600)
             audio_segment.export(tmp.name, format="wav")
 
             latency = (time.time() - convert_start) * 1000

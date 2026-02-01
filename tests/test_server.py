@@ -213,6 +213,107 @@ class TestProcessAudio:
                 assert "could not be understood" in result["error"]
 
 
+class TestCacheStoresRawMarkdown:
+    @patch(
+        "akande.server.server.OPENAI_API_KEY",
+        "sk-test-1234567890abcdef",
+    )
+    @patch("akande.server.server.OpenAIImpl")
+    @patch("akande.server.server.cherrypy")
+    def test_cache_stores_raw_markdown(
+        self, mock_cp, mock_impl
+    ):
+        mock_cp.request = MagicMock()
+        mock_cp.request.remote.ip = "127.0.0.1"
+        mock_cp.request.headers = {
+            "X-Requested-With": "AkandeApp",
+        }
+        mock_cp.response = MagicMock()
+        mock_cp.response.headers = {}
+
+        raw_md = "**Bold** and _italic_ text"
+        mock_response = MagicMock()
+        mock_response.choices = [
+            MagicMock(
+                message=MagicMock(content=raw_md)
+            )
+        ]
+        mock_cp.request.body.read.return_value = (
+            json.dumps({"question": "test"}).encode()
+        )
+
+        server = AkandeServer()
+        server.cache = MagicMock()
+        server.cache.get.return_value = None
+        server.openai_service.generate_response_sync = (
+            MagicMock(return_value=mock_response)
+        )
+        server._rate_limiter = MagicMock()
+        server._rate_limiter.is_allowed.return_value = True
+
+        server.process_question()
+
+        # Cache should store raw markdown, not stripped
+        stored = server.cache.set.call_args[0][1]
+        assert "**Bold**" in stored
+
+    @patch(
+        "akande.server.server.OPENAI_API_KEY",
+        "sk-test-1234567890abcdef",
+    )
+    @patch("akande.server.server.OpenAIImpl")
+    @patch("akande.server.server.cherrypy")
+    def test_cache_hit_strips_at_boundary(
+        self, mock_cp, mock_impl
+    ):
+        mock_cp.request = MagicMock()
+        mock_cp.request.remote.ip = "127.0.0.1"
+        mock_cp.request.headers = {
+            "X-Requested-With": "AkandeApp",
+        }
+        mock_cp.response = MagicMock()
+        mock_cp.response.headers = {}
+        mock_cp.request.body.read.return_value = (
+            json.dumps({"question": "test"}).encode()
+        )
+
+        server = AkandeServer()
+        server.cache = MagicMock()
+        server.cache.get.return_value = (
+            "**Bold** and _italic_ text"
+        )
+        server._rate_limiter = MagicMock()
+        server._rate_limiter.is_allowed.return_value = True
+
+        result = server.process_question()
+        data = json.loads(result)
+
+        # Response should have markdown stripped
+        assert "**Bold**" not in data["response"]
+        assert "Bold" in data["response"]
+
+
+class TestMetricsEndpoint:
+    @patch(
+        "akande.server.server.OPENAI_API_KEY",
+        "sk-test-1234567890abcdef",
+    )
+    @patch("akande.server.server.OpenAIImpl")
+    @patch("akande.server.server.cherrypy")
+    def test_metrics_returns_json(
+        self, mock_cp, mock_impl
+    ):
+        mock_cp.response = MagicMock()
+        mock_cp.response.headers = {}
+        server = AkandeServer()
+        server._metrics.record("test_stage", 42.0)
+
+        result = server.metrics()
+        data = json.loads(result)
+        assert "test_stage" in data
+        assert data["test_stage"]["count"] == 1
+
+
 class TestConstants:
     def test_allowed_static_files(self):
         assert "sine-wave-generator.js" in ALLOWED_STATIC_FILES

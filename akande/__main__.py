@@ -15,6 +15,7 @@
 #
 import asyncio
 import logging
+import sys
 
 from .akande import Akande
 from .config import LLM_PROVIDER, OPENAI_API_KEY
@@ -28,13 +29,10 @@ from .utils import (
 )
 
 
-async def main():
-    """
-    Main function to initialize and run the Akande voice assistant.
-    """
+def _build_akande() -> Akande:
+    """Validate config and return an Akande instance."""
     provider_name = LLM_PROVIDER or "openai"
 
-    # For OpenAI provider, validate the API key format
     if provider_name == "openai" and not validate_api_key(
         OPENAI_API_KEY
     ):
@@ -42,7 +40,11 @@ async def main():
             "Invalid or missing OPENAI_API_KEY",
             extra={"event": "Config:ValidationFailed"},
         )
-        return
+        print(
+            "Error: Invalid or missing OPENAI_API_KEY. "
+            "Check your .env file."
+        )
+        sys.exit(1)
 
     try:
         provider = get_provider(provider_name)
@@ -57,16 +59,22 @@ async def main():
                 },
             },
         )
-        return
+        print(
+            f"Error: Could not load provider "
+            f"'{provider_name}': {e}"
+        )
+        sys.exit(1)
 
-    # Use the resolved provider. For backward compatibility,
-    # wrap it in a lightweight OpenAIImpl when OpenAI is
-    # selected; otherwise use the provider directly.
     if provider_name == "openai":
         openai_service = OpenAIImpl()
     else:
         openai_service = provider
-    akande = Akande(openai_service=openai_service)
+    return Akande(openai_service=openai_service)
+
+
+async def main():
+    """Run the classic CLI interaction loop."""
+    akande = _build_akande()
     try:
         await akande.run_interaction()
     except KeyboardInterrupt:
@@ -91,7 +99,29 @@ def run():
         log_format=log_format,
     )
 
-    asyncio.run(main())
+    # Use --classic flag to fall back to the plain CLI
+    if "--classic" in sys.argv:
+        asyncio.run(main())
+        return
+
+    # In TUI mode, reconfigure logging to file-only so log lines
+    # don't corrupt Textual's alternate screen buffer.
+    basic_config(
+        filename=str(file_path),
+        level=log_level,
+        log_format=log_format,
+        console=False,
+    )
+    # Suppress CherryPy's own console logging in TUI mode
+    logging.getLogger("cherrypy").setLevel(logging.WARNING)
+    logging.getLogger("cherrypy.error").setLevel(logging.WARNING)
+    logging.getLogger("cherrypy.access").setLevel(logging.WARNING)
+
+    from .tui import AkandeApp
+
+    akande = _build_akande()
+    app = AkandeApp(akande)
+    app.run()
 
 
 if __name__ == "__main__":

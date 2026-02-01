@@ -14,10 +14,12 @@ class TestSystemPrompt:
     def test_system_prompt_contains_akande(self):
         assert "Àkàndé" in SYSTEM_PROMPT
 
-    def test_system_prompt_contains_structure(self):
-        assert "Overview" in SYSTEM_PROMPT
-        assert "Solution" in SYSTEM_PROMPT
-        assert "Conclusion" in SYSTEM_PROMPT
+    def test_system_prompt_contains_bluf_structure(self):
+        lower = SYSTEM_PROMPT.lower()
+        assert "bottom line" in lower
+        assert "analysis" in lower
+        assert "recommendations" in lower
+        assert "british english" in lower
 
 
 class TestOpenAIServiceABC:

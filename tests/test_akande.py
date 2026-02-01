@@ -1,30 +1,29 @@
 import asyncio
 from unittest.mock import MagicMock, AsyncMock, patch
 
+import pytest
+
 from akande.akande import (
     Akande,
     Colors,
     CLEAR_SCREEN,
     MAX_THREAD_WORKERS,
-    TTS_RATE,
     CACHE_DB_NAME,
 )
+from akande.exceptions import LLMError
 
 
 class TestColors:
     def test_reset_defined(self):
         assert Colors.RESET == "\033[0m"
 
-    def test_header_defined(self):
-        assert Colors.HEADER == "\033[95m"
+    def test_red_background_defined(self):
+        assert Colors.RED_BACKGROUND == "\033[48;2;179;0;15m"
 
 
 class TestConstants:
     def test_max_thread_workers(self):
         assert MAX_THREAD_WORKERS == 4
-
-    def test_tts_rate(self):
-        assert TTS_RATE == 161
 
     def test_cache_db_name(self):
         assert CACHE_DB_NAME == "akande_cache.db"
@@ -34,23 +33,22 @@ class TestConstants:
 
 
 class TestAkandeInit:
-    @patch("akande.akande.pyttsx4")
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
-    def test_init(self, mock_recognizer, mock_cache, mock_tts):
+    def test_init(self, mock_recognizer, mock_cache):
         mock_service = MagicMock()
         akande = Akande(openai_service=mock_service)
         assert akande.openai_service == mock_service
         assert akande.server is None
         assert akande.server_running is False
+        assert not akande._cancel_event.is_set()
 
 
 class TestHashPrompt:
-    @patch("akande.akande.pyttsx4")
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
     def test_hash_deterministic(
-        self, mock_recognizer, mock_cache, mock_tts
+        self, mock_recognizer, mock_cache
     ):
         mock_service = MagicMock()
         akande = Akande(openai_service=mock_service)
@@ -58,11 +56,10 @@ class TestHashPrompt:
         hash2 = akande.hash_prompt("test")
         assert hash1 == hash2
 
-    @patch("akande.akande.pyttsx4")
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
     def test_hash_different_inputs(
-        self, mock_recognizer, mock_cache, mock_tts
+        self, mock_recognizer, mock_cache
     ):
         mock_service = MagicMock()
         akande = Akande(openai_service=mock_service)
@@ -72,11 +69,10 @@ class TestHashPrompt:
 
 
 class TestGenerateResponse:
-    @patch("akande.akande.pyttsx4")
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
     def test_cache_hit(
-        self, mock_recognizer, mock_cache_cls, mock_tts
+        self, mock_recognizer, mock_cache_cls
     ):
         mock_cache = MagicMock()
         mock_cache.get.return_value = "cached response"
@@ -90,11 +86,10 @@ class TestGenerateResponse:
         assert result == "cached response"
         mock_service.generate_response.assert_not_called()
 
-    @patch("akande.akande.pyttsx4")
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
     def test_cache_miss(
-        self, mock_recognizer, mock_cache_cls, mock_tts
+        self, mock_recognizer, mock_cache_cls
     ):
         mock_cache = MagicMock()
         mock_cache.get.return_value = None
@@ -119,11 +114,10 @@ class TestGenerateResponse:
         assert result == "new response"
         mock_cache.set.assert_called_once()
 
-    @patch("akande.akande.pyttsx4")
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
-    def test_api_error_returns_empty(
-        self, mock_recognizer, mock_cache_cls, mock_tts
+    def test_api_error_raises_llm_error(
+        self, mock_recognizer, mock_cache_cls
     ):
         mock_cache = MagicMock()
         mock_cache.get.return_value = None
@@ -137,14 +131,16 @@ class TestGenerateResponse:
         akande = Akande(openai_service=mock_service)
         akande.cache = mock_cache
 
-        result = asyncio.run(akande.generate_response("test"))
-        assert result == ""
+        with pytest.raises(LLMError) as exc_info:
+            asyncio.run(
+                akande.generate_response("test")
+            )
+        assert "error occurred" in exc_info.value.user_message.lower()
 
-    @patch("akande.akande.pyttsx4")
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
     def test_unexpected_response_returns_empty(
-        self, mock_recognizer, mock_cache_cls, mock_tts
+        self, mock_recognizer, mock_cache_cls
     ):
         mock_cache = MagicMock()
         mock_cache.get.return_value = None
@@ -162,11 +158,10 @@ class TestGenerateResponse:
         result = asyncio.run(akande.generate_response("test"))
         assert result == ""
 
-    @patch("akande.akande.pyttsx4")
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
     def test_correlation_id_passed(
-        self, mock_recognizer, mock_cache_cls, mock_tts
+        self, mock_recognizer, mock_cache_cls
     ):
         mock_cache = MagicMock()
         mock_cache.get.return_value = "cached"
@@ -185,11 +180,10 @@ class TestGenerateResponse:
 
 
 class TestServerLifecycle:
-    @patch("akande.akande.pyttsx4")
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
     def test_run_server_sets_running(
-        self, mock_recognizer, mock_cache, mock_tts
+        self, mock_recognizer, mock_cache
     ):
         mock_service = MagicMock()
         akande = Akande(openai_service=mock_service)
@@ -199,26 +193,98 @@ class TestServerLifecycle:
             assert akande.server_running is True
             assert akande.server_thread is not None
 
-    @patch("akande.akande.pyttsx4")
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
     def test_run_server_noop_when_running(
-        self, mock_recognizer, mock_cache, mock_tts
+        self, mock_recognizer, mock_cache
     ):
         mock_service = MagicMock()
         akande = Akande(openai_service=mock_service)
-        akande.server_running = True
+        akande._server_running.set()
 
         asyncio.run(akande.run_server())
         assert akande.server_thread is None
 
 
-class TestPIIProtection:
+class TestTTSFallback:
+    @patch("akande.akande.SQLiteCache")
+    @patch("akande.akande.sr.Recognizer")
+    @patch("akande.akande.gTTS")
+    @patch("akande.akande._PYTTSX4_AVAILABLE", True)
     @patch("akande.akande.pyttsx4")
+    def test_speak_gtts_fallback_to_pyttsx4(
+        self,
+        mock_pyttsx4,
+        mock_gtts_cls,
+        mock_recognizer,
+        mock_cache,
+    ):
+        mock_gtts_cls.side_effect = Exception("no network")
+        mock_engine = MagicMock()
+        mock_pyttsx4.init.return_value = mock_engine
+
+        mock_service = MagicMock()
+        akande = Akande(openai_service=mock_service)
+
+        asyncio.run(akande.speak("hello"))
+        mock_engine.say.assert_called_once_with("hello")
+        mock_engine.runAndWait.assert_called_once()
+
+    @patch("akande.akande.SQLiteCache")
+    @patch("akande.akande.sr.Recognizer")
+    @patch("akande.akande.gTTS")
+    @patch("akande.akande._PYTTSX4_AVAILABLE", False)
+    def test_speak_all_tts_fail_gracefully(
+        self,
+        mock_gtts_cls,
+        mock_recognizer,
+        mock_cache,
+    ):
+        mock_gtts_cls.side_effect = Exception("no network")
+        mock_service = MagicMock()
+        akande = Akande(openai_service=mock_service)
+        # Should not raise
+        asyncio.run(akande.speak("hello"))
+
+
+class TestCancellation:
+    @patch("akande.akande.SQLiteCache")
+    @patch("akande.akande.sr.Recognizer")
+    def test_cancel_stops_generate_response(
+        self, mock_recognizer, mock_cache_cls
+    ):
+        mock_cache = MagicMock()
+        mock_cache.get.return_value = None
+        mock_cache_cls.return_value = mock_cache
+
+        mock_service = MagicMock()
+        akande = Akande(openai_service=mock_service)
+        akande.cache = mock_cache
+        akande.cancel_pending()
+
+        with pytest.raises(LLMError, match="cancelled"):
+            asyncio.run(
+                akande.generate_response("test")
+            )
+
+    @patch("akande.akande.SQLiteCache")
+    @patch("akande.akande.sr.Recognizer")
+    def test_reset_cancel_clears_flag(
+        self, mock_recognizer, mock_cache_cls
+    ):
+        mock_service = MagicMock()
+        akande = Akande(openai_service=mock_service)
+        akande.cancel_pending()
+        assert akande._cancel_event.is_set()
+        akande.reset_cancel()
+        assert not akande._cancel_event.is_set()
+
+
+class TestPIIProtection:
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
     def test_cache_hit_logs_hash_not_prompt(
-        self, mock_recognizer, mock_cache_cls, mock_tts
+        self, mock_recognizer, mock_cache_cls
     ):
         mock_cache = MagicMock()
         mock_cache.get.return_value = "cached"

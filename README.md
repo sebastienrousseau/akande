@@ -53,7 +53,7 @@ worked.
 
 **Python developers** who deploy it: clone, configure a provider, and
 run. Àkàndé is a standard Python package with a CLI entry point, a
-CherryPy web server mode, and 161 tests.
+CherryPy web server mode, and 160 tests.
 
 **End users and executives** who interact with it: speak or type a
 question and receive a structured briefing read aloud and saved as
@@ -84,8 +84,8 @@ brew install portaudio ffmpeg
 
 git clone https://github.com/sebastienrousseau/akande
 cd akande
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
+python -m venv .venv && source .venv/bin/activate
+pip install -e .
 
 cp .env.example .env
 # Edit .env: set OPENAI_API_KEY=sk-your-key-here
@@ -138,23 +138,23 @@ To install all optional provider SDKs: `pip install akande[all]`
 
 **Question:** "What is quantitative easing?"
 
-> **Overview**
+> Overview
 > Quantitative easing (QE) is a monetary policy tool used by central
 > banks to stimulate economic activity when conventional interest rate
 > cuts are insufficient.
 >
-> **Solution**
+> Solution
 > - Central banks purchase government bonds and other securities to
 >   inject money into the economy
 > - This lowers long-term interest rates, encouraging borrowing and
 >   investment
 > - QE increases the money supply without printing physical currency
 >
-> **Conclusion**
+> Conclusion
 > QE can stabilise financial markets during crises but carries risks of
 > asset bubbles and currency devaluation.
 >
-> **Recommendations**
+> Recommendations
 > - Monitor inflation indicators alongside QE announcements
 > - Consider the impact on bond yields for portfolio decisions
 
@@ -179,7 +179,6 @@ output directory.
 
 - Streaming responses for reduced time-to-first-token
 - Conversation memory with multi-turn context
-- Markdown and HTML briefing output formats
 - Plugin system for domain-specific briefing templates
 - Docker image for single-command deployment
 
@@ -187,7 +186,7 @@ output directory.
 
 ## Trust
 
-- **161 tests** covering providers, caching, services, server, and
+- **160 tests** covering providers, caching, services, server, and
   utilities
 - **Apache 2.0 licence** -- permissive, enterprise-friendly
 - **Euxis-audited** architecture and security posture
@@ -202,8 +201,9 @@ Pull requests are welcome.
 
 ## License
 
-This project is licensed under the Apache Software License -- see the
-[LICENSE](LICENSE) file for details.
+This project is dual-licensed under the Apache License 2.0 and the MIT
+License -- see [LICENSE-APACHE](LICENSE-APACHE) and
+[LICENSE-MIT](LICENSE-MIT) for details.
 
 ![divider][divider]
 
