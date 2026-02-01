@@ -26,7 +26,6 @@ from .utils import (
 
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
-from pathlib import Path
 import asyncio
 import hashlib
 import logging
@@ -49,6 +48,7 @@ class Colors:
     GREEN_BACKGROUND = "\033[48;2;0;103;0m"
     BLUE_BACKGROUND = "\033[48;2;0;78;203m"
     ORANGE_BACKGROUND = "\033[48;2;150;61;0m"
+
 
 # ANSI escape sequence to clear terminal (replaces subprocess call)
 CLEAR_SCREEN = "\033[2J\033[H"

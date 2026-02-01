@@ -1,6 +1,5 @@
 import json
 import logging
-from pathlib import Path
 
 from akande.logger import basic_config, JSONFormatter
 

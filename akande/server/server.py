@@ -9,7 +9,6 @@ import time
 import threading
 import uuid
 import speech_recognition as sr
-from collections import defaultdict
 from pathlib import Path
 from pydub import AudioSegment
 from pydub.exceptions import CouldntDecodeError
@@ -17,7 +16,6 @@ from akande.cache import SQLiteCache
 from akande.config import (
     OPENAI_API_KEY,
     OPENAI_DEFAULT_MODEL,
-    API_CALL_TIMEOUT,
 )
 from akande.services import OpenAIImpl
 from akande.utils import (

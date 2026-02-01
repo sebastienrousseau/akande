@@ -15,7 +15,7 @@
 #
 import importlib
 import logging
-from typing import Dict, List, Optional, Type, Union
+from typing import Dict, List, Optional, Type
 
 from .base import LLMProvider
 

@@ -33,7 +33,7 @@ class TestOpenAIImpl:
     )
     @patch("akande.services.openai.OpenAI")
     def test_init_passes_timeout(self, mock_openai_cls):
-        service = OpenAIImpl()
+        OpenAIImpl()
         mock_openai_cls.assert_called_once()
         call_kwargs = mock_openai_cls.call_args.kwargs
         assert "timeout" in call_kwargs

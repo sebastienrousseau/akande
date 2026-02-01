@@ -1,8 +1,6 @@
 import asyncio
 from unittest.mock import MagicMock, AsyncMock, patch
 
-import pytest
-
 from akande.akande import (
     Akande,
     Colors,
