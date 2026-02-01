@@ -67,7 +67,7 @@ jobs:
 
       # Install system dependencies required by PyAudio
       - name: ❯ Install system dependencies 🛠️
-        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev python-all-dev
+        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev python3-all-dev
 
       # Install Python dependencies
       - name: ❯ Install dependencies 📦
