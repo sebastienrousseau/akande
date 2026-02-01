@@ -1,8 +1,6 @@
 import csv
 from pathlib import Path
 
-import pytest
-
 from akande.utils import (
     generate_csv,
     generate_pdf,

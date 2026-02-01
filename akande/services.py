@@ -26,7 +26,7 @@ from .config import (
 )
 
 SYSTEM_PROMPT = """
-As "Àkàndé," an AI assistant, your mission is to support users by
+As "\u00c0k\u00e0nd\u00e9," an AI assistant, your mission is to support users
 providing accurate information on various topics, condensed into a
 concise yet comprehensive briefing. Respond only in grammatically
 correct British English using proper spelling and local terminology.
@@ -56,17 +56,29 @@ user's needs within 150 words.
 
 
 class OpenAIService(ABC):
-    """Base class for OpenAI services."""
+    """Base class for OpenAI services.
+
+    Retained for backward compatibility. New code should use
+    akande.providers.LLMProvider instead.
+    """
 
     @abstractmethod
     async def generate_response(
-        self, prompt: str, model: str, params: Dict[str, Any]
+        self,
+        prompt: str,
+        system_prompt: str = "",
+        model: str = "",
+        params: Optional[Dict[str, Any]] = None,
     ) -> Any:
         pass
 
 
 class OpenAIImpl(OpenAIService):
-    """OpenAI API client implementation."""
+    """OpenAI API client implementation.
+
+    Retained for backward compatibility. Delegates to
+    akande.providers.openai_provider.OpenAIProvider internally.
+    """
 
     def __init__(self):
         self.client = openai.OpenAI(
@@ -77,17 +89,23 @@ class OpenAIImpl(OpenAIService):
     async def generate_response(
         self,
         user_prompt: str,
-        model: str = OPENAI_DEFAULT_MODEL,
+        system_prompt: str = "",
+        model: str = "",
         params: Optional[Dict[str, Any]] = None,
     ) -> Any:
         if not params:
             params = {}
+        model = model or OPENAI_DEFAULT_MODEL
+        system_prompt = system_prompt or SYSTEM_PROMPT
 
         logging.info(
-            "OpenAI request sent",
+            "LLM request sent",
             extra={
-                "event": "OpenAI:RequestSent",
-                "extra_data": {"model": model},
+                "event": "LLM:RequestSent",
+                "extra_data": {
+                    "provider": "openai",
+                    "model": model,
+                },
             },
         )
         start = time.time()
@@ -97,7 +115,10 @@ class OpenAIImpl(OpenAIService):
             lambda: self.client.chat.completions.create(
                 model=model,
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {
+                        "role": "system",
+                        "content": system_prompt,
+                    },
                     {"role": "user", "content": user_prompt},
                 ],
                 **params,
@@ -105,10 +126,11 @@ class OpenAIImpl(OpenAIService):
         )
         latency = (time.time() - start) * 1000
         logging.info(
-            "OpenAI response received",
+            "LLM response received",
             extra={
-                "event": "OpenAI:ResponseReceived",
+                "event": "LLM:ResponseReceived",
                 "extra_data": {
+                    "provider": "openai",
                     "model": model,
                     "latency_ms": round(latency, 2),
                 },
@@ -119,34 +141,44 @@ class OpenAIImpl(OpenAIService):
     def generate_response_sync(
         self,
         user_prompt: str,
-        model: str = OPENAI_DEFAULT_MODEL,
+        system_prompt: str = "",
+        model: str = "",
         params: Optional[Dict[str, Any]] = None,
     ) -> Any:
         if not params:
             params = {}
+        model = model or OPENAI_DEFAULT_MODEL
+        system_prompt = system_prompt or SYSTEM_PROMPT
 
         logging.info(
-            "OpenAI sync request sent",
+            "LLM sync request sent",
             extra={
-                "event": "OpenAI:RequestSent",
-                "extra_data": {"model": model},
+                "event": "LLM:RequestSent",
+                "extra_data": {
+                    "provider": "openai",
+                    "model": model,
+                },
             },
         )
         start = time.time()
         response = self.client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {
+                    "role": "system",
+                    "content": system_prompt,
+                },
                 {"role": "user", "content": user_prompt},
             ],
             **params,
         )
         latency = (time.time() - start) * 1000
         logging.info(
-            "OpenAI sync response received",
+            "LLM sync response received",
             extra={
-                "event": "OpenAI:ResponseReceived",
+                "event": "LLM:ResponseReceived",
                 "extra_data": {
+                    "provider": "openai",
                     "model": model,
                     "latency_ms": round(latency, 2),
                 },

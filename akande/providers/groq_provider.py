@@ -13,5 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""The Python Akande module."""
-__version__ = "0.0.5"
+import os
+
+from ._openai_compat import OpenAICompatProvider
+
+
+class GroqProvider(OpenAICompatProvider):
+    """Groq inference API provider (OpenAI-compatible).
+
+    Env vars: GROQ_API_KEY
+    """
+
+    _provider_name = "groq"
+
+    def __init__(self):
+        self._api_key = os.getenv("GROQ_API_KEY", "")
+        self._base_url = "https://api.groq.com/openai/v1"
+        self._default_model = "llama3-8b-8192"
+        self._init_client()

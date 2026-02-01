@@ -9,17 +9,17 @@ import time
 import threading
 import uuid
 import speech_recognition as sr
-from collections import defaultdict
 from pathlib import Path
 from pydub import AudioSegment
 from pydub.exceptions import CouldntDecodeError
 from akande.cache import SQLiteCache
 from akande.config import (
+    LLM_PROVIDER,
     OPENAI_API_KEY,
     OPENAI_DEFAULT_MODEL,
-    API_CALL_TIMEOUT,
 )
-from akande.services import OpenAIImpl
+from akande.providers import get_provider
+from akande.services import SYSTEM_PROMPT, OpenAIImpl
 from akande.utils import (
     validate_api_key,
     get_output_directory,
@@ -154,12 +154,19 @@ class AkandeServer:
     }
 
     def __init__(self):
-        if not validate_api_key(OPENAI_API_KEY):
-            raise RuntimeError(
-                "Invalid or missing OPENAI_API_KEY. "
-                "Server cannot start without a valid API key."
+        provider_name = LLM_PROVIDER or "openai"
+        if provider_name == "openai":
+            if not validate_api_key(OPENAI_API_KEY):
+                raise RuntimeError(
+                    "Invalid or missing OPENAI_API_KEY. "
+                    "Server cannot start without a "
+                    "valid API key."
+                )
+            self.openai_service = OpenAIImpl()
+        else:
+            self.openai_service = get_provider(
+                provider_name
             )
-        self.openai_service = OpenAIImpl()
         self.logger = logging.getLogger(__name__)
         self.public_dir = (
             Path(__file__).resolve().parent.parent.parent
@@ -314,7 +321,10 @@ class AkandeServer:
 
             response_object = (
                 self.openai_service.generate_response_sync(
-                    question, OPENAI_DEFAULT_MODEL, None
+                    question,
+                    SYSTEM_PROMPT,
+                    OPENAI_DEFAULT_MODEL,
+                    None,
                 )
             )
             message_content = (
@@ -462,7 +472,10 @@ class AkandeServer:
 
                 response_object = (
                     self.openai_service.generate_response_sync(
-                        question, OPENAI_DEFAULT_MODEL, None
+                        question,
+                        SYSTEM_PROMPT,
+                        OPENAI_DEFAULT_MODEL,
+                        None,
                     )
                 )
                 message_content = (

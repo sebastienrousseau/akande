@@ -13,5 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""The Python Akande module."""
-__version__ = "0.0.5"
+import os
+
+from ._openai_compat import OpenAICompatProvider
+
+
+class LMStudioProvider(OpenAICompatProvider):
+    """LM Studio local inference provider (OpenAI-compatible).
+
+    Env vars: LMSTUDIO_HOST (default: http://localhost:1234)
+    """
+
+    _provider_name = "lmstudio"
+
+    def __init__(self):
+        host = os.getenv(
+            "LMSTUDIO_HOST", "http://localhost:1234"
+        )
+        self._api_key = "lm-studio"
+        self._base_url = f"{host}/v1"
+        self._default_model = "local-model"
+        self._init_client()

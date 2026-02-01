@@ -13,5 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""The Python Akande module."""
-__version__ = "0.0.5"
+from ._openai_compat import OpenAICompatProvider
+
+
+class OpenAIProvider(OpenAICompatProvider):
+    """OpenAI API provider.
+
+    Env vars: OPENAI_API_KEY, OPENAI_DEFAULT_MODEL
+    """
+
+    _provider_name = "openai"
+
+    def __init__(self):
+        from akande.config import (
+            OPENAI_API_KEY,
+            OPENAI_DEFAULT_MODEL,
+        )
+
+        self._api_key = OPENAI_API_KEY or ""
+        self._base_url = ""
+        self._default_model = (
+            OPENAI_DEFAULT_MODEL or "gpt-3.5-turbo"
+        )
+        self._init_client()

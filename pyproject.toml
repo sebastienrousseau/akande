@@ -1,29 +1,66 @@
-[tool.poetry]
-name = "akande"
-version = "0.0.4"
-description = "An innovative, open-source voice assistant powered by OpenAI's GPT-3, designed to provide interactive, conversational experiences through both voice and text inputs."
-authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
-license = "Apache Software License"
-readme = "README.md"
-repository = "https://github.com/sebastienrousseau/akande"
-homepage = "https://akande.co"
-
-[tool.poetry.dependencies]
-openai = "1.12.0"
-pyaudio = "0.2.14"
-python = "^3.9"
-python-dotenv = "1.0.1"
-pyttsx4 = "3.0.15"
-reportlab = "4.1.0"
-speechrecognition = "3.10.1"
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "akande"
+version = "0.0.5"
+description = "A self-hosted, provider-agnostic voice assistant that delivers structured executive briefings via voice or text from 10 LLM providers."
+readme = "README.md"
+license = {text = "Apache Software License"}
+requires-python = ">=3.9"
+authors = [
+    {name = "Sebastien Rousseau", email = "sebastian.rousseau@gmail.com"},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "openai>=1.12.0",
+    "pyaudio>=0.2.14",
+    "python-dotenv>=1.0.1",
+    "pyttsx4>=3.0.15",
+    "reportlab>=4.1.0",
+    "speechrecognition>=3.10.1",
+    "cherrypy>=18.8.0",
+    "pydub>=0.25.1",
+]
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.18.0"]
+google = ["google-generativeai>=0.4.0"]
+mistral = ["mistralai>=0.1.0"]
+cohere = ["cohere>=5.0.0"]
+huggingface = ["huggingface_hub>=0.20.0"]
+all = [
+    "anthropic>=0.18.0",
+    "google-generativeai>=0.4.0",
+    "mistralai>=0.1.0",
+    "cohere>=5.0.0",
+    "huggingface_hub>=0.20.0",
+]
+
+[project.scripts]
+akande = "akande.__main__:run"
+
+[project.urls]
+Homepage = "https://akande.co"
+Repository = "https://github.com/sebastienrousseau/akande"
+
+[tool.setuptools.packages.find]
+include = ["akande*"]
 
 [tool.black]
 line-length = 72
-target-version = ['py39', 'py310', 'py311', 'py312']
+target-version = ["py39", "py310", "py311", "py312"]
 
 [tool.isort]
 profile = "black"

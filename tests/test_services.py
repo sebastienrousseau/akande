@@ -33,7 +33,7 @@ class TestOpenAIImpl:
     )
     @patch("akande.services.openai.OpenAI")
     def test_init_passes_timeout(self, mock_openai_cls):
-        service = OpenAIImpl()
+        OpenAIImpl()
         mock_openai_cls.assert_called_once()
         call_kwargs = mock_openai_cls.call_args.kwargs
         assert "timeout" in call_kwargs
@@ -57,7 +57,12 @@ class TestOpenAIImpl:
 
         service = OpenAIImpl()
         result = asyncio.run(
-            service.generate_response("Hello", "gpt-3.5-turbo", {})
+            service.generate_response(
+                "Hello",
+                SYSTEM_PROMPT,
+                "gpt-3.5-turbo",
+                {},
+            )
         )
 
         assert result == mock_response
@@ -81,7 +86,12 @@ class TestOpenAIImpl:
 
         service = OpenAIImpl()
         asyncio.run(
-            service.generate_response("What is AI?", "gpt-4", {})
+            service.generate_response(
+                "What is AI?",
+                SYSTEM_PROMPT,
+                "gpt-4",
+                {},
+            )
         )
 
         call_args = mock_client.chat.completions.create.call_args
@@ -109,7 +119,10 @@ class TestOpenAIImpl:
         with pytest.raises(Exception, match="API error"):
             asyncio.run(
                 service.generate_response(
-                    "Hello", "gpt-3.5-turbo", {}
+                    "Hello",
+                    SYSTEM_PROMPT,
+                    "gpt-3.5-turbo",
+                    {},
                 )
             )
 
@@ -132,7 +145,7 @@ class TestOpenAIImpl:
 
         service = OpenAIImpl()
         result = service.generate_response_sync(
-            "Hello", "gpt-3.5-turbo", {}
+            "Hello", SYSTEM_PROMPT, "gpt-3.5-turbo", {}
         )
 
         assert result == mock_response
@@ -154,7 +167,9 @@ class TestOpenAIImpl:
         )
 
         service = OpenAIImpl()
-        service.generate_response_sync("Test", "gpt-4", {})
+        service.generate_response_sync(
+            "Test", SYSTEM_PROMPT, "gpt-4", {}
+        )
 
         call_args = mock_client.chat.completions.create.call_args
         messages = call_args.kwargs.get("messages", [])

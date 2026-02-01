@@ -13,5 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""The Python Akande module."""
-__version__ = "0.0.5"
+import os
+
+from ._openai_compat import OpenAICompatProvider
+
+
+class OllamaProvider(OpenAICompatProvider):
+    """Ollama local inference provider (OpenAI-compatible API).
+
+    Env vars: OLLAMA_HOST (default: http://localhost:11434)
+    """
+
+    _provider_name = "ollama"
+
+    def __init__(self):
+        host = os.getenv(
+            "OLLAMA_HOST", "http://localhost:11434"
+        )
+        self._api_key = "ollama"
+        self._base_url = f"{host}/v1"
+        self._default_model = "llama3"
+        self._init_client()
