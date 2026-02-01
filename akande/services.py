@@ -26,7 +26,7 @@ from .config import (
 )
 
 SYSTEM_PROMPT = """
-As "Àkàndé," an AI assistant, your mission is to support users by
+As "\u00c0k\u00e0nd\u00e9," an AI assistant, your mission is to support users by
 providing accurate information on various topics, condensed into a
 concise yet comprehensive briefing. Respond only in grammatically
 correct British English using proper spelling and local terminology.
@@ -56,7 +56,11 @@ user's needs within 150 words.
 
 
 class OpenAIService(ABC):
-    """Base class for OpenAI services."""
+    """Base class for OpenAI services.
+
+    Retained for backward compatibility. New code should use
+    akande.providers.LLMProvider instead.
+    """
 
     @abstractmethod
     async def generate_response(
@@ -66,7 +70,11 @@ class OpenAIService(ABC):
 
 
 class OpenAIImpl(OpenAIService):
-    """OpenAI API client implementation."""
+    """OpenAI API client implementation.
+
+    Retained for backward compatibility. Delegates to
+    akande.providers.openai_provider.OpenAIProvider internally.
+    """
 
     def __init__(self):
         self.client = openai.OpenAI(
@@ -84,10 +92,13 @@ class OpenAIImpl(OpenAIService):
             params = {}
 
         logging.info(
-            "OpenAI request sent",
+            "LLM request sent",
             extra={
-                "event": "OpenAI:RequestSent",
-                "extra_data": {"model": model},
+                "event": "LLM:RequestSent",
+                "extra_data": {
+                    "provider": "openai",
+                    "model": model,
+                },
             },
         )
         start = time.time()
@@ -105,10 +116,11 @@ class OpenAIImpl(OpenAIService):
         )
         latency = (time.time() - start) * 1000
         logging.info(
-            "OpenAI response received",
+            "LLM response received",
             extra={
-                "event": "OpenAI:ResponseReceived",
+                "event": "LLM:ResponseReceived",
                 "extra_data": {
+                    "provider": "openai",
                     "model": model,
                     "latency_ms": round(latency, 2),
                 },
@@ -126,10 +138,13 @@ class OpenAIImpl(OpenAIService):
             params = {}
 
         logging.info(
-            "OpenAI sync request sent",
+            "LLM sync request sent",
             extra={
-                "event": "OpenAI:RequestSent",
-                "extra_data": {"model": model},
+                "event": "LLM:RequestSent",
+                "extra_data": {
+                    "provider": "openai",
+                    "model": model,
+                },
             },
         )
         start = time.time()
@@ -143,10 +158,11 @@ class OpenAIImpl(OpenAIService):
         )
         latency = (time.time() - start) * 1000
         logging.info(
-            "OpenAI sync response received",
+            "LLM sync response received",
             extra={
-                "event": "OpenAI:ResponseReceived",
+                "event": "LLM:ResponseReceived",
                 "extra_data": {
+                    "provider": "openai",
                     "model": model,
                     "latency_ms": round(latency, 2),
                 },

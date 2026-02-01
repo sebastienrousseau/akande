@@ -13,31 +13,59 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from .akande import Akande
-from .config import OPENAI_API_KEY
-from .logger import basic_config
-from .services import OpenAIImpl
-from .utils import (
-    validate_api_key,
-    get_output_directory,
-    get_output_filename,
-)
 import asyncio
 import logging
+
+from .akande import Akande
+from .config import LLM_PROVIDER, OPENAI_API_KEY
+from .logger import basic_config
+from .providers import get_provider
+from .services import OpenAIImpl
+from .utils import (
+    get_output_directory,
+    get_output_filename,
+    validate_api_key,
+)
 
 
 async def main():
     """
     Main function to initialize and run the Akande voice assistant.
     """
-    if not validate_api_key(OPENAI_API_KEY):
+    provider_name = LLM_PROVIDER or "openai"
+
+    # For OpenAI provider, validate the API key format
+    if provider_name == "openai" and not validate_api_key(
+        OPENAI_API_KEY
+    ):
         logging.error(
             "Invalid or missing OPENAI_API_KEY",
             extra={"event": "Config:ValidationFailed"},
         )
         return
 
-    openai_service = OpenAIImpl()
+    try:
+        provider = get_provider(provider_name)
+    except (ValueError, ImportError) as e:
+        logging.error(
+            "Provider initialization failed",
+            extra={
+                "event": "Provider:InitFailed",
+                "extra_data": {
+                    "provider": provider_name,
+                    "error": type(e).__name__,
+                },
+            },
+        )
+        return
+
+    # Use the resolved provider. For backward compatibility,
+    # wrap it in a lightweight OpenAIImpl when OpenAI is
+    # selected; otherwise use the provider directly.
+    if provider_name == "openai":
+        openai_service = OpenAIImpl()
+    else:
+        openai_service = provider
     akande = Akande(openai_service=openai_service)
     try:
         await akande.run_interaction()

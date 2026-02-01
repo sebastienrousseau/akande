@@ -29,3 +29,8 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Gets the name of default OpenAI model to use from the environment variables
 OPENAI_DEFAULT_MODEL = os.getenv("OPENAI_DEFAULT_MODEL")
+
+# LLM provider to use (default: "openai"). See akande/providers/ for options.
+# Available: openai, anthropic, google, ollama, azure_openai, mistral,
+#            cohere, huggingface, groq, lmstudio
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")
