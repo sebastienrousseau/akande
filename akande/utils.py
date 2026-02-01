@@ -15,6 +15,7 @@
 #
 import csv
 from typing import Optional
+from xml.sax.saxutils import escape as xml_escape
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import (
     SimpleDocTemplate,
@@ -29,189 +30,212 @@ import datetime
 import logging
 import re
 
+# Module-level cached styles for PDF generation
+_styles = getSampleStyleSheet()
+
+_list_item_style = ParagraphStyle(
+    "listItem",
+    parent=_styles["BodyText"],
+    fontSize=12,
+    leading=14,
+    spaceBefore=0,
+    spaceAfter=6,
+    leftIndent=10,
+    firstLineIndent=-10,
+)
+
+_heading1_style = _styles["Heading1"]
+_heading1_style.fontName = "Helvetica-Bold"
+_heading1_style.fontSize = 14
+_heading1_style.leading = 16
+_heading1_style.alignment = TA_LEFT
+
+_heading2_style = _styles["Heading2"]
+_heading2_style.fontName = "Helvetica-Bold"
+_heading2_style.fontSize = 12
+_heading2_style.leading = 14
+_heading2_style.alignment = TA_LEFT
+
+_paragraph_style = _styles["BodyText"]
+_paragraph_style.fontName = "Helvetica"
+_paragraph_style.fontSize = 12
+_paragraph_style.leading = 14
+_paragraph_style.alignment = TA_LEFT
+
+
+def get_output_directory() -> Path:
+    """
+    Get or create the date-stamped output directory.
+
+    Returns
+    -------
+    Path
+        The path to the output directory for today's date.
+    """
+    date_str = datetime.datetime.now().strftime("%Y-%m-%d")
+    directory_path = Path(date_str)
+    directory_path.mkdir(parents=True, exist_ok=True)
+    return directory_path
+
+
+def get_output_filename(extension: str) -> str:
+    """
+    Generate a timestamped output filename with seconds precision.
+
+    Parameters
+    ----------
+    extension : str
+        The file extension (e.g., '.pdf', '.csv', '.wav', '.log').
+
+    Returns
+    -------
+    str
+        The generated filename.
+    """
+    return (
+        datetime.datetime.now().strftime(
+            "%Y-%m-%d-%H-%M-%S-Akande"
+        )
+        + extension
+    )
+
 
 def validate_api_key(api_key: Optional[str]) -> bool:
     """
     Validates the format of an OpenAI API key.
 
-    Checks if the provided API key is not None and its length is greater than
-    20 characters, which is a basic validation to ensure that the key has a
-    plausible format.
+    Parameters
+    ----------
+    api_key : Optional[str]
+        The API key to validate.
 
-    Parameters:
-    api_key (Optional[str]): The API key to validate.
-
-    Returns:
-    bool: True if the API key is valid, False otherwise.
+    Returns
+    -------
+    bool
+        True if the API key format is valid, False otherwise.
     """
-    return api_key is not None and len(api_key) > 20
+    if api_key is None or len(api_key) < 20:
+        return False
+    valid_prefixes = ("sk-", "sk-proj-", "sk-org-")
+    return api_key.startswith(valid_prefixes)
 
 
-async def generate_pdf(question: str, response: str) -> None:
+def generate_pdf(question: str, response: str) -> None:
     """
-    Generates a PDF document containing a question and its response.
-
-    The PDF will be saved in the current directory.
+    Generates a PDF document containing a question and response.
 
     Parameters
     ----------
     question : str
         The question to be included in the PDF.
     response : str
-        The response to the question, to be included in the PDF.
-
-    Returns
-    -------
-    None
-        The function creates a PDF file but does not return any value. It
-        prints the filename of the generated PDF.
-
-    Notes
-    -----
-    - The PDF file is saved in a directory corresponding to the current date
-    within the current working directory.
-    - The directory and file names are based on the current date and time.
-    - If an error occurs during speech synthesis, it is logged as an error.
-    - The PDF is generated using the reportlab library, which must be installed
-    for this function to work.
-    - The PDF will contain the question as a header, followed by the response.
-    List items are formatted with a dash.
-    - The PDF will also contain a logo at the top, if a file
-    named "512x512.png" is present in the current directory.
+        The response to the question.
     """
-    # Setup directory and file path for the PDF
-    date_str = datetime.datetime.now().strftime("%Y-%m-%d")
-    directory_path = Path(date_str)
-    directory_path.mkdir(parents=True, exist_ok=True)
-    filename = (
-        datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-Akande")
-        + ".pdf"
-    )
-    file_path = directory_path / filename
+    try:
+        directory_path = get_output_directory()
+        filename = get_output_filename(".pdf")
+        file_path = directory_path / filename
 
-    # Initialize the document
-    doc = SimpleDocTemplate(str(file_path), pagesize=letter)
-    styles = getSampleStyleSheet()
+        doc = SimpleDocTemplate(str(file_path), pagesize=letter)
+        flowables = []
 
-    flowables = []
+        # Optional: Add a logo at the top if the file exists
+        logo_path = Path("./512x512.png")
+        if logo_path.exists():
+            logo = Image(str(logo_path), width=48, height=48)
+            logo.hAlign = "RIGHT"
+            logo.preserveAspectRatio = True
+            flowables.append(logo)
+            flowables.append(Spacer(1, 12))
 
-    # Optional: Add a logo at the top
-    logo_path = "./512x512.png"  # Adjust the path to your logo
-    logo = Image(logo_path, width=48, height=48)
-    logo.hAlign = "RIGHT"
-    logo.preserveAspectRatio = True
-    flowables.append(logo)
-    flowables.append(Spacer(1, 12))
+        # Escape user input to prevent ReportLab markup injection
+        safe_question = xml_escape(question.title())
+        flowables.append(
+            Paragraph(safe_question, _heading1_style)
+        )
+        flowables.append(Spacer(1, 6))
 
-    # Custom style for list items
-    list_item_style = ParagraphStyle(
-        "listItem",
-        parent=styles["BodyText"],
-        fontSize=12,
-        leading=14,
-        spaceBefore=0,
-        spaceAfter=6,
-        leftIndent=10,
-        firstLineIndent=-10,
-    )
+        # Process and format the response content
+        paragraphs = response.split("\n")
+        for para in paragraphs:
+            safe_para = xml_escape(para)
+            if para.startswith(
+                (
+                    "Overview",
+                    "Solution",
+                    "Conclusion",
+                    "Recommendations",
+                )
+            ):
+                flowables.append(
+                    Paragraph(safe_para, _heading2_style)
+                )
+                flowables.append(Spacer(1, 6))
+            elif re.match(r"^-?\d", para):
+                formatted_text = (
+                    "- " + safe_para
+                    if not safe_para.startswith("-")
+                    else safe_para
+                )
+                flowables.append(
+                    Paragraph(formatted_text, _list_item_style)
+                )
+                flowables.append(Spacer(1, 6))
+            else:
+                flowables.append(
+                    Paragraph(safe_para, _paragraph_style)
+                )
+                flowables.append(Spacer(1, 6))
 
-    # Get the sample style sheet and modify the Heading1 style
-    styles = getSampleStyleSheet()
-    heading1Style = styles["Heading1"]
-    heading1Style.fontName = "Helvetica-Bold"  # Set to a bold font
-    heading1Style.fontSize = 14
-    heading1Style.leading = 16
-    heading1Style.alignment = TA_LEFT  # Set text alignment if needed
-
-    styles = getSampleStyleSheet()
-    heading2Style = styles["Heading2"]
-    heading2Style.fontName = "Helvetica-Bold"
-    heading2Style.fontSize = 12
-    heading2Style.leading = 14
-    heading2Style.alignment = TA_LEFT  # Set text alignment if needed
-
-    styles = getSampleStyleSheet()
-    paragraphStyle = styles["BodyText"]
-    paragraphStyle.fontName = "Helvetica"
-    paragraphStyle.fontSize = 12
-    paragraphStyle.leading = 14
-    paragraphStyle.alignment = TA_LEFT  # Set text alignment if needed
-
-    # When adding the question as a header, make sure it's uppercase
-    flowables.append(Paragraph(question.title(), heading1Style))
-    flowables.append(Spacer(1, 6))
-
-    # Process and format the response content
-    paragraphs = response.split("\n")
-    for para in paragraphs:
-        if para.startswith(
-            (
-                "Overview",
-                "Solution",
-                "Conclusion",
-                "Recommendations",
-            )
-        ):
-            flowables.append(Paragraph(para, heading2Style))
-            flowables.append(Spacer(1, 6))
-        elif re.match(r"^-?\d", para):
-            formatted_text = (
-                "- " + para if not para.startswith("-") else para
-            )
-            flowables.append(Paragraph(formatted_text, list_item_style))
-            flowables.append(Spacer(1, 6))
-        else:
-            flowables.append(Paragraph(para, paragraphStyle))
-            flowables.append(Spacer(1, 6))
-
-    doc.build(flowables)
-    logging.info(f"PDF file generated: {file_path}")
+        doc.build(flowables)
+        logging.info(
+            "PDF generated",
+            extra={
+                "event": "Export:PDFGenerated",
+                "extra_data": {"file_path": str(file_path)},
+            },
+        )
+    except Exception as e:
+        logging.error(
+            f"PDF generation failed: {type(e).__name__}: {e}",
+            exc_info=True,
+            extra={"event": "Export:PDFFailed"},
+        )
 
 
-async def generate_csv(question: str, response: str) -> None:
+def generate_csv(question: str, response: str) -> None:
     """
-    Generates a CSV document containing a question and its response.
+    Generates a CSV document containing a question and response.
 
-    This asynchronous function creates a CSV file within a directory named
-    with the current date (%Y-%m-%d). The file is named with a timestamp and
-    contains two columns: one for the question and one for the response.
-
-    Parameters:
-    question (str): The question to be included in the first column of
-    the CSV.
-    response (str): The response to the question, to be included in
-    the second column of the CSV.
-
-    Returns:
-    None: The function creates a CSV file but does not return any value.
-    It prints the filename of the generated CSV.
-
-    Notes:
-    The CSV file is saved in a directory corresponding to the current date
-    within the current working directory.
-    The directory and file names are based on the current date and time.
+    Parameters
+    ----------
+    question : str
+        The question to be included in the CSV.
+    response : str
+        The response to the question.
     """
-    # Create a directory path with the current date
-    date_str = datetime.datetime.now().strftime("%Y-%m-%d")
-    directory_path = Path(date_str)
-    # Ensure the directory exists
-    directory_path.mkdir(parents=True, exist_ok=True)
+    try:
+        directory_path = get_output_directory()
+        filename = get_output_filename(".csv")
+        file_path = directory_path / filename
 
-    # Create the CSV filename with timestamp
-    filename = (
-        datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-Akande")
-        + ".csv"
-    )
-    file_path = directory_path / filename
+        with open(
+            file_path, mode="w", newline="", encoding="utf-8"
+        ) as file:
+            csv_writer = csv.writer(file)
+            csv_writer.writerow(["Question", "Response"])
+            csv_writer.writerow([question, response])
 
-    # Open the file in write mode
-    with open(
-        file_path, mode="w", newline="", encoding="utf-8"
-    ) as file:
-        csv_writer = csv.writer(file)
-        # Write the headers
-        csv_writer.writerow(["Question", "Response"])
-        # Write the question and response
-        csv_writer.writerow([question, response])
-
-    logging.info(f"CSV file generated: {file_path}")
+        logging.info(
+            "CSV generated",
+            extra={
+                "event": "Export:CSVGenerated",
+                "extra_data": {"file_path": str(file_path)},
+            },
+        )
+    except Exception as e:
+        logging.error(
+            f"CSV generation failed: {type(e).__name__}: {e}",
+            exc_info=True,
+            extra={"event": "Export:CSVFailed"},
+        )

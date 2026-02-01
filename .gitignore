@@ -113,8 +113,17 @@ ENV/
 .vscode/settings.json
 
 # Database
+*.db
 *.db-shm
 *.db-wal
+
+# Generated output files
+*.csv
+*.pdf
+*.wav
+
+# Date-stamped output directories
+[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
 
 # Files
 analysis_status.txt

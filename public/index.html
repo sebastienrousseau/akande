@@ -39,9 +39,7 @@
 	<meta content="Àkàndé: Advanced AI Voice Assistant for All" name="apple-mobile-web-app-title">
 	<meta content="yes" name="apple-touch-fullscreen">
 
-	<!-- Content Security Policy Meta Tag -->
-	<meta http-equiv="Content-Security-Policy"
-		content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' *.google-analytics.com https://cdn.jsdelivr.net unpkg.com www.googletagmanager.com x.clarity.ms https://www.googletagmanager.com https://www.google.com https://www.gstatic.com; frame-src 'self' https://www.google.com; connect-src 'self' www.googletagmanager.com https://region1.google-analytics.com; img-src 'self' data: https: blob: kura.pro www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdnjs.cloudflare.com https://use.fontawesome.com; font-src 'self' https://use.fontawesome.com/; media-src 'self';" />
+	<!-- CSP is set via server HTTP header (SecurityHeadersTool) -->
 
 	<meta content="rgb(255, 39, 34)" name="msapplication-navbutton-color">
 	<meta content="summary" name="twitter:card">
@@ -263,14 +261,39 @@
 		function updateUI(responseText) {
 			/** @type {HTMLElement} */
 			let responseDiv = document.getElementById('response');
-			responseDiv.innerHTML = `<div class="response">${responseText}</div>`;
-			showResponseCard(); // Show the overlay and card after setting the response
+			responseDiv.textContent = '';
+			let div = document.createElement('div');
+			div.className = 'response';
+			div.textContent = responseText;
+			responseDiv.appendChild(div);
+			showResponseCard();
+		}
+
+		/**
+		 * Handle error responses by displaying the error in the UI.
+		 * @param {string} errorMessage - The error message to display.
+		 */
+		function handleErrorResponse(errorMessage) {
+			let responseDiv = document.getElementById('response');
+			responseDiv.textContent = '';
+			let div = document.createElement('div');
+			div.className = 'response';
+			div.textContent = 'Error: ' + errorMessage;
+			responseDiv.appendChild(div);
+			showResponseCard();
+			let loader = document.getElementById('loader');
+			if (loader) loader.style.display = 'none';
 		}
 
 		// Event listener for closing the response card
 		document.getElementById('closeButton').addEventListener('click', function () {
-			document.querySelector('.overlay').style.display = 'none';
-			location.reload();
+			let overlay = document.querySelector('.overlay');
+			let card = document.querySelector('.card');
+			overlay.style.display = 'none';
+			card.style.display = 'none';
+			card.classList.remove('card-slide-in');
+			document.getElementById('response').textContent = '';
+			document.getElementById('search').value = '';
 		});
 
 		// Function to check if the browser is Safari
@@ -372,11 +395,10 @@
 						return response.json();
 					})
 					.then(data => {
-						console.log(data);
 						updateUI(data.response);
 					})
 					.catch(error => {
-						console.error('Error processing typed question:', error);
+						handleErrorResponse('Failed to process question');
 					})
 					.finally(() => {
 						loader.style.display = 'none'; // Hide the loader

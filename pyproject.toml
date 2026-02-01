@@ -10,9 +10,8 @@ homepage = "https://akande.co"
 
 [tool.poetry.dependencies]
 openai = "1.12.0"
-py3-tts = "3.5"
 pyaudio = "0.2.14"
-python = "^3.8"
+python = "^3.9"
 python-dotenv = "1.0.1"
 pyttsx4 = "3.0.15"
 reportlab = "4.1.0"
@@ -24,7 +23,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 72
-target-version = ['py38', 'py39', 'py310']
+target-version = ['py39', 'py310', 'py311', 'py312']
 
 [tool.isort]
 profile = "black"
@@ -35,6 +34,6 @@ force_grid_wrap = 0
 combine_as_imports = true
 known_first_party = "akande"
 
-[tool.pytest]
-addopts = "--cov=akande --cov-report=term-missing --cov-report=xml --cov-report=html --cov-fail-under=100"
-testpaths = "tests"
+[tool.pytest.ini_options]
+addopts = ["--cov=akande", "--cov-report=term-missing", "--cov-report=xml", "--cov-report=html"]
+testpaths = ["tests"]

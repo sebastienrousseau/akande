@@ -294,7 +294,7 @@ class SineWaveGenerator {
     this.ctx.beginPath();
     this.ctx.moveTo(0, startY);
 
-    for (let xPos = 0; xPos < this.el.width; xPos++) {
+    for (let xPos = 0; xPos < this.el.width; xPos += (wave.segmentLength || 10)) {
       const percent = xPos / this.el.width;
       const amp = easing(percent, wave.amplitude);
 

@@ -17,27 +17,23 @@ from .akande import Akande
 from .config import OPENAI_API_KEY
 from .logger import basic_config
 from .services import OpenAIImpl
-from .utils import validate_api_key
+from .utils import (
+    validate_api_key,
+    get_output_directory,
+    get_output_filename,
+)
 import asyncio
-from datetime import datetime
 import logging
-from pathlib import Path
 
 
 async def main():
     """
     Main function to initialize and run the Akande voice assistant.
-
-    This function checks for the presence of the OPENAI_API_KEY environment
-    variable. If the variable is missing or invalid, an error message is logged
-    and the function returns. Otherwise, it creates an instance of the
-    OpenAIImpl class and the Akande class, and then runs the interaction loop
-    of the Akande voice assistant.
     """
-    # Validate the OPENAI_API_KEY
     if not validate_api_key(OPENAI_API_KEY):
         logging.error(
-            "Invalid or missing OPENAI_API_KEY in environment variables."
+            "Invalid or missing OPENAI_API_KEY",
+            extra={"event": "Config:ValidationFailed"},
         )
         return
 
@@ -46,30 +42,29 @@ async def main():
     try:
         await akande.run_interaction()
     except KeyboardInterrupt:
-        logging.info("Keyboard interrupt detected. Exiting...")
-        # Perform any necessary cleanup tasks here
-        # For example, stop the CherryPy server if it's running
+        logging.info(
+            "Keyboard interrupt detected, exiting",
+            extra={"event": "Session:Ended"},
+        )
         await akande.stop_server()
 
 
-if __name__ == "__main__":
-    # Create a directory path with the current date
-    date_str = datetime.now().strftime("%Y-%m-%d")
-    directory_path = Path(date_str)
-    # Ensure the directory exists
-    directory_path.mkdir(parents=True, exist_ok=True)
-
-    # Create the WAV filename with timestamp
-    filename = datetime.now().strftime("%Y-%m-%d-%H-%M-Akande") + ".log"
+def run():
+    """Synchronous entry point for console_scripts."""
+    directory_path = get_output_directory()
+    filename = get_output_filename(".log")
     file_path = directory_path / filename
 
-    # Setup logging configuration
-    log_file = file_path
-    log_level = logging.DEBUG
+    log_level = logging.INFO
     log_format = "%(asctime)s - %(levelname)s - %(message)s"
     basic_config(
-        filename=log_file, level=log_level, log_format=log_format
+        filename=str(file_path),
+        level=log_level,
+        log_format=log_format,
     )
 
-    # Run the main async function
     asyncio.run(main())
+
+
+if __name__ == "__main__":
+    run()
