@@ -29,14 +29,23 @@ to voice-driven intelligence briefings.
 
 ## Why Àkàndé?
 
-| Concern | OpenAI API directly | LangChain | ChatGPT Voice | **Àkàndé** |
-|---|---|---|---|---|
-| Structured output format | You build it | You build it | Unstructured | Built-in 4-section briefing |
-| PDF/CSV artefacts | You build it | You build it | No | Automatic |
-| Provider portability | Locked to OpenAI | Framework-level | Locked to OpenAI | 10 providers, 1 env var |
-| Local/private inference | No | Possible | No | Ollama + LM Studio |
-| Voice + text input | You build it | You build it | Voice only | Both, plus web UI |
-| Self-hosted | N/A | N/A | No | Fully self-hosted |
+Ask a question. Get a structured briefing. Keep your data.
+
+That is the entire workflow. Voice, text, or web -- Àkàndé listens,
+queries the LLM of your choice, and delivers a four-section executive
+briefing: Overview, Solution, Conclusion, Recommendations. PDF and CSV
+artefacts are generated automatically.
+
+No framework to learn. No output parsing to build. No provider lock-in
+to accept.
+
+Ten LLM providers -- including fully private local inference through
+Ollama and LM Studio -- all behind one environment variable. Your
+hardware. Your models. Your data.
+
+Every other tool gives you the engine and expects you to build the car.
+Àkàndé hands you the keys. This is how AI assistants should have always
+worked.
 
 ![divider][divider]
 
