@@ -40,6 +40,7 @@
 			--shadow-modal: 0 1.25rem 3.75rem rgba(0,0,0,0.2);
 			--shadow-menu: 0 0.5rem 1.5rem rgba(0,0,0,0.15);
 			--space-xs: 0.25rem;
+			--space-between: 0.375rem;
 			--space-sm: 0.5rem;
 			--space-md: 0.75rem;
 			--space-lg: 1rem;
@@ -76,6 +77,10 @@
 			--blur-overlay: 20px;
 			--outline-width: 2px;
 			--content-max: 78%;
+			--layout-desktop: 48rem;
+			--modal-min: 17.5rem;
+			--modal-max: 22.5rem;
+			--menu-min: 10rem;
 			--duration-fast: 100ms;
 			--duration-normal: 150ms;
 			--duration-slow: 180ms;
@@ -346,7 +351,7 @@
 			cursor: pointer;
 			display: flex;
 			align-items: center;
-			gap: var(--radius-sm);
+			gap: var(--space-between);
 			padding: var(--space-xs) var(--space-sm);
 			border-radius: var(--radius-sm);
 			transition: background-color var(--duration-fast) ease, color var(--duration-slow) ease;
@@ -439,7 +444,7 @@
 			align-items: center;
 			justify-content: center;
 			text-align: center;
-			gap: var(--radius-sm);
+			gap: var(--space-between);
 		}
 
 		.welcome h2 {
@@ -529,8 +534,8 @@
 			border-radius: var(--radius-xl);
 			padding: var(--font-2xs) var(--space-lg);
 			display: none;
-			gap: 0.3rem;
-			margin-top: var(--radius-sm);
+			gap: var(--space-between);
+			margin-top: var(--space-between);
 			animation: msgAppear var(--duration-enter) ease-out both;
 		}
 
@@ -565,7 +570,7 @@
 			padding-bottom: max(var(--space-sm), env(safe-area-inset-bottom));
 			display: flex;
 			align-items: center;
-			gap: var(--radius-sm);
+			gap: var(--space-between);
 			transition: background-color var(--duration-slow) ease;
 		}
 
@@ -669,8 +674,8 @@
 			background: var(--bg-secondary);
 			border-radius: var(--radius-lg);
 			padding: var(--space-xl);
-			min-width: 17.5rem;
-			max-width: 22.5rem;
+			min-width: var(--modal-min);
+			max-width: var(--modal-max);
 			width: 90%;
 			box-shadow: var(--shadow-modal);
 			animation: modalIn var(--duration-enter) ease-out;
@@ -785,13 +790,13 @@
 
 		@media (min-width: 769px) {
 			.chat-area {
-				max-width: 48rem;
+				max-width: var(--layout-desktop);
 				width: 100%;
 				margin: 0 auto;
 				padding: var(--space-xl) var(--space-2xl) var(--space-sm);
 			}
 			.input-bar {
-				max-width: 48rem;
+				max-width: var(--layout-desktop);
 				margin: 0 auto;
 			}
 			.message { max-width: 70%; }
@@ -806,7 +811,7 @@
 			border: var(--border-regular) solid var(--border-primary);
 			border-radius: var(--radius-md);
 			box-shadow: var(--shadow-menu);
-			min-width: 10rem;
+			min-width: var(--menu-min);
 			padding: var(--space-xs) 0;
 			display: none;
 		}
