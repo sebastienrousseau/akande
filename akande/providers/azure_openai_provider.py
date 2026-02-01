@@ -37,6 +37,17 @@ class AzureOpenAIProvider(OpenAICompatProvider):
             "AZURE_OPENAI_API_VERSION", "2024-02-01"
         )
 
+        if not api_key:
+            raise ValueError(
+                "AZURE_OPENAI_API_KEY environment variable "
+                "is required for Azure OpenAI provider."
+            )
+        if not endpoint:
+            raise ValueError(
+                "AZURE_OPENAI_ENDPOINT environment variable "
+                "is required for Azure OpenAI provider."
+            )
+
         self._api_key = api_key
         self._base_url = endpoint
         self._default_model = "gpt-35-turbo"

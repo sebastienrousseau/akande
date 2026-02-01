@@ -16,7 +16,7 @@
 import cherrypy
 from .cache import SQLiteCache
 from .config import OPENAI_DEFAULT_MODEL
-from .services import OpenAIService
+from .services import SYSTEM_PROMPT, OpenAIService
 from .utils import (
     generate_pdf,
     generate_csv,
@@ -405,7 +405,10 @@ class Akande:
             try:
                 response = (
                     await self.openai_service.generate_response(
-                        prompt, OPENAI_DEFAULT_MODEL, {}
+                        prompt,
+                        SYSTEM_PROMPT,
+                        OPENAI_DEFAULT_MODEL,
+                        {},
                     )
                 )
                 if not hasattr(response, "choices"):

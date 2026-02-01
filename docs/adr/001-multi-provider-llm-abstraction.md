@@ -22,7 +22,7 @@ provider resolution.
 ```
 App (Akande CLI / CherryPy Server)
         |
-    AI Core (services.py: SYSTEM_PROMPT, Akande.generate_response)
+    AI Core (services.py: SYSTEM_PROMPT; akande.py: Akande)
         |
     Provider Adapter Interface (providers/base.py: LLMProvider ABC)
         |
@@ -51,7 +51,7 @@ App (Akande CLI / CherryPy Server)
   provider-specific `base_url` and `api_key`.
 
 - **Response normalisation**: Native SDK providers wrap their
-  responses in a `ProviderResponse` dataclass with a
+  responses in a `ProviderResponse` class with a
   `.choices[0].message.content` interface matching OpenAI's format.
 
 - **Frozen ABC**: The `LLMProvider` interface is frozen after this

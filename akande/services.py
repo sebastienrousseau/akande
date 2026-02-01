@@ -64,7 +64,11 @@ class OpenAIService(ABC):
 
     @abstractmethod
     async def generate_response(
-        self, prompt: str, model: str, params: Dict[str, Any]
+        self,
+        prompt: str,
+        system_prompt: str = "",
+        model: str = "",
+        params: Optional[Dict[str, Any]] = None,
     ) -> Any:
         pass
 
@@ -85,11 +89,14 @@ class OpenAIImpl(OpenAIService):
     async def generate_response(
         self,
         user_prompt: str,
-        model: str = OPENAI_DEFAULT_MODEL,
+        system_prompt: str = "",
+        model: str = "",
         params: Optional[Dict[str, Any]] = None,
     ) -> Any:
         if not params:
             params = {}
+        model = model or OPENAI_DEFAULT_MODEL
+        system_prompt = system_prompt or SYSTEM_PROMPT
 
         logging.info(
             "LLM request sent",
@@ -108,7 +115,10 @@ class OpenAIImpl(OpenAIService):
             lambda: self.client.chat.completions.create(
                 model=model,
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {
+                        "role": "system",
+                        "content": system_prompt,
+                    },
                     {"role": "user", "content": user_prompt},
                 ],
                 **params,
@@ -131,11 +141,14 @@ class OpenAIImpl(OpenAIService):
     def generate_response_sync(
         self,
         user_prompt: str,
-        model: str = OPENAI_DEFAULT_MODEL,
+        system_prompt: str = "",
+        model: str = "",
         params: Optional[Dict[str, Any]] = None,
     ) -> Any:
         if not params:
             params = {}
+        model = model or OPENAI_DEFAULT_MODEL
+        system_prompt = system_prompt or SYSTEM_PROMPT
 
         logging.info(
             "LLM sync request sent",
@@ -151,7 +164,10 @@ class OpenAIImpl(OpenAIService):
         response = self.client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {
+                    "role": "system",
+                    "content": system_prompt,
+                },
                 {"role": "user", "content": user_prompt},
             ],
             **params,

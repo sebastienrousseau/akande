@@ -545,7 +545,10 @@ class TestAzureOpenAIProvider:
     @patch("openai.AzureOpenAI")
     @patch.dict(
         "os.environ",
-        {"AZURE_OPENAI_API_KEY": "test-key"},
+        {
+            "AZURE_OPENAI_API_KEY": "test-key",
+            "AZURE_OPENAI_ENDPOINT": "https://test.azure.com",
+        },
     )
     def test_provider_name(self, mock_cls):
         from akande.providers.azure_openai_provider import (
@@ -573,7 +576,10 @@ class TestAzureOpenAIProvider:
     @patch("openai.AzureOpenAI")
     @patch.dict(
         "os.environ",
-        {"AZURE_OPENAI_API_KEY": "test-key"},
+        {
+            "AZURE_OPENAI_API_KEY": "test-key",
+            "AZURE_OPENAI_ENDPOINT": "https://test.azure.com",
+        },
     )
     def test_sync_call(self, mock_cls):
         from akande.providers.azure_openai_provider import (
@@ -589,6 +595,38 @@ class TestAzureOpenAIProvider:
             "hi", "sys", "gpt-35-turbo"
         )
         assert result is not None
+
+    @patch.dict(
+        "os.environ",
+        {"AZURE_OPENAI_ENDPOINT": "https://test.azure.com"},
+        clear=False,
+    )
+    def test_missing_api_key_raises(self):
+        from akande.providers.azure_openai_provider import (
+            AzureOpenAIProvider,
+        )
+        import os
+        os.environ.pop("AZURE_OPENAI_API_KEY", None)
+        with pytest.raises(
+            ValueError, match="AZURE_OPENAI_API_KEY"
+        ):
+            AzureOpenAIProvider()
+
+    @patch.dict(
+        "os.environ",
+        {"AZURE_OPENAI_API_KEY": "test-key"},
+        clear=False,
+    )
+    def test_missing_endpoint_raises(self):
+        from akande.providers.azure_openai_provider import (
+            AzureOpenAIProvider,
+        )
+        import os
+        os.environ.pop("AZURE_OPENAI_ENDPOINT", None)
+        with pytest.raises(
+            ValueError, match="AZURE_OPENAI_ENDPOINT"
+        ):
+            AzureOpenAIProvider()
 
 
 # ────────────────────────────────────────────────────────────

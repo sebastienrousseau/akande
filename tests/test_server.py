@@ -110,6 +110,9 @@ class TestHashIp:
 
 class TestAkandeServerInit:
     @patch(
+        "akande.server.server.LLM_PROVIDER", "openai"
+    )
+    @patch(
         "akande.server.server.OPENAI_API_KEY",
         "sk-test-1234567890abcdef",
     )
@@ -120,9 +123,14 @@ class TestAkandeServerInit:
         assert server.public_dir is not None
         assert server.cache is not None
 
+    @patch(
+        "akande.server.server.LLM_PROVIDER", "openai"
+    )
     @patch("akande.server.server.OPENAI_API_KEY", None)
     def test_init_fails_without_api_key(self):
-        with pytest.raises(RuntimeError, match="OPENAI_API_KEY"):
+        with pytest.raises(
+            RuntimeError, match="OPENAI_API_KEY"
+        ):
             AkandeServer()
 
 
