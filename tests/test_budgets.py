@@ -1,5 +1,4 @@
 import time
-from unittest.mock import MagicMock
 from pathlib import Path
 import tempfile
 

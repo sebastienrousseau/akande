@@ -384,15 +384,19 @@ class AkandeApp(App):
                         )
                 except Exception:
                     pass
-        except LLMError as exc:
+        except LLMError as llm_exc:
+            msg = llm_exc.user_message
+
             def _show_llm_error():
                 self._hide_thinking()
-                self._write_error(exc.user_message)
+                self._write_error(msg)
             self.call_from_thread(_show_llm_error)
-        except Exception as exc:
+        except Exception as gen_exc:
+            msg = str(gen_exc)
+
             def _show_error():
                 self._hide_thinking()
-                self._write_error(str(exc))
+                self._write_error(msg)
             self.call_from_thread(_show_error)
 
     # ── Voice ───────────────────────────────────────────────

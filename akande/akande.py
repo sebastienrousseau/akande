@@ -77,7 +77,11 @@ def _friendly_llm_error(exc: Exception) -> str:
             "The request to the LLM provider timed out. "
             "Please try again."
         )
-    return f"An error occurred while contacting the LLM provider: {type(exc).__name__}"
+    return (
+        "An error occurred while contacting the "
+        f"LLM provider: {type(exc).__name__}"
+    )
+
 
 MAX_THREAD_WORKERS = 4
 CACHE_DB_NAME = "akande_cache.db"

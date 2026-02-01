@@ -1,7 +1,4 @@
 import inspect
-from unittest.mock import MagicMock, patch
-
-from akande.exceptions import LLMError
 
 
 class TestHandleQuestionUsesAsyncioRun:
