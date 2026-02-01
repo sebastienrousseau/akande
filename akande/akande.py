@@ -60,8 +60,8 @@ class Akande:
 
     This class represents the voice assistant capable of understanding
     and responding to user queries. It integrates speech recognition
-    and synthesis, leveraging OpenAI's GPT models for generating
-    responses.
+    and synthesis, leveraging configurable LLM providers for
+    generating responses.
     """
 
     def __init__(self, openai_service: OpenAIService):
@@ -368,7 +368,7 @@ class Akande:
         correlation_id: str = "",
     ) -> str:
         """
-        Generate a response using the OpenAI service or cache.
+        Generate a response using the LLM provider or cache.
 
         Args:
             prompt: The prompt for generating the response.
@@ -393,7 +393,7 @@ class Akande:
             return cached_response
         else:
             logging.info(
-                "Cache miss, calling OpenAI",
+                "Cache miss, calling LLM provider",
                 extra={
                     "event": "Response:CacheMiss",
                     "correlation_id": correlation_id,
@@ -410,9 +410,9 @@ class Akande:
                 )
                 if not hasattr(response, "choices"):
                     logging.error(
-                        "OpenAI returned unexpected response type",
+                        "LLM returned unexpected response type",
                         extra={
-                            "event": "OpenAI:UnexpectedResponse",
+                            "event": "LLM:UnexpectedResponse",
                             "correlation_id": correlation_id,
                             "extra_data": {
                                 "response_type": type(
@@ -431,11 +431,11 @@ class Akande:
                 return text_response
             except Exception as e:
                 logging.error(
-                    f"OpenAI API error: "
+                    f"LLM API error: "
                     f"{type(e).__name__}: {e}",
                     exc_info=True,
                     extra={
-                        "event": "OpenAI:Error",
+                        "event": "LLM:Error",
                         "correlation_id": correlation_id,
                     },
                 )

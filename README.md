@@ -14,13 +14,14 @@ width="261"
 
 ![Banner for Àkàndé - Voice Assistant][banner]
 
-Àkàndé is an advanced voice assistant built in Python, leveraging OpenAI's GPT models for natural language understanding and response generation. Àkàndé has been enhanced to include a caching mechanism for efficient response retrieval and the ability to generate PDF summaries of interactions, making it ideal for both personal assistance and executive briefing purposes.
+Àkàndé is an advanced voice assistant built in Python, supporting 10 LLM providers for natural language understanding and response generation. Àkàndé includes a caching mechanism for efficient response retrieval and the ability to generate PDF summaries of interactions, making it ideal for both personal assistance and executive briefing purposes.
 
 ![divider][divider]
 
 ## Features
 
-- **Natural Language Understanding**: Utilizes OpenAI's GPT models to understand and generate human-like responses.
+- **Multi-Provider LLM Support**: Choose from 10 providers — OpenAI, Anthropic, Google Gemini, Ollama, Azure OpenAI, Mistral, Cohere, Hugging Face, Groq, and LM Studio.
+- **Natural Language Understanding**: Leverages configurable LLM providers to understand and generate human-like responses.
 - **PDF Summary Generation**: Generates PDF summaries of voice interactions, including a question header, AI-generated response, and an accompanying logo.
 - **Caching Mechanism**: Implements a SQLite-based caching system to store and retrieve past queries and responses, reducing API calls and improving response times.
 - **Voice Recognition**: Integrates with speech recognition libraries to support voice input.
@@ -30,7 +31,7 @@ width="261"
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.9+
 - Pipenv or virtualenv
 
 ![divider][divider]
@@ -56,12 +57,17 @@ pip install -r requirements.txt
 
 #### 3. Set up environment variables
 
-Copy .env.example to .env and fill in your OpenAI API key and other
-configurations.
+Copy `.env.example` to `.env` and configure your LLM provider:
 
 ```bash
-OPENAI_API_KEY=xxxxxxxxxx
+cp .env.example .env
+# Edit .env with your provider choice and API key
+LLM_PROVIDER=openai          # or anthropic, google, ollama, etc.
+OPENAI_API_KEY=sk-your-key   # Set the key for your chosen provider
 ```
+
+See `.env.example` for the full list of supported providers and their
+configuration options.
 
 #### 4. Running Àkàndé
 
@@ -89,7 +95,7 @@ Pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
 
 ## License
 
-This project is licensed under the MIT license - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache Software License - see the [LICENSE](LICENSE) file for details.
 
 ![divider][divider]
 

@@ -34,18 +34,18 @@ if sys.platform == 'darwin':
     ])
 
 setup(
-    author="Sebastian Rousseau",
+    author="Sebastien Rousseau",
     author_email="sebastian.rousseau@gmail.com",
-    description="""
-        Akande: A versatile voice assistant powered by OpenAI's GPT-3. It
-        offers both voice and text interaction, leveraging advanced speech
-        recognition and text-to-speech capabilities for a wide range of tasks.
-    """,
+    description=(
+        "Akande: A multi-provider AI voice assistant with"
+        " voice and text interaction, leveraging advanced"
+        " speech recognition and text-to-speech capabilities."
+    ),
     long_description=long_description,
     long_description_content_type="text/markdown",
     license="Apache Software License",
     name="akande",
-    version="0.0.4",
+    version="0.0.5",
     url="https://github.com/sebastienrousseau/akande",
     packages=find_packages(),
     install_requires=requirements,
