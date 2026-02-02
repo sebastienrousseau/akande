@@ -85,23 +85,23 @@ class TestKeyboardBindings:
         keys = [b.key for b in AkandeApp.BINDINGS]
         assert "f1" in keys
 
-    def test_number_bindings_exist(self):
+    def test_alt_number_bindings_exist(self):
         from akande.tui import AkandeApp
 
         keys = [b.key for b in AkandeApp.BINDINGS]
-        assert "1" in keys
-        assert "2" in keys
-        assert "3" in keys
-        assert "4" in keys
+        assert "alt+1" in keys
+        assert "alt+2" in keys
+        assert "alt+3" in keys
+        assert "alt+4" in keys
 
 
 class TestWelcomeMessage:
-    def test_welcome_shows_numbered_menu(self):
+    def test_welcome_shows_alt_menu(self):
         from akande.tui import AkandeApp
 
         src = inspect.getsource(AkandeApp.compose)
-        assert "[1]" in src
-        assert "[2]" in src
+        assert "Alt+1" in src
+        assert "Alt+2" in src
 
     def test_welcome_no_ctrl_references(self):
         from akande.tui import AkandeApp

@@ -212,10 +212,10 @@ class AkandeApp(App):
 
     BINDINGS = [
         Binding("escape", "quit", "Exit"),
-        Binding("1", "toggle_voice", "1 Record", show=False),
-        Binding("2", "toggle_server", "2 Web UI", show=False),
-        Binding("3", "clear", "3 Clear", show=False),
-        Binding("4", "quit", "4 Quit", show=False),
+        Binding("alt+1", "toggle_voice", "Record", show=False),
+        Binding("alt+2", "toggle_server", "Web UI", show=False),
+        Binding("alt+3", "clear", "Clear", show=False),
+        Binding("alt+4", "quit", "Quit", show=False),
         Binding("f1", "show_help", "Help"),
     ]
 
@@ -237,10 +237,10 @@ class AkandeApp(App):
                 "[#48484a]Executive Briefing Assistant[/]\n\n"
                 "[#8e8e93]Type a question below or "
                 "use the menu:[/]\n\n"
-                "[#0A84FF][1][/] [#8e8e93]Record  [/]"
-                "[#0A84FF][2][/] [#8e8e93]Web UI  [/]"
-                "[#0A84FF][3][/] [#8e8e93]Clear  [/]"
-                "[#0A84FF][4][/] [#8e8e93]Quit[/]\n\n"
+                "[#0A84FF]Alt+1[/] [#8e8e93]Record  [/]"
+                "[#0A84FF]Alt+2[/] [#8e8e93]Web UI  [/]"
+                "[#0A84FF]Alt+3[/] [#8e8e93]Clear  [/]"
+                "[#0A84FF]Alt+4[/] [#8e8e93]Quit[/]\n\n"
                 "[#48484a]Tab to navigate · "
                 "Escape to exit · "
                 "F1 for help[/]\n\n"
@@ -251,13 +251,13 @@ class AkandeApp(App):
             yield RichLog(id="chat", wrap=True, markup=True)
             yield Static("", id="thinking")
         with Horizontal(id="action-bar"):
-            yield Button("[1] Record", id="mic-btn-action",
+            yield Button("Alt+1 Record", id="mic-btn-action",
                          classes="action-btn")
-            yield Button("[2] Web UI", id="server-btn",
+            yield Button("Alt+2 Web UI", id="server-btn",
                          classes="action-btn")
-            yield Button("[3] Clear", id="clear-btn",
+            yield Button("Alt+3 Clear", id="clear-btn",
                          classes="action-btn")
-            yield Button("[4] Quit", id="quit-btn",
+            yield Button("Alt+4 Quit", id="quit-btn",
                          classes="action-btn")
         with Horizontal(id="input-bar"):
             yield Button("Mic", id="mic-btn")
@@ -489,10 +489,10 @@ class AkandeApp(App):
         help_text = Text()
         help_text.append("Keyboard Shortcuts\n", style="bold #f5f5f7")
         help_text.append(
-            "  [1]      Record voice input\n"
-            "  [2]      Toggle web UI server\n"
-            "  [3]      Clear chat\n"
-            "  [4]      Quit\n"
+            "  Alt+1    Record voice input\n"
+            "  Alt+2    Toggle web UI server\n"
+            "  Alt+3    Clear chat\n"
+            "  Alt+4    Quit\n"
             "  Escape   Exit to terminal\n"
             "  Tab      Navigate menu\n"
             "  F1       Show this help\n",
