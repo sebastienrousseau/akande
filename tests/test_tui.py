@@ -93,6 +93,44 @@ class TestKeyboardBindings:
         assert "2" in keys
         assert "3" in keys
         assert "4" in keys
+        assert "5" in keys
+        assert "6" in keys
+
+
+class TestExportScreen:
+    def test_export_screen_exists(self):
+        from akande.tui import AkandeApp
+
+        assert hasattr(AkandeApp, "ExportScreen")
+        assert issubclass(
+            AkandeApp.ExportScreen, object
+        )
+
+    def test_export_screen_is_modal(self):
+        from akande.tui import AkandeApp
+        from textual.screen import ModalScreen
+
+        assert issubclass(
+            AkandeApp.ExportScreen, ModalScreen
+        )
+
+
+class TestHistoryScreen:
+    def test_history_screen_exists(self):
+        from akande.tui import AkandeApp
+
+        assert hasattr(AkandeApp, "HistoryScreen")
+        assert issubclass(
+            AkandeApp.HistoryScreen, object
+        )
+
+    def test_history_screen_is_modal(self):
+        from akande.tui import AkandeApp
+        from textual.screen import ModalScreen
+
+        assert issubclass(
+            AkandeApp.HistoryScreen, ModalScreen
+        )
 
 
 class TestWelcomeMessage:
@@ -102,6 +140,10 @@ class TestWelcomeMessage:
         src = inspect.getsource(AkandeApp.compose)
         assert "[1]" in src
         assert "[2]" in src
+        assert "[3]" in src
+        assert "[4]" in src
+        assert "[5]" in src
+        assert "[6]" in src
 
     def test_welcome_no_ctrl_references(self):
         from akande.tui import AkandeApp
