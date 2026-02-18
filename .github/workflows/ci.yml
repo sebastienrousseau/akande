@@ -1,139 +1,23 @@
-name: ❯ Python akande
+name: CI
 
 on:
-  pull_request:
-    branches:
-      - main
-      - "feat/*"
   push:
-    branches:
-      - main
-      - "feat/*"
+    branches: [main, "feat/**"]
+  pull_request:
+    branches: [main, "feat/**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  # This job reads the version number from pyproject.toml and sets it
-  # as an output
-  version:
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.set-version.outputs.version }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: ❯ Set up Python 🐍
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: ❯ Get version number from pyproject.toml
-        id: set-version
-        run: |
-          VERSION=$(python -c "
-          import tomllib
-          with open('pyproject.toml', 'rb') as f:
-              cfg = tomllib.load(f)
-          print(cfg['project']['version'])
-          ")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-  # This job runs flake8 to check for code style issues
-  lint:
-    needs: version
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: ❯ Set up Python and install dependencies 🐍📦
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: ❯ Install flake8 📦
-        run: python -m pip install flake8
-      - name: ❯ Run flake8 🔍
-        run: flake8
-
-  # This job builds the distribution packages, and publishes them
-  # to PyPI
-  build:
-    needs: [version, lint]
-    runs-on: ubuntu-latest
-    env:
-      TWINE_USERNAME: __token__
-      TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-      VERSION: ${{ needs.version.outputs.version }}
-      PKG_NAME: akande
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: ❯ Set up Python 🐍
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      # Install system dependencies required by PyAudio
-      - name: ❯ Install system dependencies 🛠️
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev python3-all-dev
-
-      # Install Python dependencies
-      - name: ❯ Install dependencies 📦
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          CFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" \
-            python -m pip install pyaudio
-          python -m pip install --upgrade pip setuptools wheel build
-          python -m pip install -r requirements.txt
-
-      # Generate the changelog based on git log and template file
-      - name: Generate Changelog 📚
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          # Append version information to CHANGELOG.md
-          echo "## Release v${{ env.VERSION }} - $(date +'%Y-%m-%d')" >> ${{ github.workspace }}/CHANGELOG.md
-          # Copy content of template file to CHANGELOG.md
-          cat TEMPLATE.md >> ${{ github.workspace }}/CHANGELOG.md
-          # Append git log to CHANGELOG.md
-          echo "$(git log --pretty=format:'%s' --reverse $(git describe --tags --abbrev=0)..HEAD)" >> ${{ github.workspace }}/CHANGELOG.md
-          # Append empty line to CHANGELOG.md
-          echo "" >> ${{ github.workspace }}/CHANGELOG.md
-
-      # Build distribution packages using PEP 517 build frontend
-      - name: ❯ Build distribution packages 🧰
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          python -m build
-
-      # Publish distribution packages to PyPI
-      - name: ❯ Publish distribution packages to PyPI 🚀
-        id: publish
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: pypa/gh-action-pypi-publish@v1.13.0
-        with:
-          user: ${{ env.TWINE_USERNAME }}
-          password: ${{ env.TWINE_PASSWORD }}
-          packages_dir: dist
-          verify_metadata: true
-          skip_existing: true
-
-      # Append artifact links to the changelog
-      - name: Append Artifact Links 🔗
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          echo "" >> ${{ github.workspace }}/CHANGELOG.md
-          echo "## Artifacts" >> ${{ github.workspace }}/CHANGELOG.md
-          for filename in dist/*; do
-            link="$(basename $filename)"
-            echo "* [$link](${{ env.RELEASES_URL }}/$link)" >> ${{ github.workspace }}/CHANGELOG.md
-          done
-        env:
-          RELEASES_URL: https://github.com/${{ github.repository }}/releases/download/v${{ env.VERSION }}
-
-      # Create a release using gh CLI
-      - name: Create Release 🚀
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "v${{ env.VERSION }}" \
-            --title "Release v${{ env.VERSION }}" \
-            --notes-file "${{ github.workspace }}/CHANGELOG.md" \
-            dist/*
+  ci:
+    name: Python CI
+    uses: sebastienrousseau/pipelines/.github/workflows/python-ci.yml@main
+    with:
+      python-version: '3.11'
+      run-ruff: true
+      run-mypy: true
+      coverage-threshold: 80
+      package-manager: 'pip'
+    secrets: inherit
