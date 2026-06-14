@@ -17,12 +17,14 @@ from typing import List, Optional
 
 from .audit import verify_command, verify_watermark_command
 from .data import data_command
+from .mcp import mcp_command
 
 KNOWN_SUBCOMMANDS = {
     "data",
     "verify-audit",
     "verify-pdf",
     "verify-watermark",
+    "mcp",
 }
 
 
@@ -84,6 +86,36 @@ def _build_parser() -> argparse.ArgumentParser:
             help="Path to the .audit.json file (or .pdf)",
         )
 
+    mcp_parser = sub.add_parser(
+        "mcp",
+        help="Model Context Protocol integration (server + client)",
+    )
+    mcp_sub = mcp_parser.add_subparsers(dest="mcp_command")
+    mcp_serve = mcp_sub.add_parser(
+        "serve",
+        help=(
+            "Run Àkàndé as an MCP server (stdio by default; "
+            "--http for the streamable HTTP transport)"
+        ),
+    )
+    mcp_serve.add_argument(
+        "--http",
+        action="store_true",
+        help="Use streamable HTTP transport instead of stdio",
+    )
+    mcp_list = mcp_sub.add_parser(
+        "list",
+        help=(
+            "List configured upstream MCP servers from "
+            "~/.akande/mcp.json, or tools from a named server"
+        ),
+    )
+    mcp_list.add_argument(
+        "server",
+        nargs="?",
+        help="Name of the upstream server to introspect",
+    )
+
     vw = sub.add_parser(
         "verify-watermark",
         help=(
@@ -127,5 +159,7 @@ def dispatch_subcommand(
         return verify_command(ns)
     if ns.command == "verify-watermark":
         return verify_watermark_command(ns)
+    if ns.command == "mcp":
+        return mcp_command(ns)
     parser.print_help()
     return 2

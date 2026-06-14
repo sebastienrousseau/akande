@@ -181,6 +181,14 @@ def get_provider(name: str = "") -> LLMProvider:
 
         name = LLM_PROVIDER or DEFAULT_PROVIDER
 
+    # ``AKANDE_MODE=offline`` refuses any non-local provider.  We
+    # check at the registry boundary so the rest of the codebase
+    # never has to ask "is this allowed?".  Imported lazily to keep
+    # the registry import-time-light.
+    from akande.mode import enforce_for_provider
+
+    enforce_for_provider(name)
+
     logging.info(
         "LLM provider resolved",
         extra={

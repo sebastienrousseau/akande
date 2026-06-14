@@ -60,6 +60,11 @@ watermark = [
 # Falls back to the regex set when not installed.
 redact = ["presidio-analyzer>=2.2,<3"]
 memory = ["mem0ai>=0.1,<1"]
+# Official Anthropic-maintained Model Context Protocol SDK.
+# Required to run `akande mcp serve` (the server side, exposing
+# Àkàndé to Claude Desktop / Cursor / Continue) and `akande mcp
+# list` (the client side, introspecting upstream servers).
+mcp = ["mcp>=0.9,<2"]
 all = [
     "anthropic>=0.40,<1",
     "google-generativeai>=0.7,<1",
