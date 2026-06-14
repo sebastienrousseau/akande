@@ -30,7 +30,7 @@ tqdm==4.68.2 ; python_version >= "3.10" and python_version < "4.0"
 typing-extensions==4.15.0 ; python_version >= "3.10" and python_version < "4.0"
 textual>=0.80,<1 ; python_version >= "3.10" and python_version < "4.0"
 urllib3==2.7.0 ; python_version >= "3.10" and python_version < "4.0"
-cryptography==46.0.7 ; python_version >= "3.10" and python_version < "4.0"
+cryptography==49.0.0 ; python_version >= "3.10" and python_version < "4.0"
 # Optional extras (install with `pip install akande[<name>]`):
 #   - mic         : pyaudio (requires portaudio system headers)
 #   - offline-tts : pyttsx4
