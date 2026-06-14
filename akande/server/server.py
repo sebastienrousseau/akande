@@ -14,24 +14,26 @@
 # limitations under the License.
 #
 import asyncio
-import cherrypy
 import hashlib
+import io
 import json
 import logging
 import os
-import io
 import re
 import secrets
 import tempfile
 import time
-import threading
 import uuid
-from typing import AsyncIterator
-
-import speech_recognition as sr
+from collections.abc import AsyncIterator
 from pathlib import Path
+
+import cherrypy
+import speech_recognition as sr
 from pydub import AudioSegment
 from pydub.exceptions import CouldntDecodeError
+
+from akande import telemetry
+from akande.akande import _friendly_llm_error
 from akande.cache import SQLiteCache
 from akande.config import (
     AKANDE_API_KEY,
@@ -40,7 +42,6 @@ from akande.config import (
     OPENAI_DEFAULT_MODEL,
     REDIS_URL,
 )
-from akande.akande import _friendly_llm_error
 from akande.conversation import ConversationStore
 from akande.disclosure import (
     get_disclosure_text,
@@ -66,12 +67,11 @@ from akande.tools.calling import (
     ToolCallingResult,
     run_tool_calling_loop,
 )
-from akande import telemetry
 from akande.utils import (
-    validate_api_key,
     get_output_directory,
     get_output_filename,
     strip_markdown,
+    validate_api_key,
 )
 
 ALLOWED_STATIC_FILES = {"sine-wave-generator.js"}
@@ -113,6 +113,8 @@ def _detect_audio_format(data: bytes) -> str:
 from akande.server.rate_limit import (  # noqa: E402
     InMemoryRateLimiter as RateLimiter,
 )
+
+__all__ = ["RateLimiter"]
 
 
 def _hash_ip(ip: str) -> str:
@@ -550,7 +552,7 @@ class AkandeServer:
         conv_payload = json.dumps(
             {"type": "meta", "conversation_id": conv_id}
         )
-        yield f"data: {conv_payload}\n\n".encode("utf-8")
+        yield f"data: {conv_payload}\n\n".encode()
 
         if should_disclose(profile):
             disclosure_text = get_disclosure_text()
@@ -566,7 +568,7 @@ class AkandeServer:
                 }
             )
             yield (
-                f"data: {disclosure_payload}\n\n".encode("utf-8")
+                f"data: {disclosure_payload}\n\n".encode()
             )
 
         wrapped_system = wrap_system_prompt(
@@ -635,7 +637,7 @@ class AkandeServer:
                         "metadata": event.metadata,
                     }
                 )
-                yield f"data: {ev}\n\n".encode("utf-8")
+                yield f"data: {ev}\n\n".encode()
             messages = tool_outcome.messages
 
         try:
@@ -664,7 +666,7 @@ class AkandeServer:
                     payload = json.dumps(
                         {"type": "delta", "content": delta}
                     )
-                    yield f"data: {payload}\n\n".encode("utf-8")
+                    yield f"data: {payload}\n\n".encode()
 
             final = "".join(buffer)
             if final:
@@ -691,7 +693,7 @@ class AkandeServer:
                 },
             )
             done = json.dumps({"type": "done"})
-            yield f"data: {done}\n\n".encode("utf-8")
+            yield f"data: {done}\n\n".encode()
         except Exception as exc:
             self.logger.error(
                 f"Stream failed: {type(exc).__name__}",
@@ -710,7 +712,7 @@ class AkandeServer:
                     "message": _friendly_llm_error(exc),
                 }
             )
-            yield f"data: {err}\n\n".encode("utf-8")
+            yield f"data: {err}\n\n".encode()
 
     def _provider_name_for_log(self) -> str:
         """Best-effort provider identifier for audit log entries."""
@@ -1155,6 +1157,8 @@ class AkandeServer:
         validation paths can be tested without pulling reportlab
         into the unit-test loop.
         """
+        from xml.sax.saxutils import escape as xml_escape
+
         from reportlab.lib.enums import TA_LEFT, TA_RIGHT
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.styles import (
@@ -1166,7 +1170,6 @@ class AkandeServer:
             SimpleDocTemplate,
             Spacer,
         )
-        from xml.sax.saxutils import escape as xml_escape
 
         filename = get_output_filename(".pdf")
         file_path = directory_path / filename
@@ -1334,7 +1337,7 @@ class AkandeServer:
                     "correlation_id": correlation_id,
                 },
             )
-            raise RuntimeError(f"Error converting audio: {e}")
+            raise RuntimeError(f"Error converting audio: {e}") from e
 
     @staticmethod
     def process_audio(file_path, correlation_id=""):

@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Optional
 
 from .base import STTBackend, STTResult
 from .sr_backend import SpeechRecognitionBackend
@@ -37,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_stt_backend(
-    name: Optional[str] = None,
+    name: str | None = None,
 ) -> STTBackend:
     """Resolve the active STT backend from name or env."""
     key = (

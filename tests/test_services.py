@@ -4,9 +4,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from akande.services import (
-    OpenAIService,
-    OpenAIImpl,
     SYSTEM_PROMPT,
+    OpenAIImpl,
+    OpenAIService,
 )
 
 

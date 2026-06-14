@@ -4,14 +4,11 @@
 """Tests for akande.audit (v0.0.6 Track E)."""
 
 import json
-from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
 from akande.audit import (
     AUDIT_SUFFIX,
-    AuditManifest,
     KeyManager,
     _reset_manager_for_tests,
     build_manifest,

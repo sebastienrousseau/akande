@@ -18,7 +18,6 @@ import os
 import sqlite3
 import threading
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +68,7 @@ class ConversationDB:
     WAL mode (enabled here) so concurrent readers/writers don't block.
     """
 
-    def __init__(self, db_path: Optional[str] = None) -> None:
+    def __init__(self, db_path: str | None = None) -> None:
         if db_path is None:
             from akande.utils import get_output_directory
 

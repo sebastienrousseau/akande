@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Optional
 
 from .base import S2SProvider, S2SResult
 from .openai_realtime import OpenAIRealtimeProvider
@@ -35,8 +34,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_s2s_provider(
-    name: Optional[str] = None,
-) -> Optional[S2SProvider]:
+    name: str | None = None,
+) -> S2SProvider | None:
     """Resolve an S2S backend by name or env; ``None`` when unset.
 
     Returning ``None`` rather than raising means callers can write

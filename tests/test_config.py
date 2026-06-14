@@ -12,6 +12,7 @@ def test_config_loads_env_vars():
     ):
         # Re-import to pick up mocked env
         import importlib
+
         from akande import config
 
         importlib.reload(config)
@@ -22,6 +23,7 @@ def test_config_loads_env_vars():
 def test_config_defaults():
     with mock.patch.dict(os.environ, {}, clear=True):
         import importlib
+
         from akande import config
 
         importlib.reload(config)

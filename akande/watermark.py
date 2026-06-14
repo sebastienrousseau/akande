@@ -43,7 +43,7 @@ import io
 import logging
 import threading
 import time
-from typing import Any, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +112,7 @@ def _get_detector() -> Any:  # pragma: no cover - needs audioseal
 
 def _bytes_to_tensor(  # pragma: no cover - needs audioseal + torch
     data: bytes, fmt: str
-) -> Tuple[Any, int]:
+) -> tuple[Any, int]:
     """Decode arbitrary audio bytes to a (1, 1, samples) torch tensor.
 
     Returns the tensor and the *original* sample rate so the caller
@@ -189,7 +189,6 @@ def watermark_audio(
         # tests/test_watermark.py::TestRoundTripIntegration
         # exercise this path on a developer machine that has the
         # extras installed.
-        import torch  # type: ignore[import-not-found]  # pragma: no cover
         import torchaudio.functional as F  # type: ignore[import-not-found]  # pragma: no cover
 
         tensor, sample_rate = _bytes_to_tensor(audio, fmt)  # pragma: no cover
@@ -235,7 +234,7 @@ def detect_watermark(
     audio: bytes,
     *,
     fmt: str = "mp3",
-) -> Tuple[bool, float]:
+) -> tuple[bool, float]:
     """Return ``(present, confidence)`` for ``audio``.
 
     ``present`` is ``True`` when the mean detector probability over

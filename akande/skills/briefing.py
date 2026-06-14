@@ -13,7 +13,6 @@ specific skills get first refusal.
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from akande.config import OPENAI_DEFAULT_MODEL
 from akande.providers import get_provider
@@ -39,7 +38,7 @@ class BriefingSkill(Skill):
             citations_expected=False,
         )
 
-    def match(self, text: str) -> Optional[Intent]:
+    def match(self, text: str) -> Intent | None:
         if not text.strip():
             return None
         return Intent(

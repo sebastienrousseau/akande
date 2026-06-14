@@ -7,8 +7,6 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-import pytest
-
 from akande.providers.base import LLMProvider
 
 

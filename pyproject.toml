@@ -8,7 +8,7 @@ version = "0.0.5"
 description = "A self-hosted, provider-agnostic voice assistant that delivers structured executive briefings via voice or text from 10 LLM providers."
 readme = "README.md"
 license = {text = "Apache Software License"}
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     {name = "Sebastien Rousseau", email = "sebastian.rousseau@gmail.com"},
 ]
@@ -18,7 +18,6 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -99,7 +98,7 @@ include = ["akande*"]
 
 [tool.black]
 line-length = 72
-target-version = ["py39", "py310", "py311", "py312"]
+target-version = ["py310", "py311", "py312"]
 
 [tool.isort]
 profile = "black"
@@ -111,7 +110,7 @@ combine_as_imports = true
 known_first_party = "akande"
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py310"
 line-length = 72
 src = ["akande", "tests"]
 

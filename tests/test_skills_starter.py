@@ -3,10 +3,7 @@
 # Licensed under the Apache License, Version 2.0 (the "License").
 """Tests for the four starter skills."""
 
-import json
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from akande.skills import (
     BriefingSkill,

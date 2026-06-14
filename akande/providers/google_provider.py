@@ -17,7 +17,8 @@ import asyncio
 import logging
 import os
 import time
-from typing import Any, AsyncIterator, Dict, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 from .base import LLMProvider
 from .response import ProviderResponse
@@ -36,12 +37,12 @@ class GoogleProvider(LLMProvider):
     def __init__(self) -> None:
         try:
             import google.generativeai as genai
-        except ImportError:
+        except ImportError as exc:
             raise ImportError(
                 "The 'google-generativeai' package is required "
                 "for the Google provider. "
                 "Install it with: pip install akande[google]"
-            )
+            ) from exc
         api_key = os.getenv("GOOGLE_API_KEY", "")
         if not api_key:
             raise ValueError(
@@ -57,7 +58,7 @@ class GoogleProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> ProviderResponse:
         if not params:
             params = {}
@@ -79,7 +80,7 @@ class GoogleProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         logging.info(
             "LLM request sent",
@@ -139,7 +140,7 @@ class GoogleProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> AsyncIterator[str]:
         """Native streaming for ``generate_content(stream=True)``."""
         if not params:
@@ -219,7 +220,7 @@ class GoogleProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         logging.info(
             "LLM sync request sent",

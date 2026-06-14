@@ -6,13 +6,11 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import cherrypy
 import pytest
-
 
 # ============================================================
 # server.py rate-limit + CSRF rejection paths
@@ -77,7 +75,6 @@ class TestServerSecurityRejections:
 
 class TestSSEBriefingDisclosure:
     def test_disclosure_event_emitted_under_eu(self, server):
-        from akande.skills.briefing import BriefingSkill
 
         # Force the EU profile so disclosure fires.
         from akande.profiles import EU
@@ -208,7 +205,7 @@ class TestMemoryEnvInit:
         from akande.memory import MemoryStore
 
         monkeypatch.setenv("AKANDE_MEMORY", "1")
-        fake_mem0 = MagicMock()
+        MagicMock()
         with patch(
             "akande.memory._mem0_available",
             return_value=True,
@@ -370,8 +367,9 @@ class TestToolCallingDictArgs:
 
 class TestCLIMCPList:
     def test_list_no_servers(self, tmp_path, monkeypatch, capsys):
-        from akande.cli.mcp import mcp_command
         import argparse
+
+        from akande.cli.mcp import mcp_command
 
         monkeypatch.setattr(
             "akande.mcp.client.DEFAULT_CONFIG_PATH",

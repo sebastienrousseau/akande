@@ -9,11 +9,9 @@ async-to-sync bridge used by the SSE endpoint.
 """
 
 import asyncio
+from collections.abc import AsyncIterator
 from types import SimpleNamespace
-from typing import AsyncIterator
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 from akande.providers.base import LLMProvider, _extract_text
 from akande.server.server import _sync_iter_async

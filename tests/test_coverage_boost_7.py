@@ -9,8 +9,6 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 
 class TestToolCallingNoMessage:
     def test_loop_stops_when_message_is_none(self):
@@ -107,7 +105,7 @@ class TestWebSearchExtraBranches:
             "akande.tools.web_search.urllib.request.urlopen",
             return_value=resp,
         ):
-            backend, results = tool._brave("q", 5), None
+            backend, _results = tool._brave("q", 5), None
         # _brave returns the list directly.
         # Sanity: when results are empty, the list is empty.
         assert isinstance(backend, list)

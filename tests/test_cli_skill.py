@@ -5,7 +5,6 @@
 
 import argparse
 import json
-from unittest.mock import patch
 
 import pytest
 

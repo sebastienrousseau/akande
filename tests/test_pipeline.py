@@ -5,8 +5,6 @@
 
 from unittest.mock import patch
 
-import pytest
-
 from akande.pipeline import PipelineResult, respond_to_audio
 from akande.stt.base import STTResult
 from akande.tts.base import TTSSynthesisResult

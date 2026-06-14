@@ -21,7 +21,6 @@ import re
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Optional
 
 from .base import (
     Intent,
@@ -65,7 +64,7 @@ class FinanceSkill(Skill):
             citations_expected=True,
         )
 
-    def match(self, text: str) -> Optional[Intent]:
+    def match(self, text: str) -> Intent | None:
         m = _DOLLAR_SYMBOL.search(text)
         if m:
             return Intent(
@@ -138,7 +137,7 @@ class FinanceSkill(Skill):
 
     # -- internals --------------------------------------------------
 
-    def _quote(self, symbol: str) -> Optional[dict]:
+    def _quote(self, symbol: str) -> dict | None:
         url = (
             QUOTE_URL
             + "?"

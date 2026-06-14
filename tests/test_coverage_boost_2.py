@@ -6,12 +6,10 @@
 from __future__ import annotations
 
 import asyncio
-import os
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ============================================================
 # anthropic_provider streaming + edge branches
@@ -402,9 +400,9 @@ class TestMemoryExtras:
 
 class TestVerifyWatermarkBranches:
     def test_missing_file_exits_2(self, tmp_path, capsys):
-        from akande.cli.audit import verify_watermark_command
-
         import argparse
+
+        from akande.cli.audit import verify_watermark_command
 
         ns = argparse.Namespace(
             path=str(tmp_path / "missing.mp3"),
@@ -416,8 +414,9 @@ class TestVerifyWatermarkBranches:
     def test_audioseal_missing_returns_3(
         self, tmp_path, capsys
     ):
-        from akande.cli.audit import verify_watermark_command
         import argparse
+
+        from akande.cli.audit import verify_watermark_command
 
         wav = tmp_path / "x.wav"
         wav.write_bytes(b"RIFF" + b"\x00" * 100)

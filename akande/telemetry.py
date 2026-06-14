@@ -37,8 +37,9 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Any, Iterator, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +53,8 @@ _meter: Any = None
 
 def _opentelemetry_available() -> bool:
     try:
-        import opentelemetry.trace  # noqa: F401
         import opentelemetry.metrics  # noqa: F401
+        import opentelemetry.trace  # noqa: F401
     except ImportError:  # pragma: no cover - dep-presence check
         return False
     return True
@@ -242,7 +243,7 @@ def record_metric(
     if cache is None:
         cache = {}
         try:
-            setattr(_meter, "_akande_hist_cache", cache)
+            _meter._akande_hist_cache = cache
         except Exception:  # pragma: no cover
             return
     hist = cache.get(name)

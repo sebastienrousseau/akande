@@ -6,11 +6,8 @@
 from __future__ import annotations
 
 import argparse
-import asyncio
 import json
-from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -46,7 +43,6 @@ class TestVerifyAuditCLI:
     ):
         monkeypatch.setenv("AKANDE_HOME", str(tmp_path))
         from akande.audit import (
-            AUDIT_SUFFIX,
             _reset_manager_for_tests,
             build_manifest,
             write_sidecar,

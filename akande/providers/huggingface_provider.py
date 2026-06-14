@@ -17,7 +17,7 @@ import asyncio
 import logging
 import os
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .base import LLMProvider
 from .response import ProviderResponse
@@ -36,12 +36,12 @@ class HuggingFaceProvider(LLMProvider):
     def __init__(self) -> None:
         try:
             from huggingface_hub import InferenceClient
-        except ImportError:
+        except ImportError as exc:
             raise ImportError(
                 "The 'huggingface_hub' package is required for "
                 "the Hugging Face provider. Install it with: "
                 "pip install akande[huggingface]"
-            )
+            ) from exc
         api_key = os.getenv("HUGGINGFACE_API_KEY", "")
         if not api_key:
             raise ValueError(
@@ -58,7 +58,7 @@ class HuggingFaceProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> ProviderResponse:
         if not params:
             params = {}
@@ -86,7 +86,7 @@ class HuggingFaceProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         logging.info(
             "LLM request sent",
@@ -146,7 +146,7 @@ class HuggingFaceProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         logging.info(
             "LLM sync request sent",

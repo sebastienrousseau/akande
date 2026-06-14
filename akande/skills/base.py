@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class Intent:
     """A matched intent, ready for the skill to handle."""
 
     name: str
-    args: Dict[str, Any] = field(default_factory=dict)
+    args: dict[str, Any] = field(default_factory=dict)
     raw_text: str = ""
 
 
@@ -44,8 +44,8 @@ class SkillResult:
     """Outcome of :meth:`Skill.handle`."""
 
     content: str
-    citations: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    citations: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -53,8 +53,8 @@ class SkillContext:
     """Runtime context passed through to every skill invocation."""
 
     user_id: str = "default"
-    conversation_id: Optional[str] = None
-    correlation_id: Optional[str] = None
+    conversation_id: str | None = None
+    correlation_id: str | None = None
 
 
 class Skill(ABC):
@@ -75,7 +75,7 @@ class Skill(ABC):
         ...
 
     @abstractmethod
-    def match(self, text: str) -> Optional[Intent]:
+    def match(self, text: str) -> Intent | None:
         """Return an Intent if this skill claims the request, else None."""
         ...
 
@@ -95,7 +95,7 @@ class SkillRegistry:
     ENTRY_POINT_GROUP = "akande.skills"
 
     def __init__(self) -> None:
-        self._skills: List[Skill] = []
+        self._skills: list[Skill] = []
         self._disabled: set[str] = set()
 
     def register(self, skill: Skill) -> None:
@@ -112,21 +112,21 @@ class SkillRegistry:
             )
         self._skills.append(skill)
 
-    def names(self) -> List[str]:
+    def names(self) -> list[str]:
         return [
             s.meta.name
             for s in self._skills
             if s.meta.name not in self._disabled
         ]
 
-    def all(self) -> List[Skill]:
+    def all(self) -> list[Skill]:
         return [
             s
             for s in self._skills
             if s.meta.name not in self._disabled
         ]
 
-    def get(self, name: str) -> Optional[Skill]:
+    def get(self, name: str) -> Skill | None:
         if name in self._disabled:
             return None
         for s in self._skills:
@@ -140,7 +140,7 @@ class SkillRegistry:
     def enable(self, name: str) -> None:
         self._disabled.discard(name)
 
-    def route(self, text: str) -> Optional[tuple[Skill, Intent]]:
+    def route(self, text: str) -> tuple[Skill, Intent] | None:
         """Find the first skill that claims the text.
 
         Returns ``(skill, intent)`` or ``None`` when nothing

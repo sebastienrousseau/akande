@@ -4,7 +4,6 @@
 """Tests for the akande.mcp server + client integration."""
 
 import json
-from pathlib import Path
 
 import pytest
 

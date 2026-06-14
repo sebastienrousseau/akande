@@ -10,16 +10,16 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from akande.providers.base import LLMProvider
+from akande.providers.registry import (
+    DEFAULT_PROVIDER,
+    ProviderRegistry,
+    _registry,
+    get_provider,
+)
 from akande.providers.response import (
-    ProviderResponse,
     ProviderChoice,
     ProviderMessage,
-)
-from akande.providers.registry import (
-    ProviderRegistry,
-    get_provider,
-    DEFAULT_PROVIDER,
-    _registry,
+    ProviderResponse,
 )
 
 
@@ -602,10 +602,11 @@ class TestAzureOpenAIProvider:
         clear=False,
     )
     def test_missing_api_key_raises(self):
+        import os
+
         from akande.providers.azure_openai_provider import (
             AzureOpenAIProvider,
         )
-        import os
         os.environ.pop("AZURE_OPENAI_API_KEY", None)
         with pytest.raises(
             ValueError, match="AZURE_OPENAI_API_KEY"
@@ -618,10 +619,11 @@ class TestAzureOpenAIProvider:
         clear=False,
     )
     def test_missing_endpoint_raises(self):
+        import os
+
         from akande.providers.azure_openai_provider import (
             AzureOpenAIProvider,
         )
-        import os
         os.environ.pop("AZURE_OPENAI_ENDPOINT", None)
         with pytest.raises(
             ValueError, match="AZURE_OPENAI_ENDPOINT"

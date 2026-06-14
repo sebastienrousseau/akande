@@ -13,7 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 
 def skill_command(ns: argparse.Namespace) -> int:
@@ -45,7 +45,7 @@ def _registry_and_policy():
 
 def _list(ns: argparse.Namespace) -> int:
     registry, policy = _registry_and_policy()
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for skill in registry.all():
         meta = skill.meta
         rows.append(

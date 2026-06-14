@@ -22,7 +22,6 @@ from __future__ import annotations
 import importlib
 import sys
 import traceback
-from typing import List
 
 # Every public submodule we expect a fresh install to be able to
 # import.  Optional-dep paths (``akande.tts.kokoro_backend``,
@@ -30,7 +29,7 @@ from typing import List
 # ``akande.mcp.server``, ``akande.mcp.client``) sit in a second list
 # whose failures are reported but don't fail the smoke — operators
 # who skip ``pip install akande[mcp]`` shouldn't see a red bar.
-REQUIRED_MODULES: List[str] = [
+REQUIRED_MODULES: list[str] = [
     "akande",
     "akande.akande",
     "akande.audit",
@@ -100,7 +99,7 @@ REQUIRED_MODULES: List[str] = [
     "akande.watermark",
 ]
 
-OPTIONAL_MODULES: List[str] = [
+OPTIONAL_MODULES: list[str] = [
     # Heavy optional deps — fail-open if extras aren't installed.
     "akande.tts.kokoro_backend",
     "akande.stt.faster_whisper_backend",

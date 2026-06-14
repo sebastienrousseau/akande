@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, List
+from typing import Any
 
 from akande.tools import default_registry
 from akande.tools.base import ToolError, ToolRegistry
@@ -202,7 +202,7 @@ def build_server(
     return app
 
 
-def list_tool_names(app: Any) -> List[str]:
+def list_tool_names(app: Any) -> list[str]:
     """Best-effort introspection of registered tool names.
 
     FastMCP doesn't ship a stable ``list`` accessor across versions,

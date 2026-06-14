@@ -5,14 +5,9 @@
 
 from __future__ import annotations
 
-import argparse
 import asyncio
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
-
-import pytest
-
 
 # ============================================================
 # audit verify_sidecar - load + verify path

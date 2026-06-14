@@ -5,14 +5,8 @@
 
 from __future__ import annotations
 
-import asyncio
-import os
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
-from urllib.error import URLError
-
-import pytest
-
 
 # ============================================================
 # utils._maybe_sign_briefing branches

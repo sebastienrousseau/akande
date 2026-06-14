@@ -37,7 +37,6 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +45,7 @@ DEFAULT_STT = "faster_whisper"
 DEFAULT_TTS = "gtts"  # Kokoro is on the operator if they want it.
 
 
-OFFLINE_ENV_DEFAULTS: Dict[str, str] = {
+OFFLINE_ENV_DEFAULTS: dict[str, str] = {
     "AKANDE_MODE": "offline",
     "LLM_PROVIDER": "ollama",
     "OLLAMA_HOST": "http://localhost:11434",
@@ -188,10 +187,10 @@ def _write_env(
     print(f"✓ wrote {target}")
 
 
-def _load_env(path: Path) -> Dict[str, str]:
+def _load_env(path: Path) -> dict[str, str]:
     if not path.is_file():
         return {}
-    out: Dict[str, str] = {}
+    out: dict[str, str] = {}
     for line in path.read_text().splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:

@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import asyncio
 import threading
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import openai

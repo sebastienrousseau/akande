@@ -13,16 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from abc import ABC, abstractmethod
 import asyncio
 import logging
 import time
-from typing import Any, Dict, Optional
+from abc import ABC, abstractmethod
+from typing import Any
+
 import openai
+
 from .config import (
+    API_CALL_TIMEOUT,
     OPENAI_API_KEY,
     OPENAI_DEFAULT_MODEL,
-    API_CALL_TIMEOUT,
 )
 
 SYSTEM_PROMPT = """
@@ -78,7 +80,7 @@ class OpenAIService(ABC):
         prompt: str,
         system_prompt: str = "",
         model: str = "",
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         pass
 
@@ -101,7 +103,7 @@ class OpenAIImpl(OpenAIService):
         user_prompt: str,
         system_prompt: str = "",
         model: str = "",
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         if not params:
             params = {}
@@ -153,7 +155,7 @@ class OpenAIImpl(OpenAIService):
         user_prompt: str,
         system_prompt: str = "",
         model: str = "",
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         if not params:
             params = {}

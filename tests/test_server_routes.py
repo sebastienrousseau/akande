@@ -17,9 +17,7 @@ This file fills in the routes the earlier suites didn't reach:
 
 from __future__ import annotations
 
-import io
 import json
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 

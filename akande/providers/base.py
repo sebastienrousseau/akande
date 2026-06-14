@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 from abc import ABC, abstractmethod
-from typing import Any, AsyncIterator, Dict, List, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 
 class LLMProvider(ABC):
@@ -43,7 +44,7 @@ class LLMProvider(ABC):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         """Generate a response asynchronously.
 
@@ -71,7 +72,7 @@ class LLMProvider(ABC):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         """Generate a response synchronously.
 
@@ -98,7 +99,7 @@ class LLMProvider(ABC):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> AsyncIterator[str]:
         """Yield response content as a stream of text deltas.
 
@@ -128,9 +129,9 @@ class LLMProvider(ABC):
 
     async def generate_stream_messages(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> AsyncIterator[str]:
         """Stream a completion for a full chat-style message list.
 
@@ -150,7 +151,7 @@ class LLMProvider(ABC):
         proper role-tagged context.
         """
         system_prompt = ""
-        history: List[Dict[str, str]] = []
+        history: list[dict[str, str]] = []
         for msg in messages:
             role = msg.get("role", "user")
             content = msg.get("content", "")

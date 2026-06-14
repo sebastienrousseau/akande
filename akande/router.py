@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Tuple
 
 from akande.mode import active_mode
 from akande.pricing import cheapest_meeting
@@ -22,7 +21,7 @@ from akande.pricing import cheapest_meeting
 logger = logging.getLogger(__name__)
 
 
-def route() -> Tuple[str, str]:
+def route() -> tuple[str, str]:
     """Return ``(provider_name, model)`` per the active router."""
     policy = (
         os.getenv("AKANDE_ROUTER", "passthrough")
@@ -34,7 +33,7 @@ def route() -> Tuple[str, str]:
     return _passthrough()
 
 
-def _passthrough() -> Tuple[str, str]:
+def _passthrough() -> tuple[str, str]:
     from akande.config import (
         LLM_PROVIDER,
         OPENAI_DEFAULT_MODEL,
@@ -45,7 +44,7 @@ def _passthrough() -> Tuple[str, str]:
     return provider, OPENAI_DEFAULT_MODEL or ""
 
 
-def _cost_optimised() -> Tuple[str, str]:
+def _cost_optimised() -> tuple[str, str]:
     minimum = os.getenv(
         "AKANDE_ROUTER_MIN_TIER", "medium"
     )

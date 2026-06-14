@@ -49,7 +49,7 @@ import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -63,15 +63,15 @@ class MCPServerConfig:
 
     name: str
     command: str
-    args: List[str] = field(default_factory=list)
-    env: Dict[str, str] = field(default_factory=dict)
+    args: list[str] = field(default_factory=list)
+    env: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
 class MCPPolicy:
     """Per-server tool allow / deny / require-confirm sets."""
 
-    allow: Optional[set[str]] = None
+    allow: set[str] | None = None
     deny: set[str] = field(default_factory=set)
     require_confirm: set[str] = field(default_factory=set)
 
@@ -92,7 +92,7 @@ def _expand(path: str) -> Path:
 
 def load_config(
     config_path: str = DEFAULT_CONFIG_PATH,
-) -> Dict[str, MCPServerConfig]:
+) -> dict[str, MCPServerConfig]:
     """Parse Claude-Desktop-shaped MCP config into typed dataclasses.
 
     Returns an empty mapping when the file is missing — that's the
@@ -103,7 +103,7 @@ def load_config(
         return {}
     raw = json.loads(target.read_text())
     servers = raw.get("mcpServers") or {}
-    out: Dict[str, MCPServerConfig] = {}
+    out: dict[str, MCPServerConfig] = {}
     for name, spec in servers.items():
         if not isinstance(spec, dict):
             continue
@@ -127,7 +127,7 @@ def load_config(
 
 def load_policy(
     policy_path: str = DEFAULT_POLICY_PATH,
-) -> Dict[str, MCPPolicy]:
+) -> dict[str, MCPPolicy]:
     """Read per-server tool policy.  Empty dict means "no constraint"."""
     target = _expand(policy_path)
     if not target.is_file():
@@ -135,7 +135,7 @@ def load_policy(
     raw = json.loads(target.read_text())
     if not isinstance(raw, dict):
         return {}
-    out: Dict[str, MCPPolicy] = {}
+    out: dict[str, MCPPolicy] = {}
     for name, spec in raw.items():
         if not isinstance(spec, dict):
             continue
@@ -156,9 +156,9 @@ def load_policy(
 
 def admitted_tools(
     server: str,
-    upstream_tool_names: List[str],
-    policy: Dict[str, MCPPolicy] | None = None,
-) -> List[str]:
+    upstream_tool_names: list[str],
+    policy: dict[str, MCPPolicy] | None = None,
+) -> list[str]:
     """Apply the configured policy to an upstream tool list."""
     policies = policy if policy is not None else load_policy()
     rules = policies.get(server)
@@ -171,8 +171,14 @@ def admitted_tools(
 
 def _require_mcp_sdk() -> Any:
     try:
-        from mcp import ClientSession, StdioServerParameters  # type: ignore[import-not-found]
-        from mcp.client.stdio import stdio_client  # type: ignore[import-not-found]
+        from mcp.client.stdio import (
+            stdio_client,  # type: ignore[import-not-found]
+        )
+
+        from mcp import (  # type: ignore[import-not-found]
+            ClientSession,
+            StdioServerParameters,
+        )
     except ImportError as exc:
         raise ImportError(
             "The 'mcp' package is required for the MCP "
@@ -183,7 +189,7 @@ def _require_mcp_sdk() -> Any:
 
 async def list_upstream_tools(
     cfg: MCPServerConfig,
-) -> List[Dict[str, Any]]:  # pragma: no cover - integration
+) -> list[dict[str, Any]]:  # pragma: no cover - integration
     """Open a session, list tools, close.
 
     Run by the CLI as ``akande mcp list <server>`` to help operators

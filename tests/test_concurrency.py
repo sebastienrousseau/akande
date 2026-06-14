@@ -40,9 +40,10 @@ class TestCacheConcurrentReadWrite:
     ):
         """10 threads doing barrier-synchronised cache
         reads and writes should not corrupt data."""
-        from akande.cache import SQLiteCache
         import tempfile
         from pathlib import Path
+
+        from akande.cache import SQLiteCache
 
         with tempfile.TemporaryDirectory() as tmpdir:
             cache = SQLiteCache(

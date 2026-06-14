@@ -17,27 +17,27 @@ import contextlib
 import os
 from datetime import datetime, timezone
 
+from rich.text import Text
+from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import (
+    Button,
     Footer,
     Header,
     Input,
     OptionList,
-    Static,
-    Button,
     RichLog,
+    Static,
 )
-from textual import work
-from rich.text import Text
 
 from .config import LLM_PROVIDER, OPENAI_DEFAULT_MODEL
 from .exceptions import LLMError
 from .utils import (
-    generate_pdf,
     generate_csv,
+    generate_pdf,
     strip_markdown,
 )
 

@@ -4,13 +4,12 @@
 """Tests for the multi-turn conversation store (v0.0.6 Track B)."""
 
 import os
-import tempfile
 
 import pytest
 
 from akande.conversation import (
-    ConversationStore,
     DEFAULT_USER_ID,
+    ConversationStore,
     new_conversation_id,
 )
 from akande.db import ConversationDB

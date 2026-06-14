@@ -16,7 +16,7 @@ import argparse
 import dataclasses
 import json
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from akande.conversation import ConversationStore
 from akande.memory import MemoryStore
@@ -26,8 +26,8 @@ def _dump_user(
     store: ConversationStore,
     user_id: str,
     *,
-    memory: Optional[MemoryStore] = None,
-) -> Dict[str, Any]:
+    memory: MemoryStore | None = None,
+) -> dict[str, Any]:
     """Build the JSON dump for a single data subject.
 
     Includes:
@@ -39,7 +39,7 @@ def _dump_user(
       active (long-term inferred facts also fall under Article 15)
     """
     conversations = store.list(user_id=user_id, limit=10_000)
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     for conv in conversations:
         turns = store.recent_turns(conv.id, limit=100_000)
         out.append(
@@ -51,7 +51,7 @@ def _dump_user(
             }
         )
 
-    memories: List[Dict[str, Any]] = []
+    memories: list[dict[str, Any]] = []
     memory_enabled = False
     if memory is not None and memory.enabled:
         memory_enabled = True

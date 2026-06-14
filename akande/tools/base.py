@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class ToolResult:
     """
 
     content: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class Tool(ABC):
@@ -45,16 +45,16 @@ class Tool(ABC):
 
     @property
     @abstractmethod
-    def input_schema(self) -> Dict[str, Any]:
+    def input_schema(self) -> dict[str, Any]:
         """JSON-Schema describing the ``args`` dict for ``run``."""
         ...
 
     @abstractmethod
-    def run(self, args: Dict[str, Any]) -> ToolResult:
+    def run(self, args: dict[str, Any]) -> ToolResult:
         """Execute the tool.  Raise :class:`ToolError` on user error."""
         ...
 
-    def to_mcp_dict(self) -> Dict[str, Any]:
+    def to_mcp_dict(self) -> dict[str, Any]:
         """Render as the dict shape ``mcp.types.Tool`` expects."""
         return {
             "name": self.name,
@@ -72,7 +72,7 @@ class ToolRegistry:
     """
 
     def __init__(self) -> None:
-        self._tools: Dict[str, Tool] = {}
+        self._tools: dict[str, Tool] = {}
         self._disabled: set[str] = set()
 
     def register(self, tool: Tool) -> None:
@@ -92,18 +92,18 @@ class ToolRegistry:
     def enable(self, name: str) -> None:
         self._disabled.discard(name)
 
-    def names(self) -> List[str]:
+    def names(self) -> list[str]:
         return sorted(
             n for n in self._tools if n not in self._disabled
         )
 
-    def get(self, name: str) -> Optional[Tool]:
+    def get(self, name: str) -> Tool | None:
         if name in self._disabled:
             return None
         return self._tools.get(name)
 
     def call(
-        self, name: str, args: Dict[str, Any]
+        self, name: str, args: dict[str, Any]
     ) -> ToolResult:
         """Dispatch by name.  Logs every call for audit purposes."""
         tool = self.get(name)
@@ -120,7 +120,7 @@ class ToolRegistry:
         )
         return tool.run(args)
 
-    def all_mcp_dicts(self) -> List[Dict[str, Any]]:
+    def all_mcp_dicts(self) -> list[dict[str, Any]]:
         return [
             self._tools[n].to_mcp_dict()
             for n in self.names()

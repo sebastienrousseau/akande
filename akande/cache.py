@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from datetime import datetime, timedelta
-from typing import Any, Optional
 import json
 import logging
 import os
@@ -22,7 +20,8 @@ import re
 import sqlite3
 import threading
 import time
-
+from datetime import datetime, timedelta
+from typing import Any
 
 # Module-level regex patterns for PII redaction.  Kept conservative
 # so the cache stays useful as a cache; high-recall ML-based
@@ -171,7 +170,7 @@ class SQLiteCache:
             },
         )
 
-    def get(self, prompt_hash: str) -> Optional[str]:
+    def get(self, prompt_hash: str) -> str | None:
         """
         Retrieve a response from the cache.
 

@@ -34,7 +34,6 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Optional
 
 from .base import TTSBackend, TTSSynthesisResult
 from .gtts_backend import GTTSBackend
@@ -50,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_tts_backend(
-    name: Optional[str] = None,
+    name: str | None = None,
 ) -> TTSBackend:
     """Return a TTS backend resolved from name or ``AKANDE_TTS``.
 

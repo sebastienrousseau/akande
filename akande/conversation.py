@@ -18,11 +18,10 @@ test.  The summariser will live on top of this method.
 
 from __future__ import annotations
 
+import builtins
 import logging
 import secrets
-import time
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
 
 from akande.db import ConversationDB
 
@@ -41,12 +40,12 @@ class Turn:
     role: str
     content: str
     ts: str
-    tokens: Optional[int] = None
-    cost_usd: Optional[float] = None
-    provider: Optional[str] = None
-    model: Optional[str] = None
+    tokens: int | None = None
+    cost_usd: float | None = None
+    provider: str | None = None
+    model: str | None = None
 
-    def to_message(self) -> Dict[str, str]:
+    def to_message(self) -> dict[str, str]:
         """Render as an OpenAI-style chat message."""
         return {"role": self.role, "content": self.content}
 
@@ -57,7 +56,7 @@ class Conversation:
 
     id: str
     user_id: str
-    title: Optional[str]
+    title: str | None
     created_at: str
     updated_at: str
 
@@ -80,7 +79,7 @@ class ConversationStore:
     underlying DB lock.
     """
 
-    def __init__(self, db: Optional[ConversationDB] = None) -> None:
+    def __init__(self, db: ConversationDB | None = None) -> None:
         self.db = db or ConversationDB()
 
     # -- conversations ---------------------------------------------
@@ -88,8 +87,8 @@ class ConversationStore:
     def create(
         self,
         user_id: str = DEFAULT_USER_ID,
-        title: Optional[str] = None,
-        conv_id: Optional[str] = None,
+        title: str | None = None,
+        conv_id: str | None = None,
     ) -> Conversation:
         """Create a new conversation row and return it."""
         cid = conv_id or new_conversation_id()
@@ -101,7 +100,7 @@ class ConversationStore:
             )
         return self._fetch_conversation(cid)
 
-    def get(self, conv_id: str) -> Optional[Conversation]:
+    def get(self, conv_id: str) -> Conversation | None:
         with self.db.lock:
             row = self.db.conn.execute(
                 "SELECT id, user_id, title, created_at, "
@@ -114,7 +113,7 @@ class ConversationStore:
 
     def get_or_create(
         self,
-        conv_id: Optional[str],
+        conv_id: str | None,
         user_id: str = DEFAULT_USER_ID,
     ) -> Conversation:
         """Look up or mint a conversation by id.
@@ -136,7 +135,7 @@ class ConversationStore:
         self,
         user_id: str = DEFAULT_USER_ID,
         limit: int = 50,
-    ) -> List[Conversation]:
+    ) -> builtins.list[Conversation]:
         """Return the user's most recently-updated conversations."""
         with self.db.lock:
             rows = self.db.conn.execute(
@@ -173,10 +172,10 @@ class ConversationStore:
         role: str,
         content: str,
         *,
-        tokens: Optional[int] = None,
-        cost_usd: Optional[float] = None,
-        provider: Optional[str] = None,
-        model: Optional[str] = None,
+        tokens: int | None = None,
+        cost_usd: float | None = None,
+        provider: str | None = None,
+        model: str | None = None,
     ) -> Turn:
         """Append a new turn and bump the conversation's updated_at.
 
@@ -221,7 +220,7 @@ class ConversationStore:
         self,
         conv_id: str,
         limit: int = DEFAULT_RECENT_TURNS,
-    ) -> List[Turn]:
+    ) -> builtins.list[Turn]:
         """Return the last ``limit`` turns in chronological order."""
         with self.db.lock:
             rows = self.db.conn.execute(
@@ -237,7 +236,7 @@ class ConversationStore:
         self,
         conv_id: str,
         limit: int = DEFAULT_RECENT_TURNS,
-    ) -> List[Dict[str, str]]:
+    ) -> builtins.list[dict[str, str]]:
         """Return recent turns shaped for an LLM ``messages`` arg."""
         return [t.to_message() for t in self.recent_turns(conv_id, limit)]
 

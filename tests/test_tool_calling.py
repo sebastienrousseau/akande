@@ -3,15 +3,11 @@
 # Licensed under the Apache License, Version 2.0 (the "License").
 """Tests for the LLM tool-calling loop."""
 
-import json
 from types import SimpleNamespace
-from typing import Any, Dict, List
-
-import pytest
+from typing import Any
 
 from akande.tools.base import (
     Tool,
-    ToolError,
     ToolRegistry,
     ToolResult,
 )
@@ -29,10 +25,10 @@ class _ConstantTool(Tool):
         self._reply = reply
 
     @property
-    def input_schema(self) -> Dict[str, Any]:
+    def input_schema(self) -> dict[str, Any]:
         return {"type": "object", "properties": {}}
 
-    def run(self, args: Dict[str, Any]) -> ToolResult:
+    def run(self, args: dict[str, Any]) -> ToolResult:
         return ToolResult(
             content=self._reply,
             metadata={"got": args},
@@ -42,7 +38,7 @@ class _ConstantTool(Tool):
 def _envelope(
     *,
     content: str = "",
-    tool_calls: List[Dict[str, Any]] | None = None,
+    tool_calls: list[dict[str, Any]] | None = None,
 ) -> SimpleNamespace:
     msg = SimpleNamespace(
         content=content,

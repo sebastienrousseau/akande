@@ -18,7 +18,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from html import unescape
-from typing import Any, Dict
+from typing import Any
 
 from .base import Tool, ToolError, ToolResult
 
@@ -47,7 +47,7 @@ class FetchURLTool(Tool):
     )
 
     @property
-    def input_schema(self) -> Dict[str, Any]:
+    def input_schema(self) -> dict[str, Any]:
         return {
             "type": "object",
             "properties": {
@@ -68,7 +68,7 @@ class FetchURLTool(Tool):
             "required": ["url"],
         }
 
-    def run(self, args: Dict[str, Any]) -> ToolResult:
+    def run(self, args: dict[str, Any]) -> ToolResult:
         url = (args.get("url") or "").strip()
         max_chars = int(args.get("max_chars") or 8000)
         max_chars = max(100, min(max_chars, 50_000))

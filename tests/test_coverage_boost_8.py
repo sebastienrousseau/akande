@@ -11,7 +11,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ============================================================
 # google_provider — native streaming
 # ============================================================
@@ -178,7 +177,7 @@ class TestWebSearchTavily:
             "akande.tools.web_search.urllib.request.urlopen",
             return_value=resp,
         ):
-            backend, results = tool._tavily("q", 5), None
+            backend, _results = tool._tavily("q", 5), None
         # _tavily returns just the list.
         assert isinstance(backend, list)
         assert backend[0]["title"] == "T"

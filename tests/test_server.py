@@ -5,12 +5,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from akande.server.server import (
-    AkandeServer,
     ALLOWED_STATIC_FILES,
-    MAX_QUESTION_LENGTH,
     MAX_AUDIO_SIZE,
-    RATE_LIMIT_WINDOW,
+    MAX_QUESTION_LENGTH,
     RATE_LIMIT_MAX_REQUESTS,
+    RATE_LIMIT_WINDOW,
+    AkandeServer,
     RateLimiter,
     _detect_audio_format,
     _hash_ip,

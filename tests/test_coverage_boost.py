@@ -10,16 +10,13 @@ branch over multiple variations of the same code path.
 
 from __future__ import annotations
 
-import asyncio
 import json
-import os
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from urllib.error import HTTPError, URLError
 
 import pytest
-
 
 # ============================================================
 # akande/tools/web_search.py — uncovered backend branches
@@ -205,8 +202,8 @@ class TestFetchURLBranches:
     def test_body_overflow(self):
         from akande.tools.base import ToolError
         from akande.tools.fetch_url import (
-            FetchURLTool,
             MAX_BYTES,
+            FetchURLTool,
         )
 
         tool = FetchURLTool()
@@ -281,8 +278,8 @@ class TestWeatherSkillBranches:
     def test_forecast_failure_returns_error_message(self):
         from akande.skills.base import Intent, SkillContext
         from akande.skills.weather import (
-            _SkillFetchError,
             WeatherSkill,
+            _SkillFetchError,
         )
 
         s = WeatherSkill()
@@ -325,8 +322,8 @@ class TestWeatherSkillBranches:
 
     def test_http_get_json_http_error(self):
         from akande.skills.weather import (
-            _SkillFetchError,
             _http_get_json,
+            _SkillFetchError,
         )
 
         err = HTTPError(
@@ -505,7 +502,7 @@ class TestMCPServerBuild:
             gp.return_value = provider
             mock_mcp = MagicMock()
             require.return_value = mock_mcp
-            app = srv.build_server()
+            srv.build_server()
             # build_server registered briefing + verify-audit +
             # verify-watermark + conversation-list + the two
             # built-in tools.  We assert add_tool was called at

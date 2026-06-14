@@ -28,7 +28,7 @@ import io
 import logging
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from .base import TTSBackend, TTSSynthesisResult
 
@@ -43,11 +43,13 @@ class KokoroBackend(TTSBackend):
 
     def __init__(
         self,
-        voice: Optional[str] = None,
-        model_path: Optional[str] = None,
+        voice: str | None = None,
+        model_path: str | None = None,
     ) -> None:
         try:
-            from kokoro_onnx import Kokoro  # type: ignore[import-not-found]
+            from kokoro_onnx import (
+                Kokoro,  # type: ignore[import-not-found]
+            )
         except ImportError as exc:  # pragma: no cover
             raise ImportError(
                 "kokoro-onnx is required for the Kokoro TTS "

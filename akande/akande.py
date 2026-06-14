@@ -13,33 +13,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import asyncio
+import hashlib
+import logging
+import threading
+import time
+import uuid
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
+
 import cherrypy
+import openai
+import speech_recognition as sr
+from pydub import AudioSegment
+from pydub.playback import play as pydub_play
+
 from .cache import SQLiteCache
 from .config import LLM_PROVIDER, OPENAI_DEFAULT_MODEL
 from .exceptions import LLMError
 from .providers.base import LLMProvider
 from .services import SYSTEM_PROMPT, OpenAIService
 from .utils import (
-    generate_pdf,
     generate_csv,
+    generate_pdf,
     get_output_directory,
     get_output_filename,
     strip_markdown,
 )
-
-from concurrent.futures import ThreadPoolExecutor
-from functools import partial
-from typing import Optional, Union
-import asyncio
-import hashlib
-import logging
-import openai
-import time
-import threading
-import uuid
-import speech_recognition as sr
-from pydub import AudioSegment
-from pydub.playback import play as pydub_play
 
 try:
     import pyttsx4
@@ -114,11 +114,11 @@ class Akande:
 
     def __init__(
         self,
-        openai_service: Union[OpenAIService, LLMProvider],
+        openai_service: OpenAIService | LLMProvider,
         metrics=None,
     ):
         self.server = None
-        self.server_thread: Optional[threading.Thread] = None
+        self.server_thread: threading.Thread | None = None
         self._server_running = threading.Event()
 
         # Cancellation support
@@ -538,8 +538,8 @@ class Akande:
 
         def start_server():  # pragma: no cover - spawns real cherrypy
             from .server.server import (
-                AkandeServer,
                 MAX_AUDIO_SIZE,
+                AkandeServer,
             )
 
             cherrypy.config.update(
@@ -676,4 +676,4 @@ class Akande:
                 )
                 raise LLMError(
                     _friendly_llm_error(e), original=e
-                )
+                ) from e

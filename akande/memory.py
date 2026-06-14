@@ -38,7 +38,7 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass
-from typing import Any, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ class MemoryHit:
 
     text: str
     score: float
-    memory_id: Optional[str] = None
+    memory_id: str | None = None
 
 
 def _mem0_available() -> bool:
@@ -80,7 +80,7 @@ class MemoryStore:
         self,
         *,
         user_id: str = DEFAULT_USER_ID,
-        client: Optional[Any] = None,
+        client: Any | None = None,
     ) -> None:
         self.user_id = user_id
         self._client = client
@@ -133,7 +133,7 @@ class MemoryStore:
         self,
         text: str,
         *,
-        metadata: Optional[dict] = None,
+        metadata: dict | None = None,
     ) -> None:
         """Persist a memory atom.
 
@@ -167,7 +167,7 @@ class MemoryStore:
         query: str,
         *,
         limit: int = DEFAULT_MAX_MEMORIES,
-    ) -> List[MemoryHit]:
+    ) -> list[MemoryHit]:
         """Return memories semantically similar to ``query``."""
         if not self._enabled or self._client is None or not query.strip():
             return []
@@ -230,9 +230,9 @@ class MemoryStore:
             return 0
 
 
-def _normalise_hits(raw: Any) -> List[MemoryHit]:
+def _normalise_hits(raw: Any) -> list[MemoryHit]:
     """Best-effort normalisation of Mem0's varied return shapes."""
-    out: List[MemoryHit] = []
+    out: list[MemoryHit] = []
     for item in _coerce_iter(raw):
         text = (
             item.get("memory")
@@ -249,7 +249,7 @@ def _normalise_hits(raw: Any) -> List[MemoryHit]:
     return out
 
 
-def _coerce_iter(raw: Any) -> List[dict]:
+def _coerce_iter(raw: Any) -> list[dict]:
     """Mem0 SDK has returned dict-of-list, list-of-dict, and bare
     list across versions; normalise to a list of dicts."""
     if isinstance(raw, dict):
@@ -267,7 +267,7 @@ def _coerce_iter(raw: Any) -> List[dict]:
 
 
 def format_for_prompt(
-    hits: List[MemoryHit],
+    hits: list[MemoryHit],
     *,
     token_budget: int = DEFAULT_TOKEN_BUDGET,
 ) -> str:
@@ -281,7 +281,7 @@ def format_for_prompt(
     if not hits:
         return ""
     char_budget = token_budget * 4
-    lines: List[str] = []
+    lines: list[str] = []
     used = 0
     for h in hits:
         line = f"- {h.text.strip()}"

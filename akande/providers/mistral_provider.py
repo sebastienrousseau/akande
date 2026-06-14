@@ -17,7 +17,8 @@ import asyncio
 import logging
 import os
 import time
-from typing import Any, AsyncIterator, Dict, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 from .base import LLMProvider
 from .response import ProviderResponse
@@ -36,12 +37,12 @@ class MistralProvider(LLMProvider):
     def __init__(self) -> None:
         try:
             from mistralai import Mistral
-        except ImportError:
+        except ImportError as exc:
             raise ImportError(
                 "The 'mistralai' package is required for the "
                 "Mistral provider. "
                 "Install it with: pip install akande[mistral]"
-            )
+            ) from exc
         api_key = os.getenv("MISTRAL_API_KEY", "")
         if not api_key:
             raise ValueError(
@@ -56,7 +57,7 @@ class MistralProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> ProviderResponse:
         if not params:
             params = {}
@@ -93,7 +94,7 @@ class MistralProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         logging.info(
             "LLM request sent",
@@ -153,7 +154,7 @@ class MistralProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> AsyncIterator[str]:
         """Native streaming for Mistral v1+ ``client.chat.stream``."""
         if not params:
@@ -246,7 +247,7 @@ class MistralProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         logging.info(
             "LLM sync request sent",

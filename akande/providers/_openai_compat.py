@@ -16,7 +16,8 @@
 import asyncio
 import logging
 import time
-from typing import Any, AsyncIterator, Dict, List, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 from .base import LLMProvider
 
@@ -40,6 +41,7 @@ class OpenAICompatProvider(LLMProvider):
     def _init_client(self) -> None:
         """Initialise the OpenAI-compatible client."""
         import openai
+
         from akande.config import API_CALL_TIMEOUT
 
         api_key = self._api_key
@@ -55,7 +57,7 @@ class OpenAICompatProvider(LLMProvider):
                 f"Set the appropriate environment variable."
             )
 
-        kwargs: Dict[str, Any] = {
+        kwargs: dict[str, Any] = {
             "api_key": api_key,
             "timeout": API_CALL_TIMEOUT,
         }
@@ -72,7 +74,7 @@ class OpenAICompatProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         if not params:
             params = {}
@@ -142,7 +144,7 @@ class OpenAICompatProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> AsyncIterator[str]:
         """Native streaming for OpenAI-compatible chat completions.
 
@@ -239,9 +241,9 @@ class OpenAICompatProvider(LLMProvider):
 
     async def generate_stream_messages(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> AsyncIterator[str]:
         """Native multi-turn streaming via the OpenAI ``messages=`` arg.
 
@@ -330,7 +332,7 @@ class OpenAICompatProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         if not params:
             params = {}

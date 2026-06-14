@@ -38,7 +38,7 @@ import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
@@ -97,8 +97,8 @@ class AuditManifest:
     prompt_hash: str
     response_hash: str
     response_chars: int
-    correlation_id: Optional[str] = None
-    extras: Dict[str, Any] = field(default_factory=dict)
+    correlation_id: str | None = None
+    extras: dict[str, Any] = field(default_factory=dict)
 
     def to_canonical_json(self) -> bytes:
         """Encode the manifest with sorted keys for stable signing.
@@ -115,7 +115,7 @@ class AuditManifest:
             ensure_ascii=False,
         ).encode("utf-8")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return dict(self.__dict__)
 
 
@@ -126,8 +126,8 @@ def build_manifest(
     provider: str,
     model: str,
     profile: str,
-    correlation_id: Optional[str] = None,
-    extras: Optional[Dict[str, Any]] = None,
+    correlation_id: str | None = None,
+    extras: dict[str, Any] | None = None,
 ) -> AuditManifest:
     """Construct a manifest from the components of a briefing."""
     return AuditManifest(
@@ -155,10 +155,10 @@ class KeyManager:
     PRIV_NAME = "signing.ed25519"
     PUB_NAME = "signing.pub"
 
-    def __init__(self, keys_dir: Optional[Path] = None) -> None:
+    def __init__(self, keys_dir: Path | None = None) -> None:
         self.keys_dir = keys_dir or _keys_dir()
-        self._priv: Optional[Ed25519PrivateKey] = None
-        self._pub: Optional[Ed25519PublicKey] = None
+        self._priv: Ed25519PrivateKey | None = None
+        self._pub: Ed25519PublicKey | None = None
 
     @property
     def private_key_path(self) -> Path:
@@ -246,7 +246,7 @@ class KeyManager:
             pass
 
 
-_default_manager: Optional[KeyManager] = None
+_default_manager: KeyManager | None = None
 
 
 def _manager() -> KeyManager:
@@ -263,8 +263,8 @@ def _reset_manager_for_tests() -> None:
 
 def sign_manifest(
     manifest: AuditManifest,
-    manager: Optional[KeyManager] = None,
-) -> Dict[str, Any]:
+    manager: KeyManager | None = None,
+) -> dict[str, Any]:
     """Return the manifest as a dict with appended signature block.
 
     The returned dict has the manifest fields plus a top-level
@@ -285,8 +285,8 @@ def sign_manifest(
 
 
 def verify_manifest_dict(
-    body: Dict[str, Any],
-    manager: Optional[KeyManager] = None,
+    body: dict[str, Any],
+    manager: KeyManager | None = None,
 ) -> bool:
     """Return ``True`` if the signed manifest verifies.
 
@@ -339,7 +339,7 @@ def verify_manifest_dict(
 def write_sidecar(
     manifest: AuditManifest,
     pdf_path: Path | str,
-    manager: Optional[KeyManager] = None,
+    manager: KeyManager | None = None,
 ) -> Path:
     """Write the signed manifest as ``<pdf>.audit.json`` and return the path."""
     body = sign_manifest(manifest, manager=manager)
@@ -372,7 +372,7 @@ def write_sidecar(
 
 def verify_sidecar(
     sidecar_path: Path | str,
-    manager: Optional[KeyManager] = None,
+    manager: KeyManager | None = None,
 ) -> bool:
     """Load + verify a previously-written audit sidecar JSON."""
     with Path(sidecar_path).open("r", encoding="utf-8") as fh:

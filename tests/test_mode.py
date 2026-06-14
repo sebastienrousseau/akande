@@ -10,7 +10,6 @@ from akande.mode import (
     OFFLINE,
     ONLINE,
     OfflineModeViolation,
-    active_mode,
     enforce_for_provider,
     resolve_mode,
 )

@@ -3,12 +3,13 @@
 # Licensed under the Apache License, Version 2.0 (the "License").
 """Tests for the v0.0.6 TTS backend abstraction."""
 
-from unittest.mock import MagicMock, patch
+import dataclasses
+from unittest.mock import patch
 
 import pytest
 
 from akande.tts import GTTSBackend, get_tts_backend
-from akande.tts.base import TTSBackend, TTSSynthesisResult
+from akande.tts.base import TTSSynthesisResult
 
 
 class TestGetBackend:
@@ -85,7 +86,7 @@ class TestGetTTSBackendForKokoro:
 class TestTTSResultDataclass:
     def test_immutable(self):
         r = TTSSynthesisResult(audio=b"x", fmt="mp3")
-        with pytest.raises(Exception):
+        with pytest.raises(dataclasses.FrozenInstanceError):
             r.audio = b"y"  # type: ignore[misc]
 
     def test_sample_rate_defaults_none(self):

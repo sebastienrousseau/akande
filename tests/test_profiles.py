@@ -5,8 +5,6 @@
 
 from unittest.mock import patch
 
-import pytest
-
 from akande.profiles import (
     EU,
     INTERNAL,

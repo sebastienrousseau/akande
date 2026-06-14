@@ -21,7 +21,6 @@ Update procedure
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
 
 LAST_UPDATED = "2026-06-14"
 
@@ -44,7 +43,7 @@ class PriceRow:
 # Provider+model price table.  Local entries have zero marginal
 # cost so they always win cost-optimised routing; quality tier is
 # the operator's own assessment of the *deployed* local model.
-PRICES: List[PriceRow] = [
+PRICES: list[PriceRow] = [
     # Local providers — zero marginal cost.
     PriceRow(
         "ollama", "llama3.1", 0.0, 0.0, "medium", local=True
@@ -97,8 +96,8 @@ PRICES: List[PriceRow] = [
 ]
 
 
-def by_provider() -> Dict[str, List[PriceRow]]:
-    out: Dict[str, List[PriceRow]] = {}
+def by_provider() -> dict[str, list[PriceRow]]:
+    out: dict[str, list[PriceRow]] = {}
     for row in PRICES:
         out.setdefault(row.provider, []).append(row)
     return out
@@ -133,7 +132,7 @@ def cheapest_meeting(
     minimum: QualityTier = "medium",
     *,
     local_only: bool = False,
-) -> Optional[Tuple[PriceRow, float]]:
+) -> tuple[PriceRow, float] | None:
     """Return the (row, est-cost) tuple for the cheapest qualifier.
 
     ``local_only=True`` filters to zero-cost local providers — the

@@ -29,6 +29,7 @@ class AzureOpenAIProvider(OpenAICompatProvider):
 
     def __init__(self) -> None:
         import openai
+
         from akande.config import API_CALL_TIMEOUT
 
         api_key = os.getenv("AZURE_OPENAI_API_KEY", "")

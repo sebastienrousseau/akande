@@ -1,14 +1,14 @@
 import asyncio
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from akande.akande import (
-    Akande,
-    Colors,
+    CACHE_DB_NAME,
     CLEAR_SCREEN,
     MAX_THREAD_WORKERS,
-    CACHE_DB_NAME,
+    Akande,
+    Colors,
 )
 from akande.exceptions import LLMError
 

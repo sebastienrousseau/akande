@@ -31,7 +31,7 @@ import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -65,12 +65,12 @@ class SkillPolicy:
     """Persistent per-skill enable / consent state."""
 
     def __init__(
-        self, policy_path: Optional[Path] = None
+        self, policy_path: Path | None = None
     ) -> None:
         self.policy_path = (
             policy_path or (_policy_dir() / POLICY_FILE_NAME)
         )
-        self._state: Dict[str, Dict[str, Any]] = {}
+        self._state: dict[str, dict[str, Any]] = {}
         self._load()
 
     # -- I/O ----------------------------------------------------
@@ -143,7 +143,7 @@ class SkillPolicy:
             return False
         return entry["consented_at"] is not None
 
-    def state(self, name: str) -> Dict[str, Any]:
+    def state(self, name: str) -> dict[str, Any]:
         entry = self._state.get(name)
         if entry is None:
             return {

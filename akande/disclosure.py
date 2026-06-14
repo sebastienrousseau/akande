@@ -19,7 +19,6 @@ spoken utterance, an SSE event, a banner string).
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from akande.profiles import Profile, active_profile
 
@@ -39,7 +38,7 @@ SHORT_DISCLOSURE = (
 def get_disclosure_text(
     *,
     short: bool = False,
-    custom: Optional[str] = None,
+    custom: str | None = None,
 ) -> str:
     """Return the disclosure string to read aloud or display.
 
@@ -68,7 +67,7 @@ def get_disclosure_text(
     return SHORT_DISCLOSURE if short else DEFAULT_DISCLOSURE
 
 
-def should_disclose(profile: Optional[Profile] = None) -> bool:
+def should_disclose(profile: Profile | None = None) -> bool:
     """Return ``True`` when the active profile demands disclosure.
 
     Centralised so the policy check is identical across surfaces
@@ -81,8 +80,8 @@ def should_disclose(profile: Optional[Profile] = None) -> bool:
 def log_disclosure_emitted(
     surface: str,
     *,
-    text: Optional[str] = None,
-    correlation_id: Optional[str] = None,
+    text: str | None = None,
+    correlation_id: str | None = None,
 ) -> None:
     """Record that a disclosure was shown / spoken.
 
@@ -107,7 +106,7 @@ def log_disclosure_suppressed(
     surface: str,
     reason: str,
     *,
-    correlation_id: Optional[str] = None,
+    correlation_id: str | None = None,
 ) -> None:
     """Record an intentional non-disclosure (profile=internal)."""
     logger.warning(

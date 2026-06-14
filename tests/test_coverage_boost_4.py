@@ -6,14 +6,10 @@
 from __future__ import annotations
 
 import asyncio
-import json
-import os
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
-from urllib.error import HTTPError, URLError
 
 import pytest
-
 
 # ============================================================
 # mistral_provider streaming + error paths

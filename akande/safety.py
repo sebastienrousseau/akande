@@ -28,7 +28,6 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Tuple
 
 from akande.profiles import Profile, active_profile
 
@@ -106,7 +105,7 @@ def wrap_system_prompt(
 def wrap_user_input(
     user_prompt: str,
     profile: Profile | None = None,
-) -> Tuple[str, list[str]]:
+) -> tuple[str, list[str]]:
     """Return ``(wrapped_prompt, suspicious_patterns)``.
 
     When the envelope is active, the user text is placed inside

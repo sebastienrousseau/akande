@@ -16,7 +16,6 @@ import re
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Any, Optional, Tuple
 
 from .base import (
     Intent,
@@ -80,7 +79,7 @@ class WeatherSkill(Skill):
             citations_expected=True,
         )
 
-    def match(self, text: str) -> Optional[Intent]:
+    def match(self, text: str) -> Intent | None:
         m = _TRIGGER.search(text.strip())
         if not m:
             return None
@@ -131,7 +130,7 @@ class WeatherSkill(Skill):
 
     def _geocode(  # pragma: no cover - hits open-meteo geocoder
         self, place: str
-    ) -> Tuple[float, float, str]:
+    ) -> tuple[float, float, str]:
         url = (
             GEOCODE_URL
             + "?"

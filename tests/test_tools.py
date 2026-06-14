@@ -3,8 +3,7 @@
 # Licensed under the Apache License, Version 2.0 (the "License").
 """Tests for akande.tools."""
 
-import json
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -12,7 +11,6 @@ import pytest
 from akande.tools import (
     FetchURLTool,
     WebSearchTool,
-    builtin_tools,
     default_registry,
 )
 from akande.tools.base import (
@@ -28,10 +26,10 @@ class _NoopTool(Tool):
     description = "does nothing"
 
     @property
-    def input_schema(self) -> Dict[str, Any]:
+    def input_schema(self) -> dict[str, Any]:
         return {"type": "object", "properties": {}}
 
-    def run(self, args: Dict[str, Any]) -> ToolResult:
+    def run(self, args: dict[str, Any]) -> ToolResult:
         return ToolResult(content="ok")
 
 

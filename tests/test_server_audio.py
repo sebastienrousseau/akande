@@ -9,9 +9,7 @@ requiring real audio bytes or a real network speech endpoint.
 
 from __future__ import annotations
 
-import io
 import os
-import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -120,8 +118,9 @@ class TestProcessAudio:
         assert out["text"] == "hello"
 
     def test_unknown_value_error(self, tmp_path):
-        from akande.server.server import AkandeServer
         import speech_recognition as sr
+
+        from akande.server.server import AkandeServer
 
         wav = tmp_path / "x.wav"
         wav.write_bytes(b"RIFF" + b"\x00" * 100)
@@ -143,8 +142,9 @@ class TestProcessAudio:
         assert "understood" in out["error"]
 
     def test_request_error(self, tmp_path):
-        from akande.server.server import AkandeServer
         import speech_recognition as sr
+
+        from akande.server.server import AkandeServer
 
         wav = tmp_path / "x.wav"
         wav.write_bytes(b"RIFF" + b"\x00" * 100)

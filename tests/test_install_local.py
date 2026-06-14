@@ -4,10 +4,7 @@
 """Tests for the install-local CLI."""
 
 import argparse
-from pathlib import Path
 from unittest.mock import patch
-
-import pytest
 
 from akande.cli.install_local import (
     OFFLINE_ENV_DEFAULTS,

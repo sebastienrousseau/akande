@@ -10,7 +10,6 @@ can pick the explicit retrieval path over the LLM-only briefing.
 from __future__ import annotations
 
 import re
-from typing import Optional
 
 from akande.tools.web_search import WebSearchTool
 
@@ -48,7 +47,7 @@ class WebSearchSkill(Skill):
             citations_expected=True,
         )
 
-    def match(self, text: str) -> Optional[Intent]:
+    def match(self, text: str) -> Intent | None:
         m = _TRIGGERS.match(text.strip())
         if not m:
             return None

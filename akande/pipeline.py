@@ -26,7 +26,6 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 from akande.profiles import active_profile
 from akande.s2s import get_s2s_provider

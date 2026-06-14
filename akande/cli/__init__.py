@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-from typing import List, Optional
 
 from .audit import verify_command, verify_watermark_command
 from .data import data_command
@@ -185,8 +184,8 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def dispatch_subcommand(
-    argv: Optional[List[str]] = None,
-) -> Optional[int]:
+    argv: list[str] | None = None,
+) -> int | None:
     """Route ``argv`` to a subcommand handler.
 
     Returns ``None`` if no recognised subcommand is present (so the

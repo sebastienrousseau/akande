@@ -23,7 +23,7 @@ import logging
 import os
 import threading
 import time
-from typing import Optional, Protocol
+from typing import Protocol
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +143,7 @@ class RedisRateLimiter:
 def build_rate_limiter(
     window: int,
     max_requests: int,
-    redis_url: Optional[str] = None,
+    redis_url: str | None = None,
 ) -> RateLimiterBackend:
     """Construct a rate limiter, preferring Redis when configured.
 

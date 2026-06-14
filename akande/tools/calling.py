@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .base import ToolError, ToolRegistry
 
@@ -43,27 +43,27 @@ class ToolCallEvent:
     """
 
     name: str
-    args: Dict[str, Any]
+    args: dict[str, Any]
     result_content: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    error: Optional[str] = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+    error: str | None = None
 
 
 @dataclass
 class ToolCallingResult:
     """Outcome of :func:`run_tool_calling_loop`."""
 
-    messages: List[Dict[str, Any]]
-    events: List[ToolCallEvent] = field(default_factory=list)
+    messages: list[dict[str, Any]]
+    events: list[ToolCallEvent] = field(default_factory=list)
     iterations: int = 0
     stopped_reason: str = "ok"
 
 
 def tools_payload(
     registry: ToolRegistry,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Render the registry as OpenAI-style ``tools=`` payload."""
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     for entry in registry.all_mcp_dicts():
         out.append(
             {
@@ -80,7 +80,7 @@ def tools_payload(
 
 def run_tool_calling_loop(
     provider: Any,
-    messages: List[Dict[str, Any]],
+    messages: list[dict[str, Any]],
     model: str,
     registry: ToolRegistry,
     *,
@@ -156,7 +156,7 @@ def run_tool_calling_loop(
 
 
 def _dispatch(
-    call: Dict[str, Any], registry: ToolRegistry
+    call: dict[str, Any], registry: ToolRegistry
 ) -> ToolCallEvent:
     fn = call.get("function") or {}
     name = str(fn.get("name", "")).strip()
@@ -193,7 +193,7 @@ def _dispatch(
 
 
 def _last_user_content(
-    messages: List[Dict[str, Any]],
+    messages: list[dict[str, Any]],
 ) -> str:
     for msg in reversed(messages):
         if msg.get("role") == "user":
@@ -202,7 +202,7 @@ def _last_user_content(
 
 
 def _first_system(
-    messages: List[Dict[str, Any]],
+    messages: list[dict[str, Any]],
 ) -> str:
     for msg in messages:
         if msg.get("role") == "system":
@@ -212,7 +212,7 @@ def _first_system(
 
 def _extract_assistant_message(
     response: Any,
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """Best-effort extraction of an OpenAI-shaped assistant message."""
     try:
         choice = response.choices[0]
@@ -226,7 +226,7 @@ def _extract_assistant_message(
     # speaks one shape.
     content = getattr(message, "content", None)
     tool_calls_raw = getattr(message, "tool_calls", None) or []
-    tool_calls: List[Dict[str, Any]] = []
+    tool_calls: list[dict[str, Any]] = []
     for tc in tool_calls_raw:
         if isinstance(tc, dict):
             tool_calls.append(tc)

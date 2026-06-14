@@ -16,7 +16,6 @@
 import asyncio
 import logging
 import sys
-from typing import Union
 
 from .akande import Akande
 from .config import LLM_PROVIDER, OPENAI_API_KEY
@@ -67,7 +66,7 @@ def _build_akande() -> Akande:  # pragma: no cover - boot path
         )
         sys.exit(1)
 
-    openai_service: Union[OpenAIImpl, LLMProvider]
+    openai_service: OpenAIImpl | LLMProvider
     if provider_name == "openai":
         openai_service = OpenAIImpl()
     else:

@@ -4,7 +4,6 @@
 """Tests for the v0.0.6 Track B /api/stream SSE endpoint."""
 
 import json
-from typing import AsyncIterator
 from unittest.mock import MagicMock, patch
 
 import cherrypy

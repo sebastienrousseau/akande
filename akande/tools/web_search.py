@@ -26,7 +26,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from html import unescape
-from typing import Any, Dict, List
+from typing import Any
 
 from .base import Tool, ToolError, ToolResult
 
@@ -50,7 +50,7 @@ class WebSearchTool(Tool):
     )
 
     @property
-    def input_schema(self) -> Dict[str, Any]:
+    def input_schema(self) -> dict[str, Any]:
         return {
             "type": "object",
             "properties": {
@@ -71,7 +71,7 @@ class WebSearchTool(Tool):
             "required": ["query"],
         }
 
-    def run(self, args: Dict[str, Any]) -> ToolResult:
+    def run(self, args: dict[str, Any]) -> ToolResult:
         query = (args.get("query") or "").strip()
         if not query:
             raise ToolError(
@@ -102,7 +102,7 @@ class WebSearchTool(Tool):
 
     def _search(
         self, query: str, limit: int
-    ) -> tuple[str, List[Dict[str, str]]]:
+    ) -> tuple[str, list[dict[str, str]]]:
         if os.getenv("BRAVE_API_KEY"):
             try:
                 return "brave", self._brave(query, limit)
@@ -135,7 +135,7 @@ class WebSearchTool(Tool):
 
     def _brave(
         self, query: str, limit: int
-    ) -> List[Dict[str, str]]:
+    ) -> list[dict[str, str]]:
         url = (
             "https://api.search.brave.com/res/v1/web/search?"
             + urllib.parse.urlencode(
@@ -170,7 +170,7 @@ class WebSearchTool(Tool):
 
     def _tavily(
         self, query: str, limit: int
-    ) -> List[Dict[str, str]]:
+    ) -> list[dict[str, str]]:
         body = json.dumps(
             {
                 "api_key": os.environ["TAVILY_API_KEY"],
@@ -203,7 +203,7 @@ class WebSearchTool(Tool):
 
     def _duckduckgo(
         self, query: str, limit: int
-    ) -> List[Dict[str, str]]:
+    ) -> list[dict[str, str]]:
         url = (
             "https://duckduckgo.com/html/?"
             + urllib.parse.urlencode({"q": query})
@@ -233,7 +233,7 @@ class WebSearchTool(Tool):
             r".*?<a[^>]+class=\"result__snippet\"[^>]*>(.*?)</a>",
             re.DOTALL,
         )
-        results: List[Dict[str, str]] = []
+        results: list[dict[str, str]] = []
         for match in pattern.finditer(html):
             url_raw, title, snippet = match.groups()
             results.append(
@@ -251,7 +251,7 @@ class WebSearchTool(Tool):
     def _render(
         query: str,
         backend: str,
-        results: List[Dict[str, str]],
+        results: list[dict[str, str]],
     ) -> str:
         lines = [
             f"Top {len(results)} results for {query!r} "

@@ -3,13 +3,14 @@
 # Licensed under the Apache License, Version 2.0 (the "License").
 """Tests for the STT backend abstraction."""
 
+import dataclasses
+
 import pytest
 
 from akande.stt import (
-    SpeechRecognitionBackend,
     get_stt_backend,
 )
-from akande.stt.base import STTBackend, STTResult
+from akande.stt.base import STTResult
 
 
 class TestGetBackend:
@@ -43,5 +44,5 @@ class TestGetBackend:
 class TestResultDataclass:
     def test_immutable(self):
         r = STTResult(text="hi")
-        with pytest.raises(Exception):
+        with pytest.raises(dataclasses.FrozenInstanceError):
             r.text = "x"  # type: ignore[misc]

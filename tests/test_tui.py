@@ -107,8 +107,9 @@ class TestExportScreen:
         )
 
     def test_export_screen_is_modal(self):
-        from akande.tui import AkandeApp
         from textual.screen import ModalScreen
+
+        from akande.tui import AkandeApp
 
         assert issubclass(
             AkandeApp.ExportScreen, ModalScreen
@@ -125,8 +126,9 @@ class TestHistoryScreen:
         )
 
     def test_history_screen_is_modal(self):
-        from akande.tui import AkandeApp
         from textual.screen import ModalScreen
+
+        from akande.tui import AkandeApp
 
         assert issubclass(
             AkandeApp.HistoryScreen, ModalScreen

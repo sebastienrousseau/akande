@@ -3,6 +3,8 @@
 # Licensed under the Apache License, Version 2.0 (the "License").
 """Tests for the speech-to-speech provider seam."""
 
+import dataclasses
+
 import pytest
 
 from akande.s2s import get_s2s_provider
@@ -36,5 +38,5 @@ class TestGetProvider:
 class TestResult:
     def test_immutable(self):
         r = S2SResult(audio=b"x", fmt="wav")
-        with pytest.raises(Exception):
+        with pytest.raises(dataclasses.FrozenInstanceError):
             r.audio = b"y"  # type: ignore[misc]

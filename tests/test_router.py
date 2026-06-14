@@ -60,6 +60,7 @@ class TestRouter:
         monkeypatch.setenv("LLM_PROVIDER", "openai")
         # Need to reimport config since it caches the env at import.
         import importlib
+
         import akande.config
 
         importlib.reload(akande.config)

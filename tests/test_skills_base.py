@@ -3,7 +3,6 @@
 # Licensed under the Apache License, Version 2.0 (the "License").
 """Tests for the akande.skills protocol + registry."""
 
-from typing import Optional
 
 import pytest
 
@@ -26,7 +25,7 @@ class _Echo(Skill):
             name="echo", description="echo skill"
         )
 
-    def match(self, text: str) -> Optional[Intent]:
+    def match(self, text: str) -> Intent | None:
         if not text.strip():
             return None
         return Intent(
@@ -56,7 +55,7 @@ class _StrictMatch(Skill):
             name=self._name, description="strict match"
         )
 
-    def match(self, text: str) -> Optional[Intent]:
+    def match(self, text: str) -> Intent | None:
         if text.startswith(self._keyword):
             return Intent(
                 name=self._name,

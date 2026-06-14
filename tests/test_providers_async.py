@@ -12,9 +12,8 @@ already exercised in ``test_streaming.py``.
 from __future__ import annotations
 
 import asyncio
-import os
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 

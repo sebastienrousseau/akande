@@ -17,7 +17,8 @@ import asyncio
 import logging
 import os
 import time
-from typing import Any, AsyncIterator, Dict, List, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 from .base import LLMProvider
 from .response import ProviderResponse
@@ -36,12 +37,12 @@ class AnthropicProvider(LLMProvider):
     def __init__(self) -> None:
         try:
             import anthropic
-        except ImportError:
+        except ImportError as exc:
             raise ImportError(
                 "The 'anthropic' package is required for the "
                 "Anthropic provider. "
                 "Install it with: pip install akande[anthropic]"
-            )
+            ) from exc
         from akande.config import API_CALL_TIMEOUT
 
         api_key = os.getenv("ANTHROPIC_API_KEY", "")
@@ -61,7 +62,7 @@ class AnthropicProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> ProviderResponse:
         if not params:
             params = {}
@@ -87,7 +88,7 @@ class AnthropicProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         logging.info(
             "LLM request sent",
@@ -147,7 +148,7 @@ class AnthropicProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> AsyncIterator[str]:
         """Native streaming for Anthropic's ``messages.stream`` API.
 
@@ -246,9 +247,9 @@ class AnthropicProvider(LLMProvider):
 
     async def generate_stream_messages(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> AsyncIterator[str]:
         """Native multi-turn streaming for Anthropic.
 
@@ -261,7 +262,7 @@ class AnthropicProvider(LLMProvider):
         model = model or self._default_model
 
         system_text = ""
-        chat_messages: List[Dict[str, str]] = []
+        chat_messages: list[dict[str, str]] = []
         for msg in messages:
             if (
                 msg.get("role") == "system"
@@ -365,7 +366,7 @@ class AnthropicProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         logging.info(
             "LLM sync request sent",

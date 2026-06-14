@@ -14,25 +14,25 @@
 # limitations under the License.
 #
 import csv
-from typing import Optional
-from xml.sax.saxutils import escape as xml_escape
-
-from akande.audit import build_manifest, write_sidecar
-from akande.profiles import active_profile
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import (
-    SimpleDocTemplate,
-    Paragraph,
-    Spacer,
-    Image,
-)
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_LEFT
-from pathlib import Path
 import datetime
 import logging
 import os
 import re
+from pathlib import Path
+from xml.sax.saxutils import escape as xml_escape
+
+from reportlab.lib.enums import TA_LEFT
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import (
+    Image,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+)
+
+from akande.audit import build_manifest, write_sidecar
+from akande.profiles import active_profile
 
 # Module-level cached styles for PDF generation
 _styles = getSampleStyleSheet()
@@ -133,7 +133,7 @@ def get_output_filename(extension: str) -> str:
     )
 
 
-def validate_api_key(api_key: Optional[str]) -> bool:
+def validate_api_key(api_key: str | None) -> bool:
     """
     Validates the format of an OpenAI API key.
 
@@ -195,7 +195,7 @@ def _maybe_sign_briefing(
     response: str,
     provider: str,
     model: str,
-    correlation_id: Optional[str],
+    correlation_id: str | None,
 ) -> None:
     """Write an Ed25519-signed audit sidecar when the profile requires it.
 
@@ -233,7 +233,7 @@ def generate_pdf(
     *,
     provider: str = "openai",
     model: str = "",
-    correlation_id: Optional[str] = None,
+    correlation_id: str | None = None,
 ) -> str:
     """
     Generates a PDF document containing a question and response.

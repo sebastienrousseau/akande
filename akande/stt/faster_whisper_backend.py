@@ -27,7 +27,9 @@ class FasterWhisperBackend(STTBackend):
 
     def __init__(self) -> None:
         try:
-            from faster_whisper import WhisperModel  # type: ignore[import-not-found]
+            from faster_whisper import (
+                WhisperModel,  # type: ignore[import-not-found]
+            )
         except ImportError as exc:  # pragma: no cover
             raise ImportError(
                 "faster-whisper is required for the local "
