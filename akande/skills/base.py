@@ -71,8 +71,7 @@ class Skill(ABC):
 
     @property
     @abstractmethod
-    def meta(self) -> SkillMeta:
-        ...
+    def meta(self) -> SkillMeta: ...
 
     @abstractmethod
     def match(self, text: str) -> Intent | None:
@@ -82,8 +81,7 @@ class Skill(ABC):
     @abstractmethod
     def handle(
         self, intent: Intent, ctx: SkillContext
-    ) -> SkillResult:
-        ...
+    ) -> SkillResult: ...
 
     def __repr__(self) -> str:  # pragma: no cover - trivial
         return f"<Skill {self.meta.name}>"
@@ -100,13 +98,8 @@ class SkillRegistry:
 
     def register(self, skill: Skill) -> None:
         if not skill.meta.name:
-            raise ValueError(
-                "skill must declare a non-empty name"
-            )
-        if any(
-            s.meta.name == skill.meta.name
-            for s in self._skills
-        ):
+            raise ValueError("skill must declare a non-empty name")
+        if any(s.meta.name == skill.meta.name for s in self._skills):
             raise ValueError(
                 f"skill {skill.meta.name!r} already registered"
             )
@@ -121,9 +114,7 @@ class SkillRegistry:
 
     def all(self) -> list[Skill]:
         return [
-            s
-            for s in self._skills
-            if s.meta.name not in self._disabled
+            s for s in self._skills if s.meta.name not in self._disabled
         ]
 
     def get(self, name: str) -> Skill | None:
@@ -165,9 +156,7 @@ class SkillRegistry:
             return
         eps = entry_points()
         if hasattr(eps, "select"):  # py3.10+
-            candidates = list(
-                eps.select(group=self.ENTRY_POINT_GROUP)
-            )
+            candidates = list(eps.select(group=self.ENTRY_POINT_GROUP))
         else:  # pragma: no cover
             # Pre-3.10 EntryPoints exposes ``get`` returning a list.
             getter = getattr(eps, "get", None)
@@ -180,7 +169,9 @@ class SkillRegistry:
             try:
                 obj = ep.load()
                 instance = obj() if callable(obj) else obj
-                if isinstance(instance, Skill):  # pragma: no cover - real plugin registration
+                if isinstance(
+                    instance, Skill
+                ):  # pragma: no cover - real plugin registration
                     self.register(instance)
                     logger.info(
                         "Plugin skill registered",

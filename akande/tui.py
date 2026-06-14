@@ -288,7 +288,11 @@ class AkandeApp(App):
         }
         """
 
-        def compose(self) -> ComposeResult:  # pragma: no cover - needs mounted Textual app
+        def compose(
+            self,
+        ) -> (
+            ComposeResult
+        ):  # pragma: no cover - needs mounted Textual app
             with Vertical(id="export-dialog"):
                 yield Static(
                     "Export Last Response",
@@ -300,9 +304,7 @@ class AkandeApp(App):
                 yield Button(
                     "CSV", id="export-csv", classes="export-btn"
                 )
-                yield Button(
-                    "Cancel", id="export-cancel"
-                )
+                yield Button("Cancel", id="export-cancel")
 
         async def on_button_pressed(  # pragma: no cover - event-driven
             self, event: Button.Pressed
@@ -350,7 +352,9 @@ class AkandeApp(App):
             super().__init__()
             self._history = history
 
-        def compose(self) -> ComposeResult:  # pragma: no cover - mounted Textual
+        def compose(
+            self,
+        ) -> ComposeResult:  # pragma: no cover - mounted Textual
             with Vertical(id="history-dialog"):
                 yield Static(
                     "Conversation History",
@@ -365,9 +369,7 @@ class AkandeApp(App):
                         label += "..."
                     option_list.add_option(label)
                 yield option_list
-                yield Button(
-                    "Cancel", id="history-cancel"
-                )
+                yield Button("Cancel", id="history-cancel")
 
         async def on_option_list_option_selected(  # pragma: no cover - event-driven
             self, event: OptionList.OptionSelected
@@ -394,7 +396,9 @@ class AkandeApp(App):
 
     # ── Compose ─────────────────────────────────────────────
 
-    def compose(self) -> ComposeResult:  # pragma: no cover - mounted Textual
+    def compose(
+        self,
+    ) -> ComposeResult:  # pragma: no cover - mounted Textual
         provider = LLM_PROVIDER or "openai"
         model = OPENAI_DEFAULT_MODEL or "default"
         yield Header()
@@ -421,38 +425,45 @@ class AkandeApp(App):
             yield Static("", id="thinking")
         with Horizontal(id="action-bar"):
             yield Button(
-                "[1] Record", id="mic-btn-action",
+                "[1] Record",
+                id="mic-btn-action",
                 classes="action-btn",
                 tooltip="Record voice input",
             )
             yield Button(
-                "[2] Web UI", id="server-btn",
+                "[2] Web UI",
+                id="server-btn",
                 classes="action-btn",
                 tooltip="Toggle web UI server",
             )
             yield Button(
-                "[3] Clear", id="clear-btn",
+                "[3] Clear",
+                id="clear-btn",
                 classes="action-btn",
                 tooltip="Clear chat",
             )
             yield Button(
-                "[4] Quit", id="quit-btn",
+                "[4] Quit",
+                id="quit-btn",
                 classes="action-btn",
                 tooltip="Quit application",
             )
             yield Button(
-                "[5] Export", id="export-btn",
+                "[5] Export",
+                id="export-btn",
                 classes="action-btn",
                 tooltip="Export last response",
             )
             yield Button(
-                "[6] History", id="history-btn",
+                "[6] History",
+                id="history-btn",
                 classes="action-btn",
                 tooltip="Conversation history",
             )
         with Horizontal(id="input-bar"):
             yield Button(
-                "Mic", id="mic-btn",
+                "Mic",
+                id="mic-btn",
                 tooltip="Record voice input",
             )
             yield Input(
@@ -460,7 +471,8 @@ class AkandeApp(App):
                 id="question-input",
             )
             yield Button(
-                "Send", id="send-btn",
+                "Send",
+                id="send-btn",
                 tooltip="Send question",
             )
         yield Footer()
@@ -471,7 +483,9 @@ class AkandeApp(App):
         self.sub_title = f"{provider} · {model}"
         self.query_one("#chat", RichLog).display = False
 
-    def on_resize(self, event) -> None:  # pragma: no cover - mounted Textual
+    def on_resize(
+        self, event
+    ) -> None:  # pragma: no cover - mounted Textual
         bar = self.query_one("#action-bar")
         if event.size.width < 60:
             bar.add_class("compact")
@@ -570,7 +584,9 @@ class AkandeApp(App):
     # ── Question worker ─────────────────────────────────────
 
     @work(exclusive=True, thread=True)
-    def handle_question(self, question: str) -> None:  # pragma: no cover - thread worker
+    def handle_question(
+        self, question: str
+    ) -> None:  # pragma: no cover - thread worker
         import asyncio
 
         self.akande.reset_cancel()
@@ -582,9 +598,7 @@ class AkandeApp(App):
             def _update_ui():
                 self._hide_thinking()
                 if not response:
-                    self._write_error(
-                        "No response was generated."
-                    )
+                    self._write_error("No response was generated.")
                     return
 
                 clean = strip_markdown(response)
@@ -593,13 +607,15 @@ class AkandeApp(App):
                 self._last_question = question
                 self._last_response = response
 
-                self._history.append({
-                    "question": question,
-                    "response": response,
-                    "timestamp": datetime.now(
-                        tz=timezone.utc
-                    ).strftime("%H:%M:%S"),
-                })
+                self._history.append(
+                    {
+                        "question": question,
+                        "response": response,
+                        "timestamp": datetime.now(
+                            tz=timezone.utc
+                        ).strftime("%H:%M:%S"),
+                    }
+                )
 
                 pdf_path = generate_pdf(question, response)
                 csv_path = generate_csv(question, clean)
@@ -617,9 +633,7 @@ class AkandeApp(App):
                 clean = strip_markdown(response)
                 try:
                     with _suppress_stderr():
-                        asyncio.run(
-                            self.akande.speak(clean)
-                        )
+                        asyncio.run(self.akande.speak(clean))
                 except Exception:
                     pass
         except LLMError as llm_exc:
@@ -628,6 +642,7 @@ class AkandeApp(App):
             def _show_llm_error():
                 self._hide_thinking()
                 self._write_error(msg)
+
             self.call_from_thread(_show_llm_error)
         except Exception as gen_exc:
             msg = str(gen_exc)
@@ -635,11 +650,14 @@ class AkandeApp(App):
             def _show_error():
                 self._hide_thinking()
                 self._write_error(msg)
+
             self.call_from_thread(_show_error)
 
     # ── Voice ───────────────────────────────────────────────
 
-    async def _toggle_voice(self) -> None:  # pragma: no cover - mounted Textual
+    async def _toggle_voice(
+        self,
+    ) -> None:  # pragma: no cover - mounted Textual
         mic_btn = self.query_one("#mic-btn", Button)
         if self._recording:
             return
@@ -652,9 +670,7 @@ class AkandeApp(App):
 
         try:
             with _suppress_stderr():
-                text = await self.akande.listen(
-                    speak_on_error=False
-                )
+                text = await self.akande.listen(speak_on_error=False)
         except Exception:
             text = ""
         finally:
@@ -664,8 +680,7 @@ class AkandeApp(App):
 
         if not text:
             self._write_error(
-                "Could not understand. Try again or type "
-                "your question."
+                "Could not understand. Try again or type your question."
             )
         elif text.lower() == "stop":
             await self.akande.stop_server()
@@ -677,7 +692,9 @@ class AkandeApp(App):
 
     # ── Server ──────────────────────────────────────────────
 
-    async def _toggle_server(self) -> None:  # pragma: no cover - mounted Textual
+    async def _toggle_server(
+        self,
+    ) -> None:  # pragma: no cover - mounted Textual
         self._hide_welcome()
         btn = self.query_one("#server-btn", Button)
         if self.akande.server_running:
@@ -706,14 +723,19 @@ class AkandeApp(App):
                 "and PDF / CSV export built in.[/]"
             )
             import webbrowser
+
             webbrowser.open(url)
 
     # ── Actions ─────────────────────────────────────────────
 
-    async def action_toggle_voice(self) -> None:  # pragma: no cover - mounted
+    async def action_toggle_voice(
+        self,
+    ) -> None:  # pragma: no cover - mounted
         await self._toggle_voice()
 
-    async def action_toggle_server(self) -> None:  # pragma: no cover - mounted
+    async def action_toggle_server(
+        self,
+    ) -> None:  # pragma: no cover - mounted
         await self._toggle_server()
 
     async def action_clear(self) -> None:  # pragma: no cover - mounted
@@ -739,26 +761,22 @@ class AkandeApp(App):
                     self._write_file(f"PDF exported  {path}")
             elif result == "export-csv":
                 clean = strip_markdown(self._last_response)
-                path = generate_csv(
-                    self._last_question, clean
-                )
+                path = generate_csv(self._last_question, clean)
                 if path:
                     self._write_file(f"CSV exported  {path}")
 
         self.push_screen(self.ExportScreen(), _handle_export)
 
-    async def action_history(self) -> None:  # pragma: no cover - mounted
+    async def action_history(
+        self,
+    ) -> None:  # pragma: no cover - mounted
         if not self._history:
             self._hide_welcome()
-            self._write_error(
-                "No history yet. Ask a question first."
-            )
+            self._write_error("No history yet. Ask a question first.")
             return
 
         def _handle_history(result: int | None) -> None:
-            if result is not None and 0 <= result < len(
-                self._history
-            ):
+            if result is not None and 0 <= result < len(self._history):
                 entry = self._history[result]
                 self._hide_welcome()
                 self._write_user(entry["question"])
@@ -770,14 +788,14 @@ class AkandeApp(App):
             _handle_history,
         )
 
-    async def action_show_help(self) -> None:  # pragma: no cover - mounted
+    async def action_show_help(
+        self,
+    ) -> None:  # pragma: no cover - mounted
         self._hide_welcome()
         chat = self.query_one("#chat", RichLog)
         chat.write(Text(""))
         help_text = Text()
-        help_text.append(
-            "Keyboard Shortcuts\n", style="bold #f5f5f7"
-        )
+        help_text.append("Keyboard Shortcuts\n", style="bold #f5f5f7")
         help_text.append(
             "  [1]      Record voice input\n"
             "  [2]      Toggle web UI server\n"

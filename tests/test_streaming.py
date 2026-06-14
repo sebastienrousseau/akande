@@ -30,9 +30,7 @@ class _RecordingProvider(LLMProvider):
         return SimpleNamespace(
             choices=[
                 SimpleNamespace(
-                    message=SimpleNamespace(
-                        content="full response"
-                    )
+                    message=SimpleNamespace(content="full response")
                 )
             ]
         )
@@ -53,9 +51,7 @@ class TestExtractText:
         envelope = SimpleNamespace(
             choices=[
                 SimpleNamespace(
-                    message=SimpleNamespace(
-                        content="hi there"
-                    )
+                    message=SimpleNamespace(content="hi there")
                 )
             ]
         )
@@ -105,9 +101,7 @@ class TestBaseGenerateStreamDefault:
 
         async def collect():
             chunks = []
-            async for delta in Silent().generate_stream(
-                "q", "s", "m"
-            ):
+            async for delta in Silent().generate_stream("q", "s", "m"):
                 chunks.append(delta)
             return chunks
 
@@ -120,9 +114,7 @@ class TestOpenAICompatStreaming:
     def _make_chunk(self, content):
         return SimpleNamespace(
             choices=[
-                SimpleNamespace(
-                    delta=SimpleNamespace(content=content)
-                )
+                SimpleNamespace(delta=SimpleNamespace(content=content))
             ]
         )
 
@@ -137,8 +129,8 @@ class TestOpenAICompatStreaming:
 
         deltas = ["He", "llo, ", "world."]
         provider.client = MagicMock()
-        provider.client.chat.completions.create.return_value = (
-            iter(self._make_chunk(d) for d in deltas)
+        provider.client.chat.completions.create.return_value = iter(
+            self._make_chunk(d) for d in deltas
         )
 
         async def collect():
@@ -172,8 +164,8 @@ class TestOpenAICompatStreaming:
             self._make_chunk(" world"),
         ]
         provider.client = MagicMock()
-        provider.client.chat.completions.create.return_value = (
-            iter(chunks_in)
+        provider.client.chat.completions.create.return_value = iter(
+            chunks_in
         )
 
         async def collect():

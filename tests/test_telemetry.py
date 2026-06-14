@@ -32,15 +32,11 @@ class TestInitGating:
         monkeypatch.setenv("AKANDE_TELEMETRY", "1")
         from akande.profiles import EU
 
-        with patch(
-            "akande.profiles.active_profile", return_value=EU
-        ):
+        with patch("akande.profiles.active_profile", return_value=EU):
             assert telemetry.init() is False
             assert telemetry.is_enabled() is False
 
-    def test_on_when_env_set_and_profile_permits(
-        self, monkeypatch
-    ):
+    def test_on_when_env_set_and_profile_permits(self, monkeypatch):
         monkeypatch.setenv("AKANDE_TELEMETRY", "1")
         from akande.profiles import Profile
 
@@ -81,6 +77,4 @@ class TestSpanContext:
 class TestRecordMetric:
     def test_noop_when_disabled(self):
         # Just verify it doesn't raise.
-        telemetry.record_metric(
-            "llm.latency_ms", 123.4, attr="x"
-        )
+        telemetry.record_metric("llm.latency_ms", 123.4, attr="x")

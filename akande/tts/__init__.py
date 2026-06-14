@@ -65,6 +65,5 @@ def get_tts_backend(
 
         return KokoroBackend()
     raise ValueError(
-        f"unknown TTS backend: {key!r} "
-        f"(known: gtts, kokoro)"
+        f"unknown TTS backend: {key!r} (known: gtts, kokoro)"
     )

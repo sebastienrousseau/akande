@@ -35,9 +35,7 @@ class TestMistralStreaming:
                 data=SimpleNamespace(
                     choices=[
                         SimpleNamespace(
-                            delta=SimpleNamespace(
-                                content=content
-                            )
+                            delta=SimpleNamespace(content=content)
                         )
                     ]
                 )
@@ -60,9 +58,7 @@ class TestMistralStreaming:
 
     def test_stream_open_failure(self):
         p = self._make()
-        p.client.chat.stream.side_effect = RuntimeError(
-            "boom"
-        )
+        p.client.chat.stream.side_effect = RuntimeError("boom")
 
         async def call():
             async for _ in p.generate_stream(
@@ -75,9 +71,7 @@ class TestMistralStreaming:
 
     def test_async_raises_on_error(self):
         p = self._make()
-        p.client.chat.complete.side_effect = RuntimeError(
-            "down"
-        )
+        p.client.chat.complete.side_effect = RuntimeError("down")
 
         async def call():
             return await p.generate_response(
@@ -115,9 +109,7 @@ class TestWeatherSkillMoreBranches:
             from akande.skills.base import Intent, SkillContext
 
             result = s.handle(
-                Intent(
-                    name="weather", args={"place": "Atlantis"}
-                ),
+                Intent(name="weather", args={"place": "Atlantis"}),
                 SkillContext(),
             )
             assert "Could not look up" in result.content
@@ -156,9 +148,7 @@ class TestAnthropicSyncErrorPath:
         p = AnthropicProvider.__new__(AnthropicProvider)
         p._default_model = "claude-3-haiku-20240307"
         p.client = MagicMock()
-        p.client.messages.create.side_effect = RuntimeError(
-            "boom"
-        )
+        p.client.messages.create.side_effect = RuntimeError("boom")
         with pytest.raises(RuntimeError):
             p.generate_response_sync(
                 "hi", "sys", "claude-3-haiku-20240307"
@@ -243,12 +233,8 @@ class TestInstallLocalWriteEnv:
         from akande.cli.install_local import _write_env
 
         target = tmp_path / ".env"
-        target.write_text(
-            "ALREADY=set\nLLM_PROVIDER=openai\n"
-        )
-        _write_env(
-            target, dry_run=False, model="llama3.1"
-        )
+        target.write_text("ALREADY=set\nLLM_PROVIDER=openai\n")
+        _write_env(target, dry_run=False, model="llama3.1")
         body = target.read_text()
         assert "ALREADY=set" in body
         # The custom LLM_PROVIDER survives.
@@ -263,9 +249,7 @@ class TestInstallLocalWriteEnv:
 
 
 class TestUtilsLogoPresent:
-    def test_generate_pdf_with_logo(
-        self, tmp_path, monkeypatch
-    ):
+    def test_generate_pdf_with_logo(self, tmp_path, monkeypatch):
         monkeypatch.setenv("AKANDE_HOME", str(tmp_path))
         # The repo ships a 512x512.png that the PDF render embeds.
         # Verify the path that includes it runs without error.
@@ -283,9 +267,7 @@ class TestUtilsLogoPresent:
 
 
 class TestCLIDispatcherSubcommands:
-    def test_data_subcommand_routes(
-        self, tmp_path, monkeypatch
-    ):
+    def test_data_subcommand_routes(self, tmp_path, monkeypatch):
         # Dispatch a real data subcommand with arguments and
         # confirm it returns an int exit code.
         from akande.cli import dispatch_subcommand
@@ -293,8 +275,14 @@ class TestCLIDispatcherSubcommands:
         monkeypatch.setenv("AKANDE_HOME", str(tmp_path))
         out_path = tmp_path / "dump.json"
         rc = dispatch_subcommand(
-            ["data", "export", "--user", "nonexistent",
-             "--output", str(out_path)]
+            [
+                "data",
+                "export",
+                "--user",
+                "nonexistent",
+                "--output",
+                str(out_path),
+            ]
         )
         # Returns 0 even when the user has no conversations.
         assert rc == 0
@@ -307,9 +295,7 @@ class TestCLIDispatcherSubcommands:
 
 
 class TestAuditSidecarFull:
-    def test_write_sidecar_returns_path(
-        self, tmp_path, monkeypatch
-    ):
+    def test_write_sidecar_returns_path(self, tmp_path, monkeypatch):
         monkeypatch.setenv("AKANDE_HOME", str(tmp_path))
         from akande.audit import (
             _reset_manager_for_tests,

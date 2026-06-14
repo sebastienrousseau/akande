@@ -69,9 +69,7 @@ class TestRouter:
 
     def test_cost_optimised_picks_local(self, monkeypatch):
         monkeypatch.setenv("AKANDE_ROUTER", "cost_optimised")
-        monkeypatch.setenv(
-            "AKANDE_ROUTER_MIN_TIER", "medium"
-        )
+        monkeypatch.setenv("AKANDE_ROUTER_MIN_TIER", "medium")
         monkeypatch.delenv("AKANDE_MODE", raising=False)
         provider, model = route()
         # The lowest cost qualifier should be a local row.

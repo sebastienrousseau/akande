@@ -30,9 +30,7 @@ class TestGetBackend:
         with pytest.raises(ValueError):
             get_stt_backend("not-a-real-backend")
 
-    def test_faster_whisper_raises_when_missing(
-        self, monkeypatch
-    ):
+    def test_faster_whisper_raises_when_missing(self, monkeypatch):
         monkeypatch.setenv("AKANDE_STT", "faster_whisper")
         # faster-whisper isn't installed in CI; backend ctor
         # should raise a helpful ImportError rather than a

@@ -87,9 +87,7 @@ class TestMemoryEnvOff:
 
 
 class TestAuditCacheRepeat:
-    def test_load_or_create_cached(
-        self, tmp_path, monkeypatch
-    ):
+    def test_load_or_create_cached(self, tmp_path, monkeypatch):
         monkeypatch.setenv("AKANDE_HOME", str(tmp_path))
         from akande.audit import (
             KeyManager,
@@ -169,9 +167,7 @@ class TestWebSearchTavily:
             ]
         }
         resp = MagicMock()
-        resp.read.return_value = json_mod.dumps(
-            payload
-        ).encode()
+        resp.read.return_value = json_mod.dumps(payload).encode()
         resp.__enter__.return_value = resp
         with patch(
             "akande.tools.web_search.urllib.request.urlopen",
@@ -195,10 +191,13 @@ class TestSSEBriefingNoMemory:
         from akande.server.server import AkandeServer
 
         db = ConversationDB(str(tmp_path / "x.db"))
-        with patch(
-            "akande.server.server.validate_api_key",
-            return_value=True,
-        ), patch("akande.server.server.OpenAIImpl"):
+        with (
+            patch(
+                "akande.server.server.validate_api_key",
+                return_value=True,
+            ),
+            patch("akande.server.server.OpenAIImpl"),
+        ):
             srv = AkandeServer()
         srv.conversations = ConversationStore(db=db)
         srv.openai_service = MagicMock()
@@ -207,9 +206,7 @@ class TestSSEBriefingNoMemory:
         async def fake_stream(*args, **kwargs):
             yield "ok"
 
-        srv.openai_service.generate_stream_messages = (
-            fake_stream
-        )
+        srv.openai_service.generate_stream_messages = fake_stream
         # Memory store recall returns empty list.
         srv.memory = MagicMock()
         srv.memory.recall.return_value = []
@@ -222,9 +219,7 @@ class TestSSEBriefingNoMemory:
         )
 
         events = list(
-            srv._sse_briefing(
-                conv.id, "current question", "corr"
-            )
+            srv._sse_briefing(conv.id, "current question", "corr")
         )
         # done event appears at the end.
         text = b"".join(events).decode("utf-8")

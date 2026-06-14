@@ -3,7 +3,6 @@
 # Licensed under the Apache License, Version 2.0 (the "License").
 """Tests for the akande.skills protocol + registry."""
 
-
 import pytest
 
 from akande.skills.base import (
@@ -21,9 +20,7 @@ class _Echo(Skill):
 
     @property
     def meta(self) -> SkillMeta:
-        return SkillMeta(
-            name="echo", description="echo skill"
-        )
+        return SkillMeta(name="echo", description="echo skill")
 
     def match(self, text: str) -> Intent | None:
         if not text.strip():
@@ -34,12 +31,8 @@ class _Echo(Skill):
             raw_text=text,
         )
 
-    def handle(
-        self, intent: Intent, ctx: SkillContext
-    ) -> SkillResult:
-        return SkillResult(
-            content=str(intent.args.get("text") or "")
-        )
+    def handle(self, intent: Intent, ctx: SkillContext) -> SkillResult:
+        return SkillResult(content=str(intent.args.get("text") or ""))
 
 
 class _StrictMatch(Skill):
@@ -51,9 +44,7 @@ class _StrictMatch(Skill):
 
     @property
     def meta(self) -> SkillMeta:
-        return SkillMeta(
-            name=self._name, description="strict match"
-        )
+        return SkillMeta(name=self._name, description="strict match")
 
     def match(self, text: str) -> Intent | None:
         if text.startswith(self._keyword):
@@ -64,9 +55,7 @@ class _StrictMatch(Skill):
             )
         return None
 
-    def handle(
-        self, intent: Intent, ctx: SkillContext
-    ) -> SkillResult:
+    def handle(self, intent: Intent, ctx: SkillContext) -> SkillResult:
         return SkillResult(content=self._name)
 
 
@@ -81,9 +70,7 @@ class TestRegistry:
         class _Anon(_Echo):
             @property
             def meta(self) -> SkillMeta:
-                return SkillMeta(
-                    name="", description="anon"
-                )
+                return SkillMeta(name="", description="anon")
 
         with pytest.raises(ValueError):
             SkillRegistry().register(_Anon())

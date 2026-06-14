@@ -34,9 +34,7 @@ class SpeechRecognitionBackend(STTBackend):
         else:
             from pydub import AudioSegment
 
-            seg = AudioSegment.from_file(
-                io.BytesIO(audio), format=fmt
-            )
+            seg = AudioSegment.from_file(io.BytesIO(audio), format=fmt)
             buf = io.BytesIO()
             seg.export(buf, format="wav")
             audio_data = buf.getvalue()

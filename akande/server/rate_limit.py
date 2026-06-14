@@ -119,7 +119,9 @@ class RedisRateLimiter:
             redis_url, decode_responses=True
         )
 
-    def is_allowed(self, key: str) -> bool:  # pragma: no cover - needs real Redis
+    def is_allowed(
+        self, key: str
+    ) -> bool:  # pragma: no cover - needs real Redis
         now = time.time()
         cutoff = now - self.window
         full_key = f"{self.key_prefix}{key}"
@@ -164,9 +166,7 @@ def build_rate_limiter(
     to in-memory and logs a warning if Redis is requested but the
     client library is missing or the server is unreachable.
     """
-    url = redis_url if redis_url is not None else os.getenv(
-        "REDIS_URL"
-    )
+    url = redis_url if redis_url is not None else os.getenv("REDIS_URL")
     if not url:
         return InMemoryRateLimiter(window, max_requests)
 

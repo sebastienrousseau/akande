@@ -120,9 +120,7 @@ class CohereProvider(LLMProvider):
                     "event": "LLM:RequestFailed",
                     "extra_data": {
                         "provider": "cohere",
-                        "model": (
-                            model or self._default_model
-                        ),
+                        "model": (model or self._default_model),
                         "latency_ms": round(latency, 2),
                     },
                 },
@@ -173,9 +171,7 @@ class CohereProvider(LLMProvider):
                     "event": "LLM:RequestFailed",
                     "extra_data": {
                         "provider": "cohere",
-                        "model": (
-                            model or self._default_model
-                        ),
+                        "model": (model or self._default_model),
                         "latency_ms": round(latency, 2),
                     },
                 },

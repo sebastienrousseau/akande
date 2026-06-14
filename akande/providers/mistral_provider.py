@@ -84,9 +84,7 @@ class MistralProvider(LLMProvider):
         elif raw is None:
             text = ""
         else:
-            text = "".join(
-                getattr(chunk, "text", "") for chunk in raw
-            )
+            text = "".join(getattr(chunk, "text", "") for chunk in raw)
         return ProviderResponse(text)
 
     async def generate_response(
@@ -127,9 +125,7 @@ class MistralProvider(LLMProvider):
                     "event": "LLM:RequestFailed",
                     "extra_data": {
                         "provider": "mistral",
-                        "model": (
-                            model or self._default_model
-                        ),
+                        "model": (model or self._default_model),
                         "latency_ms": round(latency, 2),
                     },
                 },
@@ -219,9 +215,7 @@ class MistralProvider(LLMProvider):
                     break
                 delta = ""
                 try:
-                    delta = (
-                        item.data.choices[0].delta.content or ""
-                    )
+                    delta = item.data.choices[0].delta.content or ""
                 except (AttributeError, IndexError, TypeError):
                     delta = ""
                 if delta and isinstance(delta, str):
@@ -273,9 +267,7 @@ class MistralProvider(LLMProvider):
                     "event": "LLM:RequestFailed",
                     "extra_data": {
                         "provider": "mistral",
-                        "model": (
-                            model or self._default_model
-                        ),
+                        "model": (model or self._default_model),
                         "latency_ms": round(latency, 2),
                     },
                 },

@@ -49,30 +49,20 @@ class TestConsent:
         p.revoke_consent("finance")
         assert not SkillPolicy(path).is_consented("finance")
 
-    def test_require_consent_noop_when_not_required(
-        self, tmp_path
-    ):
+    def test_require_consent_noop_when_not_required(self, tmp_path):
         SkillPolicy(tmp_path / "policy.json").require_consent(
             "weather", requires_consent=False
         )
 
-    def test_require_consent_raises_when_missing(
-        self, tmp_path
-    ):
+    def test_require_consent_raises_when_missing(self, tmp_path):
         p = SkillPolicy(tmp_path / "policy.json")
         with pytest.raises(ConsentRequired):
-            p.require_consent(
-                "voice_clone", requires_consent=True
-            )
+            p.require_consent("voice_clone", requires_consent=True)
 
-    def test_require_consent_passes_after_grant(
-        self, tmp_path
-    ):
+    def test_require_consent_passes_after_grant(self, tmp_path):
         p = SkillPolicy(tmp_path / "policy.json")
         p.grant_consent("voice_clone")
-        p.require_consent(
-            "voice_clone", requires_consent=True
-        )
+        p.require_consent("voice_clone", requires_consent=True)
 
 
 class TestFileShape:
@@ -83,15 +73,10 @@ class TestFileShape:
         p.grant_consent("finance")
         body = json.loads(path.read_text())
         assert body["skills"]["weather"]["enabled"] is False
-        assert (
-            body["skills"]["finance"]["consented_at"]
-            is not None
-        )
+        assert body["skills"]["finance"]["consented_at"] is not None
         assert "updated_at" in body
 
-    def test_malformed_existing_file_is_ignored(
-        self, tmp_path, caplog
-    ):
+    def test_malformed_existing_file_is_ignored(self, tmp_path, caplog):
         path = tmp_path / "policy.json"
         path.write_text("not json")
         with caplog.at_level("WARNING"):

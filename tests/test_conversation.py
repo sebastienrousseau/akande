@@ -17,9 +17,7 @@ from akande.db import ConversationDB
 
 @pytest.fixture
 def store(tmp_path):
-    db = ConversationDB(
-        str(tmp_path / "conversations.db")
-    )
+    db = ConversationDB(str(tmp_path / "conversations.db"))
     yield ConversationStore(db=db)
     db.close()
 
@@ -173,9 +171,9 @@ class TestSchema:
         path = str(tmp_path / "schema.db")
         db = ConversationDB(path)
         try:
-            version = db.conn.execute(
-                "PRAGMA user_version"
-            ).fetchone()[0]
+            version = db.conn.execute("PRAGMA user_version").fetchone()[
+                0
+            ]
             assert version == 1
         finally:
             db.close()

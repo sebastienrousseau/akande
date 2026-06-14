@@ -92,9 +92,7 @@ class WeatherSkill(Skill):
             raw_text=text,
         )
 
-    def handle(
-        self, intent: Intent, ctx: SkillContext
-    ) -> SkillResult:
+    def handle(self, intent: Intent, ctx: SkillContext) -> SkillResult:
         place = str(intent.args.get("place") or "").strip()
         try:
             lat, lon, label = self._geocode(place)
@@ -108,8 +106,7 @@ class WeatherSkill(Skill):
         except _SkillFetchError as exc:
             return SkillResult(
                 content=(
-                    f"Could not fetch the forecast for "
-                    f"{label}: {exc}"
+                    f"Could not fetch the forecast for {label}: {exc}"
                 ),
                 metadata={"error": "forecast_failed"},
             )
@@ -224,16 +221,10 @@ def _http_get_json(url: str) -> dict:
         ) as resp:
             data = resp.read()
     except urllib.error.HTTPError as exc:
-        raise _SkillFetchError(
-            f"HTTP {exc.code}"
-        ) from exc
+        raise _SkillFetchError(f"HTTP {exc.code}") from exc
     except urllib.error.URLError as exc:
-        raise _SkillFetchError(
-            f"network error: {exc.reason}"
-        ) from exc
+        raise _SkillFetchError(f"network error: {exc.reason}") from exc
     try:
         return json.loads(data.decode("utf-8"))
     except json.JSONDecodeError as exc:
-        raise _SkillFetchError(
-            "malformed JSON from upstream"
-        ) from exc
+        raise _SkillFetchError("malformed JSON from upstream") from exc

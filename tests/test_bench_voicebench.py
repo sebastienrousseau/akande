@@ -54,8 +54,7 @@ class TestIterPrompts:
     def test_skips_malformed_lines(self, tmp_path, caplog):
         prompts = tmp_path / "p.jsonl"
         prompts.write_text(
-            '{"prompt": "ok", "category": "x"}\n'
-            "garbage line\n"
+            '{"prompt": "ok", "category": "x"}\ngarbage line\n'
         )
         with caplog.at_level("WARNING"):
             rows = list(vb.iter_prompts(prompts))
@@ -69,9 +68,7 @@ class _StubProvider:
         return SimpleNamespace(
             choices=[
                 SimpleNamespace(
-                    message=SimpleNamespace(
-                        content=f"reply: {prompt}"
-                    )
+                    message=SimpleNamespace(content=f"reply: {prompt}")
                 )
             ]
         )
@@ -119,14 +116,12 @@ class TestAggregate:
         summary = vb.aggregate(rows)
         assert summary["overall"]["count"] == 10
         assert summary["overall"]["ok"] == 10
-        assert (
-            summary["overall"]["p50_latency_ms"]
-            == pytest.approx(5.5)
+        assert summary["overall"]["p50_latency_ms"] == pytest.approx(
+            5.5
         )
         # P95 of 1..10 (linear interp) ≈ 9.55
-        assert (
-            summary["overall"]["p95_latency_ms"]
-            == pytest.approx(9.55)
+        assert summary["overall"]["p95_latency_ms"] == pytest.approx(
+            9.55
         )
 
     def test_handles_empty(self):
@@ -138,9 +133,7 @@ class TestAggregate:
 class TestMain:
     def test_writes_output_file(self, tmp_path):
         prompts = tmp_path / "p.jsonl"
-        prompts.write_text(
-            '{"prompt": "hi", "category": "x"}\n'
-        )
+        prompts.write_text('{"prompt": "hi", "category": "x"}\n')
         out = tmp_path / "results.json"
         with patch.object(
             vb,

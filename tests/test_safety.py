@@ -14,9 +14,7 @@ from akande.safety import (
 
 class TestSystemPromptEnvelope:
     def test_envelope_off_passes_through(self):
-        assert (
-            wrap_system_prompt("S", profile=LOCAL) == "S"
-        )
+        assert wrap_system_prompt("S", profile=LOCAL) == "S"
 
     def test_envelope_on_wraps_with_tags(self):
         out = wrap_system_prompt("S", profile=EU)
@@ -27,16 +25,12 @@ class TestSystemPromptEnvelope:
 
 class TestUserInputEnvelope:
     def test_envelope_off_passes_through(self):
-        out, suspicious = wrap_user_input(
-            "hello", profile=LOCAL
-        )
+        out, suspicious = wrap_user_input("hello", profile=LOCAL)
         assert out == "hello"
         assert suspicious == []
 
     def test_envelope_on_wraps(self):
-        out, suspicious = wrap_user_input(
-            "hello", profile=EU
-        )
+        out, suspicious = wrap_user_input("hello", profile=EU)
         assert "<user_input>" in out
         assert "</user_input>" in out
         assert suspicious == []

@@ -59,9 +59,7 @@ def _akande_home() -> Path:
     Honours ``AKANDE_HOME`` for tests + container deployments; falls
     back to ``~/.akande``.  Created if missing.
     """
-    home = os.getenv("AKANDE_HOME") or str(
-        Path.home() / ".akande"
-    )
+    home = os.getenv("AKANDE_HOME") or str(Path.home() / ".akande")
     path = Path(home)
     path.mkdir(parents=True, exist_ok=True, mode=0o700)
     return path
@@ -189,9 +187,7 @@ class KeyManager:
                 "event": "Audit:KeyGenerated",
                 "extra_data": {
                     "private_key_path": str(priv_path),
-                    "public_key_path": str(
-                        self.public_key_path
-                    ),
+                    "public_key_path": str(self.public_key_path),
                 },
             },
         )
@@ -205,19 +201,15 @@ class KeyManager:
     def _load_private(path: Path) -> Ed25519PrivateKey:
         with path.open("rb") as fh:
             data = fh.read()
-        key = serialization.load_pem_private_key(
-            data, password=None
-        )
-        if not isinstance(key, Ed25519PrivateKey):  # pragma: no cover - non-Ed25519 file
-            raise RuntimeError(
-                f"key at {path} is not Ed25519"
-            )
+        key = serialization.load_pem_private_key(data, password=None)
+        if not isinstance(
+            key, Ed25519PrivateKey
+        ):  # pragma: no cover - non-Ed25519 file
+            raise RuntimeError(f"key at {path} is not Ed25519")
         return key
 
     @staticmethod
-    def _save_private(
-        key: Ed25519PrivateKey, path: Path
-    ) -> None:
+    def _save_private(key: Ed25519PrivateKey, path: Path) -> None:
         data = key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.PKCS8,
@@ -231,9 +223,7 @@ class KeyManager:
             pass  # Windows or read-only mounts.
 
     @staticmethod
-    def _save_public(
-        key: Ed25519PublicKey, path: Path
-    ) -> None:
+    def _save_public(key: Ed25519PublicKey, path: Path) -> None:
         data = key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo,
@@ -326,9 +316,7 @@ def verify_manifest_dict(
             extra={
                 "event": "Audit:VerifyFailed",
                 "extra_data": {
-                    "prompt_hash_prefix": manifest.prompt_hash[
-                        :12
-                    ],
+                    "prompt_hash_prefix": manifest.prompt_hash[:12],
                 },
             },
         )

@@ -44,9 +44,7 @@ _TICKERS = re.compile(
     r"(?P<symbol>[A-Z][A-Z\-\.]{0,9}(?:\s+stock)?)\b",
     re.IGNORECASE,
 )
-_DOLLAR_SYMBOL = re.compile(
-    r"\$(?P<symbol>[A-Z]{1,10})\b"
-)
+_DOLLAR_SYMBOL = re.compile(r"\$(?P<symbol>[A-Z]{1,10})\b")
 
 
 class FinanceSkill(Skill):
@@ -69,17 +67,13 @@ class FinanceSkill(Skill):
         if m:
             return Intent(
                 name="finance",
-                args={
-                    "symbol": m.group("symbol").upper()
-                },
+                args={"symbol": m.group("symbol").upper()},
                 raw_text=text,
             )
         m = _TICKERS.search(text)
         if not m:
             return None
-        symbol = m.group("symbol").upper().replace(
-            " STOCK", ""
-        ).strip()
+        symbol = m.group("symbol").upper().replace(" STOCK", "").strip()
         if not symbol:
             return None
         return Intent(
@@ -88,12 +82,8 @@ class FinanceSkill(Skill):
             raw_text=text,
         )
 
-    def handle(
-        self, intent: Intent, ctx: SkillContext
-    ) -> SkillResult:
-        symbol = str(
-            intent.args.get("symbol") or ""
-        ).strip().upper()
+    def handle(self, intent: Intent, ctx: SkillContext) -> SkillResult:
+        symbol = str(intent.args.get("symbol") or "").strip().upper()
         if not symbol:
             return SkillResult(
                 content=(
@@ -107,8 +97,7 @@ class FinanceSkill(Skill):
         except _FetchError as exc:
             return SkillResult(
                 content=(
-                    f"Could not fetch a quote for {symbol}: "
-                    f"{exc}"
+                    f"Could not fetch a quote for {symbol}: {exc}"
                 ),
                 metadata={
                     "error": "fetch_failed",
@@ -151,24 +140,16 @@ class FinanceSkill(Skill):
             with urllib.request.urlopen(  # nosec B310
                 req, timeout=TIMEOUT_S
             ) as resp:
-                payload = json.loads(
-                    resp.read().decode("utf-8")
-                )
+                payload = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             raise _FetchError(f"HTTP {exc.code}") from exc
         except urllib.error.URLError as exc:
-            raise _FetchError(
-                f"network error: {exc.reason}"
-            ) from exc
+            raise _FetchError(f"network error: {exc.reason}") from exc
         except json.JSONDecodeError as exc:
-            raise _FetchError(
-                "malformed JSON from upstream"
-            ) from exc
-        results = (
-            (payload.get("quoteResponse") or {})
-            .get("result")
-            or []
-        )
+            raise _FetchError("malformed JSON from upstream") from exc
+        results = (payload.get("quoteResponse") or {}).get(
+            "result"
+        ) or []
         if not results:
             return None
         return results[0]
@@ -180,17 +161,14 @@ class FinanceSkill(Skill):
         change = q.get("regularMarketChange")
         change_pct = q.get("regularMarketChangePercent")
         currency = q.get("currency", "")
-        name = q.get(
-            "shortName", q.get("longName", symbol)
-        )
+        name = q.get("shortName", q.get("longName", symbol))
         bits = [f"{symbol} ({name})"]
         if price is not None:
             bits.append(f"  price: {price} {currency}")
         if change is not None and change_pct is not None:
             arrow = "▲" if change >= 0 else "▼"
             bits.append(
-                f"  change: {arrow} "
-                f"{change:+.2f} ({change_pct:+.2f}%)"
+                f"  change: {arrow} {change:+.2f} ({change_pct:+.2f}%)"
             )
         bits.append(f"  ({DISCLAIMER})")
         return "\n".join(bits)

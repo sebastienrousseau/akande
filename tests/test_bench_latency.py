@@ -34,9 +34,7 @@ class TestPercentile:
 
     def test_p95_interpolates(self):
         # P95 of 1..10 is 9.55 with linear interpolation.
-        out = lat._percentile(
-            [float(i) for i in range(1, 11)], 95
-        )
+        out = lat._percentile([float(i) for i in range(1, 11)], 95)
         assert out == pytest.approx(9.55)
 
 

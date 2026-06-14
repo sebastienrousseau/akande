@@ -46,23 +46,15 @@ class TestList:
 
 
 class TestEnableDisable:
-    def test_disable_then_enable_persists(
-        self, isolated_home, capsys
-    ):
-        rc = skill_command(
-            _ns(skill_command="disable", name="weather")
-        )
+    def test_disable_then_enable_persists(self, isolated_home, capsys):
+        rc = skill_command(_ns(skill_command="disable", name="weather"))
         assert rc == 0
         assert not SkillPolicy().is_enabled("weather")
-        rc = skill_command(
-            _ns(skill_command="enable", name="weather")
-        )
+        rc = skill_command(_ns(skill_command="enable", name="weather"))
         assert rc == 0
         assert SkillPolicy().is_enabled("weather")
 
-    def test_unknown_skill_exits_2(
-        self, isolated_home, capsys
-    ):
+    def test_unknown_skill_exits_2(self, isolated_home, capsys):
         with pytest.raises(SystemExit) as exc:
             skill_command(
                 _ns(
@@ -75,14 +67,10 @@ class TestEnableDisable:
 
 class TestConsent:
     def test_grant_and_revoke(self, isolated_home, capsys):
-        rc = skill_command(
-            _ns(skill_command="consent", name="finance")
-        )
+        rc = skill_command(_ns(skill_command="consent", name="finance"))
         assert rc == 0
         assert SkillPolicy().is_consented("finance")
-        rc = skill_command(
-            _ns(skill_command="revoke", name="finance")
-        )
+        rc = skill_command(_ns(skill_command="revoke", name="finance"))
         assert rc == 0
         assert not SkillPolicy().is_consented("finance")
 

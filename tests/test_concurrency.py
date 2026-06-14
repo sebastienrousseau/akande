@@ -27,9 +27,7 @@ class TestCancellationStopsGenerateResponse:
         akande.cancel_pending()
 
         with pytest.raises(LLMError, match="cancelled"):
-            asyncio.run(
-                akande.generate_response("test")
-            )
+            asyncio.run(akande.generate_response("test"))
 
 
 class TestCacheConcurrentReadWrite:
@@ -46,9 +44,7 @@ class TestCacheConcurrentReadWrite:
         from akande.cache import SQLiteCache
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            cache = SQLiteCache(
-                Path(tmpdir) / "test.db"
-            )
+            cache = SQLiteCache(Path(tmpdir) / "test.db")
             num_threads = 10
             barrier = threading.Barrier(num_threads)
             errors = []
@@ -66,9 +62,7 @@ class TestCacheConcurrentReadWrite:
                             f"{value}, got {result}"
                         )
                 except Exception as e:
-                    errors.append(
-                        f"Thread {i}: {e}"
-                    )
+                    errors.append(f"Thread {i}: {e}")
 
             threads = [
                 threading.Thread(target=worker, args=(i,))
@@ -87,9 +81,7 @@ class TestRateLimiterConcurrentAccess:
     def test_rate_limiter_concurrent_access(self):
         from akande.server.server import RateLimiter
 
-        limiter = RateLimiter(
-            window=60, max_requests=200
-        )
+        limiter = RateLimiter(window=60, max_requests=200)
         num_threads = 10
         per_thread = 20
         barrier = threading.Barrier(num_threads)
@@ -100,15 +92,12 @@ class TestRateLimiterConcurrentAccess:
             barrier.wait(timeout=5)
             local = []
             for _ in range(per_thread):
-                local.append(
-                    limiter.is_allowed("127.0.0.1")
-                )
+                local.append(limiter.is_allowed("127.0.0.1"))
             with lock:
                 results.extend(local)
 
         threads = [
-            threading.Thread(target=worker)
-            for _ in range(num_threads)
+            threading.Thread(target=worker) for _ in range(num_threads)
         ]
         for t in threads:
             t.start()

@@ -75,13 +75,9 @@ class FetchURLTool(Tool):
 
         parsed = urllib.parse.urlparse(url)
         if parsed.scheme != "https":
-            raise ToolError(
-                "fetch_url requires an https:// URL"
-            )
+            raise ToolError("fetch_url requires an https:// URL")
         if not parsed.netloc:
-            raise ToolError(
-                "fetch_url URL is missing a host"
-            )
+            raise ToolError("fetch_url URL is missing a host")
 
         req = urllib.request.Request(
             url,
@@ -96,9 +92,7 @@ class FetchURLTool(Tool):
             with urllib.request.urlopen(  # nosec B310
                 req, timeout=TIMEOUT_S
             ) as resp:
-                content_type = (
-                    resp.headers.get_content_type() or ""
-                )
+                content_type = resp.headers.get_content_type() or ""
                 if content_type not in ALLOWED_CONTENT_TYPES:
                     raise ToolError(
                         "fetch_url refused content-type "
@@ -110,9 +104,7 @@ class FetchURLTool(Tool):
                 f"fetch_url HTTP {exc.code}: {exc.reason}"
             ) from exc
         except urllib.error.URLError as exc:
-            raise ToolError(
-                f"fetch_url failed: {exc.reason}"
-            ) from exc
+            raise ToolError(f"fetch_url failed: {exc.reason}") from exc
 
         if len(body) > MAX_BYTES:
             raise ToolError(
@@ -144,7 +136,10 @@ _WS = re.compile(r"\s+")
 def _html_to_text(html: str) -> str:
     """Minimal HTML→text — drop script/style first, then strip tags."""
     html = re.sub(
-        r"<script.*?</script>", " ", html, flags=re.DOTALL | re.IGNORECASE
+        r"<script.*?</script>",
+        " ",
+        html,
+        flags=re.DOTALL | re.IGNORECASE,
     )
     html = re.sub(
         r"<style.*?</style>", " ", html, flags=re.DOTALL | re.IGNORECASE

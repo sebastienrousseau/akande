@@ -73,7 +73,9 @@ def _friendly_llm_error(exc: Exception) -> str:
             "Could not connect to the LLM provider. "
             "Please check your internet connection."
         )
-    if isinstance(exc, openai.APITimeoutError):  # pragma: no cover - subclass of APIConnectionError
+    if isinstance(
+        exc, openai.APITimeoutError
+    ):  # pragma: no cover - subclass of APIConnectionError
         return (
             "The request to the LLM provider timed out. "
             "Please try again."
@@ -164,9 +166,7 @@ class Akande:
 
     def hash_prompt(self, prompt: str) -> str:
         """Hash the prompt for caching."""
-        return hashlib.sha256(
-            prompt.encode("utf-8")
-        ).hexdigest()
+        return hashlib.sha256(prompt.encode("utf-8")).hexdigest()
 
     async def speak(self, text: str) -> None:
         """
@@ -184,7 +184,9 @@ class Akande:
         if self._cancel_event.is_set():
             raise LLMError("Request was cancelled")
 
-        def tts_engine_run(text: str):  # pragma: no cover - real audio playback
+        def tts_engine_run(
+            text: str,
+        ):  # pragma: no cover - real audio playback
             from akande.profiles import active_profile
             from akande.tts import get_tts_backend
             from akande.watermark import watermark_audio
@@ -200,9 +202,7 @@ class Akande:
                     audio_bytes = watermark_audio(
                         audio_bytes, fmt=result.fmt
                     )
-                ext = (
-                    ".mp3" if result.fmt == "mp3" else ".wav"
-                )
+                ext = ".mp3" if result.fmt == "mp3" else ".wav"
                 audio_filename = get_output_filename(ext)
                 audio_path = directory_path / audio_filename
                 with audio_path.open("wb") as fh:
@@ -224,9 +224,7 @@ class Akande:
                             "audio_file": str(audio_path),
                             "text_length": len(text),
                             "backend": backend.name,
-                            "watermarked": (
-                                profile.audio_watermark
-                            ),
+                            "watermarked": (profile.audio_watermark),
                             "latency_ms": round(latency, 2),
                         },
                     },
@@ -245,19 +243,13 @@ class Akande:
                         engine = pyttsx4.init()
                         engine.say(text)
                         engine.runAndWait()
-                        latency = (
-                            (time.time() - start) * 1000
-                        )
+                        latency = (time.time() - start) * 1000
                         if self.metrics:
-                            self.metrics.record(
-                                "tts", latency
-                            )
+                            self.metrics.record("tts", latency)
                         logging.info(
                             "pyttsx4 fallback succeeded",
                             extra={
-                                "event": (
-                                    "Speech:pyttsx4Completed"
-                                ),
+                                "event": ("Speech:pyttsx4Completed"),
                             },
                         )
                         return
@@ -267,9 +259,7 @@ class Akande:
                             f"{type(e2).__name__}",
                             exc_info=True,
                             extra={
-                                "event": (
-                                    "Speech:pyttsx4Failed"
-                                ),
+                                "event": ("Speech:pyttsx4Failed"),
                             },
                         )
                 else:
@@ -277,9 +267,7 @@ class Akande:
                         "No offline TTS available "
                         "(pyttsx4 not installed)",
                         extra={
-                            "event": (
-                                "Speech:SynthesisFailed"
-                            ),
+                            "event": ("Speech:SynthesisFailed"),
                         },
                     )
 
@@ -375,7 +363,9 @@ class Akande:
                 )
                 return ""
 
-        loop = asyncio.get_running_loop()  # pragma: no cover - needs PyAudio
+        loop = (
+            asyncio.get_running_loop()
+        )  # pragma: no cover - needs PyAudio
         result = await loop.run_in_executor(  # pragma: no cover
             self.executor, _listen_sync
         )
@@ -395,10 +385,7 @@ class Akande:
             f"  Àkàndé Voice Assistant  "
             f"{Colors.RESET}"
         )
-        print(
-            f"  Provider: {provider}  |  "
-            f"Model: {model}"
-        )
+        print(f"  Provider: {provider}  |  Model: {model}")
         print()
 
     def _print_menu(self) -> None:
@@ -410,9 +397,7 @@ class Akande:
             ("4", "Quit", Colors.RED_BACKGROUND),
         ]
         for key, label, color in options:
-            print(
-                f"  {color} {key} {Colors.RESET} {label}"
-            )
+            print(f"  {color} {key} {Colors.RESET} {label}")
         print()
 
     async def _generate_files(  # pragma: no cover - prints to stdout
@@ -463,7 +448,9 @@ class Akande:
         await self.speak(clean)
         await self._generate_files(question, response, clean)
 
-    async def run_interaction(self) -> None:  # pragma: no cover - interactive stdin loop
+    async def run_interaction(
+        self,
+    ) -> None:  # pragma: no cover - interactive stdin loop
         """Main interaction loop of the voice assistant."""
         while True:
             self._print_banner()
@@ -487,18 +474,11 @@ class Akande:
                 break
             elif choice == "3":
                 await self.run_server()
-                print(
-                    "  Server running at "
-                    "http://127.0.0.1:8080"
-                )
-                print(
-                    "  Open the URL in your browser."
-                )
+                print("  Server running at http://127.0.0.1:8080")
+                print("  Open the URL in your browser.")
                 input("\n  Press Enter to continue...")
             elif choice == "2":
-                question = input(
-                    "Your question: "
-                ).strip()
+                question = input("Your question: ").strip()
                 if question:
                     print("Processing...")
                     await self._handle_response(
@@ -517,9 +497,7 @@ class Akande:
                 elif prompt:
                     print(f'Heard: "{prompt}"')
                     print("Processing...")
-                    await self._handle_response(
-                        prompt, correlation_id
-                    )
+                    await self._handle_response(prompt, correlation_id)
                 else:
                     print("No voice command detected.")
                 input("Press Enter to continue...")
@@ -547,9 +525,7 @@ class Akande:
                     "server.socket_host": "127.0.0.1",
                     "server.socket_port": 8080,
                     "server.thread_pool": 30,
-                    "server.max_request_body_size": (
-                        MAX_AUDIO_SIZE
-                    ),
+                    "server.max_request_body_size": (MAX_AUDIO_SIZE),
                     "request.show_tracebacks": False,
                     "request.show_mismatched_params": False,
                     "log.screen": False,
@@ -630,13 +606,11 @@ class Akande:
             )
             try:
                 start = time.time()
-                response = (
-                    await self.openai_service.generate_response(
-                        prompt,
-                        SYSTEM_PROMPT,
-                        OPENAI_DEFAULT_MODEL or "gpt-4o-mini",
-                        {},
-                    )
+                response = await self.openai_service.generate_response(
+                    prompt,
+                    SYSTEM_PROMPT,
+                    OPENAI_DEFAULT_MODEL or "gpt-4o-mini",
+                    {},
                 )
                 latency = (time.time() - start) * 1000
                 if self.metrics:
@@ -666,8 +640,7 @@ class Akande:
                 raise
             except Exception as e:
                 logging.error(
-                    f"LLM API error: "
-                    f"{type(e).__name__}: {e}",
+                    f"LLM API error: {type(e).__name__}: {e}",
                     exc_info=True,
                     extra={
                         "event": "LLM:Error",

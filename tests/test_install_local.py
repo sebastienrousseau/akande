@@ -37,8 +37,7 @@ class TestWriteEnv:
     def test_preserves_existing_values(self, tmp_path):
         target = tmp_path / ".env"
         target.write_text(
-            "OPENAI_DEFAULT_MODEL=mistral-large-latest\n"
-            "OTHER=value\n"
+            "OPENAI_DEFAULT_MODEL=mistral-large-latest\nOTHER=value\n"
         )
         _write_env(target, dry_run=False, model="llama3.1")
         body = target.read_text()
@@ -65,9 +64,7 @@ class TestCommand:
         defaults.update(overrides)
         return argparse.Namespace(**defaults)
 
-    def test_missing_ollama_fails_cleanly(
-        self, capsys, monkeypatch
-    ):
+    def test_missing_ollama_fails_cleanly(self, capsys, monkeypatch):
         with patch(
             "akande.cli.install_local.shutil.which",
             return_value=None,

@@ -123,9 +123,7 @@ class MetricsCollector:
     def record(self, stage: str, latency_ms: float) -> None:
         """Record a latency sample for *stage*."""
         with self._lock:
-            self._data.setdefault(stage, []).append(
-                latency_ms
-            )
+            self._data.setdefault(stage, []).append(latency_ms)
 
     def summary(self) -> dict[str, dict[str, float]]:
         """Return per-stage statistics.

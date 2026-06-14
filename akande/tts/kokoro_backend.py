@@ -66,7 +66,9 @@ class KokoroBackend(TTSBackend):
             or os.getenv("AKANDE_TTS_KOKORO_VOICE")
             or DEFAULT_VOICE
         )
-        self._model_path = model_path or self._resolve_model_path()  # pragma: no cover
+        self._model_path = (
+            model_path or self._resolve_model_path()
+        )  # pragma: no cover
         self._client: Any = Kokoro(  # pragma: no cover
             model_path=self._model_path,
             voices_path=self._resolve_voices_path(),
@@ -82,14 +84,18 @@ class KokoroBackend(TTSBackend):
             },
         )
 
-    def _resolve_model_path(self) -> str:  # pragma: no cover - tested via integration
+    def _resolve_model_path(
+        self,
+    ) -> str:  # pragma: no cover - tested via integration
         home = os.getenv(
             "KOKORO_MODEL_HOME",
             str(Path.home() / ".akande" / "models" / "kokoro"),
         )
         return str(Path(home) / "kokoro-v1.0.onnx")
 
-    def _resolve_voices_path(self) -> str:  # pragma: no cover - tested via integration
+    def _resolve_voices_path(
+        self,
+    ) -> str:  # pragma: no cover - tested via integration
         home = os.getenv(
             "KOKORO_MODEL_HOME",
             str(Path.home() / ".akande" / "models" / "kokoro"),
@@ -108,9 +114,7 @@ class KokoroBackend(TTSBackend):
             speed=1.0,
             lang=lang or "en-us",
         )
-        wav_bytes = _pcm_float_to_wav_bytes(
-            samples, sample_rate
-        )
+        wav_bytes = _pcm_float_to_wav_bytes(samples, sample_rate)
         return TTSSynthesisResult(
             audio=wav_bytes,
             fmt="wav",
@@ -131,9 +135,7 @@ def _pcm_float_to_wav_bytes(  # pragma: no cover - needs numpy + kokoro
     import numpy as np  # type: ignore[import-not-found]
 
     arr = np.asarray(samples, dtype=np.float32)
-    pcm16 = (arr * 32767.0).clip(-32768, 32767).astype(
-        np.int16
-    )
+    pcm16 = (arr * 32767.0).clip(-32768, 32767).astype(np.int16)
     buf = io.BytesIO()
     with wave.open(buf, "wb") as wav:
         wav.setnchannels(1)

@@ -51,9 +51,7 @@ def _maybe_stub_briefing(question: str) -> str:
             OPENAI_DEFAULT_MODEL or "gpt-4o-mini",
             None,
         )
-        return str(
-            response.choices[0].message.content or ""
-        )
+        return str(response.choices[0].message.content or "")
     except Exception as exc:
         return (
             f"(demo stub — set OPENAI_API_KEY for a real "
@@ -68,16 +66,10 @@ def cascade(question: str) -> tuple[str, str]:
     if not (question or "").strip():
         return "Please ask a question.", ""
     profile = active_profile()
-    disclosure = (
-        get_disclosure_text()
-        if profile.ai_disclosure
-        else ""
-    )
+    disclosure = get_disclosure_text() if profile.ai_disclosure else ""
     reply = _maybe_stub_briefing(question)
     rendered = (
-        f"{disclosure}\n\n{reply}".strip()
-        if disclosure
-        else reply
+        f"{disclosure}\n\n{reply}".strip() if disclosure else reply
     )
     audio_path = ""
     try:
@@ -85,12 +77,8 @@ def cascade(question: str) -> tuple[str, str]:
         result = backend.synthesise(reply)
         audio_bytes = result.audio
         if profile.audio_watermark:
-            audio_bytes = watermark_audio(
-                audio_bytes, fmt=result.fmt
-            )
-        suffix = (
-            ".mp3" if result.fmt == "mp3" else ".wav"
-        )
+            audio_bytes = watermark_audio(audio_bytes, fmt=result.fmt)
+        suffix = ".mp3" if result.fmt == "mp3" else ".wav"
         with tempfile.NamedTemporaryFile(
             delete=False, suffix=suffix
         ) as fh:
@@ -98,8 +86,7 @@ def cascade(question: str) -> tuple[str, str]:
             audio_path = fh.name
     except Exception as exc:
         rendered += (
-            f"\n\n(TTS unavailable in this Space: "
-            f"{type(exc).__name__})"
+            f"\n\n(TTS unavailable in this Space: {type(exc).__name__})"
         )
     return rendered, audio_path
 
@@ -122,13 +109,9 @@ def build_ui() -> gr.Blocks:
                 lines=2,
             )
             briefing = gr.Markdown(label="Briefing")
-            audio = gr.Audio(
-                label="Spoken reply", autoplay=False
-            )
+            audio = gr.Audio(label="Spoken reply", autoplay=False)
             btn = gr.Button("Generate briefing")
-            btn.click(
-                cascade, inputs=text, outputs=[briefing, audio]
-            )
+            btn.click(cascade, inputs=text, outputs=[briefing, audio])
         with gr.Tab("Speech-to-speech (preview)"):
             gr.Markdown(
                 "End-to-end S2S via OpenAI Realtime ships in "

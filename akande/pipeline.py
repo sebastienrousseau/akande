@@ -65,9 +65,7 @@ def respond_to_audio(
     start = time.time()
     s2s = get_s2s_provider()
     if s2s is not None:
-        result = s2s.respond(
-            audio, fmt=fmt, sample_rate=sample_rate
-        )
+        result = s2s.respond(audio, fmt=fmt, sample_rate=sample_rate)
         latency = (time.time() - start) * 1000
         return PipelineResult(
             transcript=result.transcript or "",
@@ -80,9 +78,7 @@ def respond_to_audio(
         )
 
     stt = get_stt_backend()
-    stt_result = stt.transcribe(
-        audio, fmt=fmt, sample_rate=sample_rate
-    )
+    stt_result = stt.transcribe(audio, fmt=fmt, sample_rate=sample_rate)
     transcript = stt_result.text
 
     fn = briefing_fn or _default_briefing_fn
@@ -92,9 +88,7 @@ def respond_to_audio(
     tts_result = tts.synthesise(reply_text)
     audio_bytes = tts_result.audio
     if active_profile().audio_watermark:
-        audio_bytes = watermark_audio(
-            audio_bytes, fmt=tts_result.fmt
-        )
+        audio_bytes = watermark_audio(audio_bytes, fmt=tts_result.fmt)
     latency = (time.time() - start) * 1000
     return PipelineResult(
         transcript=transcript,
@@ -123,8 +117,6 @@ def _default_briefing_fn(transcript: str) -> str:
         None,
     )
     try:
-        return str(
-            response.choices[0].message.content or ""
-        )
+        return str(response.choices[0].message.content or "")
     except (AttributeError, IndexError, TypeError):
         return ""

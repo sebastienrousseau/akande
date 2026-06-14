@@ -9,7 +9,9 @@ from akande.cache import SQLiteCache
 @pytest.fixture
 def cache(tmp_path):
     db_path = tmp_path / "test_cache.db"
-    return SQLiteCache(db_path, max_size=5, expiration=timedelta(days=1))
+    return SQLiteCache(
+        db_path, max_size=5, expiration=timedelta(days=1)
+    )
 
 
 def test_set_and_get(cache):

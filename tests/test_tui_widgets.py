@@ -24,9 +24,7 @@ class TestSuppressStderr:
             print("anything")
 
     def test_outer_oserror_path(self):
-        with patch(
-            "akande.tui.os.open", side_effect=OSError("nope")
-        ):
+        with patch("akande.tui.os.open", side_effect=OSError("nope")):
             with _suppress_stderr():
                 pass
 
@@ -56,9 +54,7 @@ class TestAkandeAppInit:
 
 class TestWriteHelpers:
     def test_helpers_dont_crash(self, app):
-        with patch.object(
-            app, "query_one"
-        ) as q:
+        with patch.object(app, "query_one") as q:
             log = MagicMock()
             q.return_value = log
             app._write_user("hello")
@@ -69,17 +65,13 @@ class TestWriteHelpers:
         assert log.write.called
 
     def test_hide_welcome_invokes_query(self, app):
-        with patch.object(
-            app, "query_one"
-        ) as q:
+        with patch.object(app, "query_one") as q:
             q.return_value = MagicMock()
             app._hide_welcome()
         q.assert_called()
 
     def test_show_and_hide_thinking(self, app):
-        with patch.object(
-            app, "query_one"
-        ) as q:
+        with patch.object(app, "query_one") as q:
             q.return_value = MagicMock()
             app._show_thinking()
             app._hide_thinking()

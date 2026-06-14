@@ -34,9 +34,7 @@ KNOWN_SUBCOMMANDS = {
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="akande",
-        description=(
-            "Self-hosted, provider-agnostic voice assistant"
-        ),
+        description=("Self-hosted, provider-agnostic voice assistant"),
     )
     sub = parser.add_subparsers(dest="command")
 
@@ -93,12 +91,8 @@ def _build_parser() -> argparse.ArgumentParser:
         "skill",
         help="Manage skills (list / enable / disable / consent / revoke)",
     )
-    skill_sub = skill_parser.add_subparsers(
-        dest="skill_command"
-    )
-    skill_sub.add_parser(
-        "list", help="List registered skills"
-    )
+    skill_sub = skill_parser.add_subparsers(dest="skill_command")
+    skill_sub.add_parser("list", help="List registered skills")
     for action in ("enable", "disable", "consent", "revoke"):
         ap = skill_sub.add_parser(
             action,
@@ -220,11 +214,15 @@ def dispatch_subcommand(
         return data_command(ns)
     if ns.command in {"verify-audit", "verify-pdf"}:
         return verify_command(ns)
-    if ns.command == "verify-watermark":  # pragma: no cover - exercised via subcommand routing
+    if (
+        ns.command == "verify-watermark"
+    ):  # pragma: no cover - exercised via subcommand routing
         return verify_watermark_command(ns)
     if ns.command == "mcp":  # pragma: no cover - tested directly
         return mcp_command(ns)
-    if ns.command == "install-local":  # pragma: no cover - tested directly
+    if (
+        ns.command == "install-local"
+    ):  # pragma: no cover - tested directly
         return install_local_command(ns)
     if ns.command == "skill":  # pragma: no cover - tested directly
         return skill_command(ns)

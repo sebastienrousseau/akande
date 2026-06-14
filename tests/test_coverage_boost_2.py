@@ -53,9 +53,7 @@ class TestAnthropicStreamCoverage:
         p = self._make()
         stream_ctx = MagicMock()
         stream = MagicMock()
-        stream.text_stream = iter(
-            ["", "Hi", "", "there", ""]
-        )
+        stream.text_stream = iter(["", "Hi", "", "there", ""])
         stream_ctx.__enter__.return_value = stream
         stream_ctx.__exit__.return_value = False
         p.client.messages.stream.return_value = stream_ctx
@@ -72,9 +70,7 @@ class TestAnthropicStreamCoverage:
 
     def test_stream_open_failure_propagates(self):
         p = self._make()
-        p.client.messages.stream.side_effect = RuntimeError(
-            "open fail"
-        )
+        p.client.messages.stream.side_effect = RuntimeError("open fail")
 
         async def collect():
             async for _ in p.generate_stream(
@@ -124,23 +120,13 @@ class TestOpenAICompatExtras:
         p._provider_name = "openai"
         p._default_model = "gpt-4o-mini"
         p.client = MagicMock()
-        p.client.chat.completions.create.return_value = (
-            SimpleNamespace(
-                choices=[
-                    SimpleNamespace(
-                        message=SimpleNamespace(
-                            content="sync"
-                        )
-                    )
-                ]
-            )
+        p.client.chat.completions.create.return_value = SimpleNamespace(
+            choices=[
+                SimpleNamespace(message=SimpleNamespace(content="sync"))
+            ]
         )
-        out = p.generate_response_sync(
-            "hi", "", "gpt-4o-mini"
-        )
-        assert (
-            out.choices[0].message.content == "sync"
-        )
+        out = p.generate_response_sync("hi", "", "gpt-4o-mini")
+        assert out.choices[0].message.content == "sync"
 
     def test_sync_raises_on_error(self):
         from akande.providers.openai_provider import (
@@ -151,13 +137,9 @@ class TestOpenAICompatExtras:
         p._provider_name = "openai"
         p._default_model = "gpt-4o-mini"
         p.client = MagicMock()
-        p.client.chat.completions.create.side_effect = (
-            RuntimeError("x")
-        )
+        p.client.chat.completions.create.side_effect = RuntimeError("x")
         with pytest.raises(RuntimeError):
-            p.generate_response_sync(
-                "hi", "", "gpt-4o-mini"
-            )
+            p.generate_response_sync("hi", "", "gpt-4o-mini")
 
 
 # ============================================================
@@ -171,9 +153,7 @@ class TestTelemetryInitSuccess:
 
         telemetry._reset_for_tests()
 
-    def test_initialises_when_env_and_profile_allow(
-        self, monkeypatch
-    ):
+    def test_initialises_when_env_and_profile_allow(self, monkeypatch):
         from akande import telemetry
         from akande.profiles import Profile
 
@@ -199,9 +179,7 @@ class TestTelemetryInitSuccess:
         # Span yields a real span object now.
         with telemetry.span("test", attr="x") as sp:
             assert sp is not None
-        telemetry.record_metric(
-            "akande.test", 1.0, label="x"
-        )
+        telemetry.record_metric("akande.test", 1.0, label="x")
 
 
 # ============================================================
@@ -248,9 +226,7 @@ class TestCLIParserBuild:
         ):
             rc = dispatch_subcommand(["--version"])
         assert rc == 0
-        assert (
-            "unknown" in capsys.readouterr().out.lower()
-        )
+        assert "unknown" in capsys.readouterr().out.lower()
 
 
 # ============================================================
@@ -283,16 +259,16 @@ class TestMCPServerInternals:
 
 
 class TestAuditEdges:
-    def test_verify_sidecar_missing_signature_block(
-        self, tmp_path
-    ):
+    def test_verify_sidecar_missing_signature_block(self, tmp_path):
         from akande.audit import verify_sidecar
 
         path = tmp_path / "x.audit.json"
         path.write_text("{}")
         assert verify_sidecar(path) is False
 
-    def test_verify_sidecar_unsupported_alg(self, tmp_path, monkeypatch):
+    def test_verify_sidecar_unsupported_alg(
+        self, tmp_path, monkeypatch
+    ):
         monkeypatch.setenv("AKANDE_HOME", str(tmp_path))
         from akande.audit import (
             _reset_manager_for_tests,
@@ -342,18 +318,14 @@ class TestCacheExtras:
     def test_eviction_when_over_max_size(self, tmp_path):
         from akande.cache import SQLiteCache
 
-        c = SQLiteCache(
-            str(tmp_path / "c.db"), max_size=2
-        )
+        c = SQLiteCache(str(tmp_path / "c.db"), max_size=2)
         try:
             c.set("a", "1")
             c.set("b", "2")
             c.set("c", "3")  # triggers eviction
             # Two of the three should remain.
             remaining = sum(
-                1
-                for k in ("a", "b", "c")
-                if c.get(k) is not None
+                1 for k in ("a", "b", "c") if c.get(k) is not None
             )
             assert remaining <= 2
         finally:
@@ -411,18 +383,14 @@ class TestVerifyWatermarkBranches:
         rc = verify_watermark_command(ns)
         assert rc == 2
 
-    def test_audioseal_missing_returns_3(
-        self, tmp_path, capsys
-    ):
+    def test_audioseal_missing_returns_3(self, tmp_path, capsys):
         import argparse
 
         from akande.cli.audit import verify_watermark_command
 
         wav = tmp_path / "x.wav"
         wav.write_bytes(b"RIFF" + b"\x00" * 100)
-        ns = argparse.Namespace(
-            path=str(wav), threshold=0.5
-        )
+        ns = argparse.Namespace(path=str(wav), threshold=0.5)
         with patch(
             "akande.watermark._audioseal_available",
             return_value=False,
@@ -441,9 +409,7 @@ class TestToolCallingEdges:
         from akande.tools.calling import _extract_assistant_message
 
         assert (
-            _extract_assistant_message(
-                SimpleNamespace(choices=[])
-            )
+            _extract_assistant_message(SimpleNamespace(choices=[]))
             is None
         )
 
@@ -452,9 +418,7 @@ class TestToolCallingEdges:
 
         assert (
             _extract_assistant_message(
-                SimpleNamespace(
-                    choices=[SimpleNamespace()]
-                )
+                SimpleNamespace(choices=[SimpleNamespace()])
             )
             is None
         )
@@ -464,9 +428,7 @@ class TestToolCallingEdges:
 
         call = SimpleNamespace(
             id="x",
-            function=SimpleNamespace(
-                name="echo", arguments="{}"
-            ),
+            function=SimpleNamespace(name="echo", arguments="{}"),
         )
         response = SimpleNamespace(
             choices=[
@@ -479,9 +441,7 @@ class TestToolCallingEdges:
             ]
         )
         out = _extract_assistant_message(response)
-        assert out["tool_calls"][0]["function"]["name"] == (
-            "echo"
-        )
+        assert out["tool_calls"][0]["function"]["name"] == ("echo")
 
 
 # ============================================================

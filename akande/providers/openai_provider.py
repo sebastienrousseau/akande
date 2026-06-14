@@ -32,7 +32,5 @@ class OpenAIProvider(OpenAICompatProvider):
 
         self._api_key = OPENAI_API_KEY or ""
         self._base_url = ""
-        self._default_model = (
-            OPENAI_DEFAULT_MODEL or "gpt-3.5-turbo"
-        )
+        self._default_model = OPENAI_DEFAULT_MODEL or "gpt-3.5-turbo"
         self._init_client()

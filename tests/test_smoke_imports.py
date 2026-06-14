@@ -46,6 +46,4 @@ def test_optional_list_has_no_duplicates() -> None:
 
 
 def test_required_and_optional_are_disjoint() -> None:
-    assert not (
-        set(REQUIRED_MODULES) & set(OPTIONAL_MODULES)
-    )
+    assert not (set(REQUIRED_MODULES) & set(OPTIONAL_MODULES))

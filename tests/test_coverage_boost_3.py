@@ -24,10 +24,13 @@ def server(tmp_path):
     from akande.server.server import AkandeServer
 
     db = ConversationDB(str(tmp_path / "x.db"))
-    with patch(
-        "akande.server.server.validate_api_key",
-        return_value=True,
-    ), patch("akande.server.server.OpenAIImpl"):
+    with (
+        patch(
+            "akande.server.server.validate_api_key",
+            return_value=True,
+        ),
+        patch("akande.server.server.OpenAIImpl"),
+    ):
         srv = AkandeServer()
     srv.conversations = ConversationStore(db=db)
     return srv
@@ -42,9 +45,10 @@ class TestServerSecurityRejections:
         req = MagicMock()
         req.remote.ip = "203.0.113.1"
         resp = MagicMock()
-        with patch.object(
-            cherrypy, "request", req
-        ), patch.object(cherrypy, "response", resp):
+        with (
+            patch.object(cherrypy, "request", req),
+            patch.object(cherrypy, "response", resp),
+        ):
             with pytest.raises(cherrypy.HTTPError) as exc:
                 server._check_rate_limit()
         assert exc.value.status == 429
@@ -54,9 +58,10 @@ class TestServerSecurityRejections:
 
         req = MagicMock()
         req.headers = {}
-        with patch.object(
-            cherrypy, "request", req
-        ), patch.object(cherrypy, "response", MagicMock()):
+        with (
+            patch.object(cherrypy, "request", req),
+            patch.object(cherrypy, "response", MagicMock()),
+        ):
             with pytest.raises(cherrypy.HTTPError) as exc:
                 AkandeServer._check_csrf()
         assert exc.value.status == 403
@@ -66,9 +71,10 @@ class TestServerSecurityRejections:
 
         req = MagicMock()
         req.headers = {"X-Requested-With": "wrong"}
-        with patch.object(
-            cherrypy, "request", req
-        ), patch.object(cherrypy, "response", MagicMock()):
+        with (
+            patch.object(cherrypy, "request", req),
+            patch.object(cherrypy, "response", MagicMock()),
+        ):
             with pytest.raises(cherrypy.HTTPError):
                 AkandeServer._check_csrf()
 
@@ -93,17 +99,13 @@ class TestSSEBriefingDisclosure:
             return_value=EU,
         ):
             events_bytes = list(
-                server._sse_briefing(
-                    conv.id, "what is QE?", "corr"
-                )
+                server._sse_briefing(conv.id, "what is QE?", "corr")
             )
 
         text = b"".join(events_bytes).decode("utf-8")
         assert "disclosure" in text
         # And the final delta/done events still emitted.
-        assert (
-            "delta" in text or "done" in text
-        )
+        assert "delta" in text or "done" in text
 
 
 # ============================================================
@@ -132,16 +134,17 @@ class TestInstallLocalPipFailure:
             # ollama pull succeeds
             SimpleNamespace(returncode=0, stderr=""),
             # pip install fails
-            SimpleNamespace(
-                returncode=1, stderr="pip down"
-            ),
+            SimpleNamespace(returncode=1, stderr="pip down"),
         ]
-        with patch(
-            "akande.cli.install_local.shutil.which",
-            return_value="/bin/ollama",
-        ), patch(
-            "akande.cli.install_local.subprocess.run",
-            side_effect=calls,
+        with (
+            patch(
+                "akande.cli.install_local.shutil.which",
+                return_value="/bin/ollama",
+            ),
+            patch(
+                "akande.cli.install_local.subprocess.run",
+                side_effect=calls,
+            ),
         ):
             rc = install_local_command(
                 self._ns(env_path=str(tmp_path / ".env"))
@@ -206,12 +209,15 @@ class TestMemoryEnvInit:
 
         monkeypatch.setenv("AKANDE_MEMORY", "1")
         MagicMock()
-        with patch(
-            "akande.memory._mem0_available",
-            return_value=True,
-        ), patch(
-            "akande.memory.MemoryStore.__init__",
-            lambda self, **k: None,
+        with (
+            patch(
+                "akande.memory._mem0_available",
+                return_value=True,
+            ),
+            patch(
+                "akande.memory.MemoryStore.__init__",
+                lambda self, **k: None,
+            ),
         ):
             ms = MemoryStore()
         # Construction patched away; just confirm shape.
@@ -264,9 +270,7 @@ class TestUtilsMarkdownBranches:
             _markdown_inline_to_reportlab,
         )
 
-        out = _markdown_inline_to_reportlab(
-            "**bold** *italic* `code`"
-        )
+        out = _markdown_inline_to_reportlab("**bold** *italic* `code`")
         assert "<b>" in out
         assert "<i>" in out
 
@@ -311,9 +315,7 @@ class TestToolCallingDictArgs:
                 return {"type": "object"}
 
             def run(self, args):
-                return ToolResult(
-                    content=str(args.get("k") or "")
-                )
+                return ToolResult(content=str(args.get("k") or ""))
 
         reg = ToolRegistry()
         reg.register(_T())
@@ -376,8 +378,6 @@ class TestCLIMCPList:
             str(tmp_path / "missing.json"),
         )
         rc = mcp_command(
-            argparse.Namespace(
-                mcp_command="list", server=None
-            )
+            argparse.Namespace(mcp_command="list", server=None)
         )
         assert rc == 1

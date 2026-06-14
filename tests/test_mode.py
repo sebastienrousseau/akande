@@ -34,8 +34,7 @@ class TestResolveMode:
         with caplog.at_level("WARNING"):
             assert resolve_mode("hypothetical") is ONLINE
         assert any(
-            "Unknown AKANDE_MODE" in r.message
-            for r in caplog.records
+            "Unknown AKANDE_MODE" in r.message for r in caplog.records
         )
 
 

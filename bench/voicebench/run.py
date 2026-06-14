@@ -56,9 +56,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     p.add_argument(
         "--model",
-        default=os.getenv(
-            "OPENAI_DEFAULT_MODEL", "gpt-4o-mini"
-        ),
+        default=os.getenv("OPENAI_DEFAULT_MODEL", "gpt-4o-mini"),
         help="Provider-specific model id",
     )
     p.add_argument(
@@ -115,9 +113,7 @@ def score_prompt(
         response = provider.generate_response_sync(
             prompt, SYSTEM_PROMPT, model, None
         )
-        text = str(
-            response.choices[0].message.content or ""
-        )
+        text = str(response.choices[0].message.content or "")
         ok = True
         error = None
     except Exception as exc:
@@ -143,8 +139,7 @@ def aggregate(rows: list[dict[str, Any]]) -> dict[str, Any]:
     out = {
         "overall": _summary(rows),
         "by_category": {
-            cat: _summary(items)
-            for cat, items in by_cat.items()
+            cat: _summary(items) for cat, items in by_cat.items()
         },
     }
     return out
@@ -157,9 +152,7 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "count": len(rows),
         "ok": len(ok),
-        "ok_rate": (
-            round(len(ok) / len(rows), 4) if rows else 0.0
-        ),
+        "ok_rate": (round(len(ok) / len(rows), 4) if rows else 0.0),
         "p50_latency_ms": (
             round(
                 statistics.median(latencies),
@@ -184,9 +177,7 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _percentile(
-    values: list[float], pct: float
-) -> float:
+def _percentile(values: list[float], pct: float) -> float:
     """Linear-interpolation percentile.  Pure-python so no numpy dep."""
     if not values:
         return 0.0

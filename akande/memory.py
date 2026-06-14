@@ -141,7 +141,11 @@ class MemoryStore:
         facts, or context summaries — not raw conversation turns
         (those live in :class:`~akande.conversation.ConversationStore`).
         """
-        if not self._enabled or self._client is None or not text.strip():
+        if (
+            not self._enabled
+            or self._client is None
+            or not text.strip()
+        ):
             return
         try:
             self._client.add(
@@ -169,7 +173,11 @@ class MemoryStore:
         limit: int = DEFAULT_MAX_MEMORIES,
     ) -> list[MemoryHit]:
         """Return memories semantically similar to ``query``."""
-        if not self._enabled or self._client is None or not query.strip():
+        if (
+            not self._enabled
+            or self._client is None
+            or not query.strip()
+        ):
             return []
         try:
             raw = self._client.search(
@@ -195,14 +203,10 @@ class MemoryStore:
         if not self._enabled or self._client is None:
             return 0
         try:
-            hits = self._client.get_all(
-                user_id=self.user_id
-            )
+            hits = self._client.get_all(user_id=self.user_id)
             count = 0
             for item in _coerce_iter(hits):
-                ident = item.get("id") or item.get(
-                    "memory_id"
-                )
+                ident = item.get("id") or item.get("memory_id")
                 if ident:
                     self._client.delete(ident)
                     count += 1
@@ -255,11 +259,7 @@ def _coerce_iter(raw: Any) -> list[dict]:
     if isinstance(raw, dict):
         for key in ("results", "memories", "data"):
             if isinstance(raw.get(key), list):
-                return [
-                    m
-                    for m in raw[key]
-                    if isinstance(m, dict)
-                ]
+                return [m for m in raw[key] if isinstance(m, dict)]
         return []
     if isinstance(raw, list):
         return [m for m in raw if isinstance(m, dict)]

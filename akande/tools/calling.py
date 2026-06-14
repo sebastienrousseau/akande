@@ -124,11 +124,7 @@ def run_tool_calling_loop(
             {
                 "role": "assistant",
                 "content": message.get("content") or "",
-                **(
-                    {"tool_calls": tool_calls}
-                    if tool_calls
-                    else {}
-                ),
+                **({"tool_calls": tool_calls} if tool_calls else {}),
             }
         )
         if not tool_calls:
@@ -169,9 +165,7 @@ def _dispatch(
                 name=name,
                 args={},
                 result_content="",
-                error=(
-                    "tool_calling: malformed JSON arguments"
-                ),
+                error=("tool_calling: malformed JSON arguments"),
             )
     else:
         args = dict(raw_args)
@@ -240,10 +234,7 @@ def _extract_assistant_message(
                 "type": "function",
                 "function": {
                     "name": getattr(fn, "name", "") or "",
-                    "arguments": getattr(
-                        fn, "arguments", ""
-                    )
-                    or "",
+                    "arguments": getattr(fn, "arguments", "") or "",
                 },
             }
         )

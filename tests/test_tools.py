@@ -118,9 +118,7 @@ class TestWebSearchTool:
 
     def test_empty_returns_no_results_message(self):
         tool = WebSearchTool()
-        with patch.object(
-            tool, "_search", return_value=("stub", [])
-        ):
+        with patch.object(tool, "_search", return_value=("stub", [])):
             result = tool.run({"query": "obscure"})
         assert "No results" in result.content
 
@@ -128,9 +126,7 @@ class TestWebSearchTool:
 class TestFetchURLTool:
     def test_rejects_non_https(self):
         with pytest.raises(ToolError):
-            FetchURLTool().run(
-                {"url": "http://example.com"}
-            )
+            FetchURLTool().run({"url": "http://example.com"})
 
     def test_rejects_empty(self):
         with pytest.raises(ToolError):

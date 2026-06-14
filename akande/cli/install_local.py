@@ -111,9 +111,7 @@ def _ensure_model(model: str, dry_run: bool) -> bool:
             timeout=600,
         )
     except FileNotFoundError:  # pragma: no cover - subprocess race
-        print(
-            "✗ `ollama` vanished between checks", file=sys.stderr
-        )
+        print("✗ `ollama` vanished between checks", file=sys.stderr)
         return False
     if result.returncode != 0:
         sys.stderr.write(result.stderr)
@@ -159,17 +157,14 @@ def _install_extras(dry_run: bool) -> bool:
     return True
 
 
-def _write_env(
-    target: Path, dry_run: bool, model: str
-) -> None:
+def _write_env(target: Path, dry_run: bool, model: str) -> None:
     defaults = dict(OFFLINE_ENV_DEFAULTS)
     defaults["OPENAI_DEFAULT_MODEL"] = model
     existing = _load_env(target)
     merged = {**defaults, **existing}
     if dry_run:
         print(
-            f"DRY-RUN would write {target} with keys "
-            f"{sorted(merged)}"
+            f"DRY-RUN would write {target} with keys {sorted(merged)}"
         )
         return
     target.parent.mkdir(parents=True, exist_ok=True)

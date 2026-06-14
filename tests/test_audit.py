@@ -38,9 +38,7 @@ class TestManifestCanonicalisation:
         )
         encoded = m.to_canonical_json().decode("utf-8")
         # Sorted-keys means 'created_at' comes before 'profile'.
-        assert encoded.index("created_at") < encoded.index(
-            "profile"
-        )
+        assert encoded.index("created_at") < encoded.index("profile")
 
     def test_hashes_inputs(self):
         m = build_manifest(
@@ -81,9 +79,7 @@ class TestSignAndVerify:
         body["response_chars"] = body["response_chars"] + 1
         assert verify_manifest_dict(body) is False
 
-    def test_missing_signature_block_rejected(
-        self, isolated_keys
-    ):
+    def test_missing_signature_block_rejected(self, isolated_keys):
         m = build_manifest(
             prompt="q",
             response="r",
@@ -145,9 +141,7 @@ class TestSidecar:
         assert sidecar.name.endswith(AUDIT_SUFFIX)
         assert verify_sidecar(sidecar) is True
 
-    def test_sidecar_is_pretty_json(
-        self, isolated_keys, tmp_path
-    ):
+    def test_sidecar_is_pretty_json(self, isolated_keys, tmp_path):
         m = build_manifest(
             prompt="x",
             response="y",

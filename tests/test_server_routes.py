@@ -34,10 +34,13 @@ def server(tmp_path):
 
     db = ConversationDB(str(tmp_path / "conv.db"))
 
-    with patch(
-        "akande.server.server.validate_api_key",
-        return_value=True,
-    ), patch("akande.server.server.OpenAIImpl"):
+    with (
+        patch(
+            "akande.server.server.validate_api_key",
+            return_value=True,
+        ),
+        patch("akande.server.server.OpenAIImpl"),
+    ):
         srv = AkandeServer()
 
     srv.conversations = ConversationStore(db=db)
@@ -51,9 +54,7 @@ def server(tmp_path):
 def _request(body=b"", headers=None, remote_ip="127.0.0.1"):
     req = MagicMock()
     req.body.read.return_value = body
-    req.headers = headers or {
-        "X-Requested-With": "AkandeApp"
-    }
+    req.headers = headers or {"X-Requested-With": "AkandeApp"}
     req.remote.ip = remote_ip
     req.path_info = "/x"
     return req
@@ -61,17 +62,13 @@ def _request(body=b"", headers=None, remote_ip="127.0.0.1"):
 
 class TestHealthMetrics:
     def test_health(self, server):
-        with patch.object(
-            cherrypy, "response", MagicMock()
-        ):
+        with patch.object(cherrypy, "response", MagicMock()):
             body = server.health()
         assert b"ok" in body
         assert b"akande" in body
 
     def test_metrics_returns_json(self, server):
-        with patch.object(
-            cherrypy, "response", MagicMock()
-        ):
+        with patch.object(cherrypy, "response", MagicMock()):
             body = server.metrics()
         # _metrics.summary() returns a dict; the response is its JSON.
         assert isinstance(body, bytes)
@@ -87,10 +84,9 @@ class TestStaticRoute:
         bad = "evil.js"
         assert bad not in ALLOWED_STATIC_FILES
         req = _request()
-        with patch.object(
-            cherrypy, "request", req
-        ), patch.object(
-            cherrypy, "response", MagicMock()
+        with (
+            patch.object(cherrypy, "request", req),
+            patch.object(cherrypy, "response", MagicMock()),
         ):
             with pytest.raises(cherrypy.HTTPError) as exc:
                 server.static(bad)
@@ -102,43 +98,36 @@ class TestStaticRoute:
         # Point public_dir at an empty tmp.
         server.public_dir = tmp_path
         req = _request()
-        with patch.object(
-            cherrypy, "request", req
-        ), patch.object(
-            cherrypy, "response", MagicMock()
+        with (
+            patch.object(cherrypy, "request", req),
+            patch.object(cherrypy, "response", MagicMock()),
         ):
             with pytest.raises(cherrypy.HTTPError) as exc:
                 server.static("sine-wave-generator.js")
         assert exc.value.status == 404
 
-    def test_path_traversal_refused(
-        self, server, tmp_path
-    ):
+    def test_path_traversal_refused(self, server, tmp_path):
         # ALLOWED_STATIC_FILES is a frozenset of *names*; static()
         # also resolves and rejects anything escaping public_dir.
         server.public_dir = tmp_path
-        with patch.object(
-            cherrypy, "request", _request()
-        ), patch.object(
-            cherrypy, "response", MagicMock()
+        with (
+            patch.object(cherrypy, "request", _request()),
+            patch.object(cherrypy, "response", MagicMock()),
         ):
             with pytest.raises(cherrypy.HTTPError):
                 server.static("../escape.js")
 
 
 class TestIndex:
-    def test_serves_index_with_nonce(
-        self, server, tmp_path
-    ):
+    def test_serves_index_with_nonce(self, server, tmp_path):
         server.public_dir = tmp_path
         (tmp_path / "index.html").write_text(
             "<html>__CSP_NONCE__</html>"
         )
         req = _request()
-        with patch.object(
-            cherrypy, "request", req
-        ), patch.object(
-            cherrypy, "response", MagicMock()
+        with (
+            patch.object(cherrypy, "request", req),
+            patch.object(cherrypy, "response", MagicMock()),
         ):
             body = server.index()
         # Nonce is base64-urlsafe(16) → 22 chars.
@@ -148,10 +137,9 @@ class TestIndex:
     def test_index_missing_404(self, server, tmp_path):
         server.public_dir = tmp_path
         req = _request()
-        with patch.object(
-            cherrypy, "request", req
-        ), patch.object(
-            cherrypy, "response", MagicMock()
+        with (
+            patch.object(cherrypy, "request", req),
+            patch.object(cherrypy, "response", MagicMock()),
         ):
             with pytest.raises(cherrypy.HTTPError) as exc:
                 server.index()
@@ -162,49 +150,41 @@ class TestProcessQuestion:
     def test_invalid_json_returns_400(self, server):
         req = _request(b"not json")
         resp = MagicMock()
-        with patch.object(
-            cherrypy, "request", req
-        ), patch.object(cherrypy, "response", resp), patch(
-            "akande.server.server.AKANDE_API_KEY", None
+        with (
+            patch.object(cherrypy, "request", req),
+            patch.object(cherrypy, "response", resp),
+            patch("akande.server.server.AKANDE_API_KEY", None),
         ):
             out = server.process_question()
         assert b"Invalid JSON" in out
 
     def test_empty_question_returns_400(self, server):
         body = json.dumps({"question": "   "}).encode()
-        with patch.object(
-            cherrypy, "request", _request(body)
-        ), patch.object(
-            cherrypy, "response", MagicMock()
-        ), patch(
-            "akande.server.server.AKANDE_API_KEY", None
+        with (
+            patch.object(cherrypy, "request", _request(body)),
+            patch.object(cherrypy, "response", MagicMock()),
+            patch("akande.server.server.AKANDE_API_KEY", None),
         ):
             out = server.process_question()
         assert b"non-empty string" in out
 
     def test_non_string_question_returns_400(self, server):
         body = json.dumps({"question": 42}).encode()
-        with patch.object(
-            cherrypy, "request", _request(body)
-        ), patch.object(
-            cherrypy, "response", MagicMock()
-        ), patch(
-            "akande.server.server.AKANDE_API_KEY", None
+        with (
+            patch.object(cherrypy, "request", _request(body)),
+            patch.object(cherrypy, "response", MagicMock()),
+            patch("akande.server.server.AKANDE_API_KEY", None),
         ):
             out = server.process_question()
         assert b"non-empty string" in out
 
     def test_cache_hit_returns_cached(self, server):
         server.cache.get.return_value = "cached briefing"
-        body = json.dumps(
-            {"question": "what is QE?"}
-        ).encode()
-        with patch.object(
-            cherrypy, "request", _request(body)
-        ), patch.object(
-            cherrypy, "response", MagicMock()
-        ), patch(
-            "akande.server.server.AKANDE_API_KEY", None
+        body = json.dumps({"question": "what is QE?"}).encode()
+        with (
+            patch.object(cherrypy, "request", _request(body)),
+            patch.object(cherrypy, "response", MagicMock()),
+            patch("akande.server.server.AKANDE_API_KEY", None),
         ):
             out = server.process_question()
         assert b"cached briefing" in out
@@ -214,22 +194,16 @@ class TestProcessQuestion:
             SimpleNamespace(
                 choices=[
                     SimpleNamespace(
-                        message=SimpleNamespace(
-                            content="answer"
-                        )
+                        message=SimpleNamespace(content="answer")
                     )
                 ]
             )
         )
-        body = json.dumps(
-            {"question": "ask me"}
-        ).encode()
-        with patch.object(
-            cherrypy, "request", _request(body)
-        ), patch.object(
-            cherrypy, "response", MagicMock()
-        ), patch(
-            "akande.server.server.AKANDE_API_KEY", None
+        body = json.dumps({"question": "ask me"}).encode()
+        with (
+            patch.object(cherrypy, "request", _request(body)),
+            patch.object(cherrypy, "response", MagicMock()),
+            patch("akande.server.server.AKANDE_API_KEY", None),
         ):
             out = server.process_question()
         server.cache.set.assert_called_once()
@@ -239,15 +213,11 @@ class TestProcessQuestion:
         server.openai_service.generate_response_sync.side_effect = (
             RuntimeError("boom")
         )
-        body = json.dumps(
-            {"question": "broken"}
-        ).encode()
-        with patch.object(
-            cherrypy, "request", _request(body)
-        ), patch.object(
-            cherrypy, "response", MagicMock()
-        ), patch(
-            "akande.server.server.AKANDE_API_KEY", None
+        body = json.dumps({"question": "broken"}).encode()
+        with (
+            patch.object(cherrypy, "request", _request(body)),
+            patch.object(cherrypy, "response", MagicMock()),
+            patch("akande.server.server.AKANDE_API_KEY", None),
         ):
             out = server.process_question()
         assert b"error" in out.lower() or b"500" in out
@@ -256,63 +226,52 @@ class TestProcessQuestion:
 class TestProcessAudioQuestion:
     def test_too_large_400(self, server):
         big = b"\x00" * (server.__class__.__init__ and 11 * 1024 * 1024)
-        with patch.object(
-            cherrypy, "request", _request(big)
-        ), patch.object(
-            cherrypy, "response", MagicMock()
-        ), patch(
-            "akande.server.server.AKANDE_API_KEY", None
+        with (
+            patch.object(cherrypy, "request", _request(big)),
+            patch.object(cherrypy, "response", MagicMock()),
+            patch("akande.server.server.AKANDE_API_KEY", None),
         ):
             out = server.process_audio_question()
         assert b"too large" in out.lower()
 
     def test_empty_400(self, server):
-        with patch.object(
-            cherrypy, "request", _request(b"")
-        ), patch.object(
-            cherrypy, "response", MagicMock()
-        ), patch(
-            "akande.server.server.AKANDE_API_KEY", None
+        with (
+            patch.object(cherrypy, "request", _request(b"")),
+            patch.object(cherrypy, "response", MagicMock()),
+            patch("akande.server.server.AKANDE_API_KEY", None),
         ):
             out = server.process_audio_question()
         assert b"No audio data" in out
 
     def test_unknown_format_400(self, server):
-        with patch.object(
-            cherrypy, "request", _request(b"garbage-bytes")
-        ), patch.object(
-            cherrypy, "response", MagicMock()
-        ), patch(
-            "akande.server.server.AKANDE_API_KEY", None
+        with (
+            patch.object(
+                cherrypy, "request", _request(b"garbage-bytes")
+            ),
+            patch.object(cherrypy, "response", MagicMock()),
+            patch("akande.server.server.AKANDE_API_KEY", None),
         ):
             out = server.process_audio_question()
         # Format detection fails on random bytes → returns an error.
-        assert (
-            b"error" in out.lower()
-            or b"format" in out.lower()
-        )
+        assert b"error" in out.lower() or b"format" in out.lower()
 
 
 class TestExportConversation:
     def test_invalid_json_returns_400(self, server):
-        with patch.object(
-            cherrypy, "request", _request(b"not json")
-        ), patch.object(
-            cherrypy, "response", MagicMock()
-        ), patch(
-            "akande.server.server.AKANDE_API_KEY", None
+        with (
+            patch.object(cherrypy, "request", _request(b"not json")),
+            patch.object(cherrypy, "response", MagicMock()),
+            patch("akande.server.server.AKANDE_API_KEY", None),
         ):
             out = server.export_conversation()
         assert b"Invalid JSON" in out
 
     def test_missing_fields_returns_400(self, server):
         body = json.dumps({"format": "pdf"}).encode()
-        with patch.object(
-            cherrypy, "request", _request(body)
-        ), patch.object(
-            cherrypy, "response", MagicMock()
-        ), patch(
-            "akande.server.server.AKANDE_API_KEY", None
+        with (
+            patch.object(cherrypy, "request", _request(body)),
+            patch.object(cherrypy, "response", MagicMock()),
+            patch("akande.server.server.AKANDE_API_KEY", None),
         ):
             out = server.export_conversation()
         # Either question/response missing.
@@ -333,8 +292,7 @@ class TestAudioFormatDetectionExtras:
         from akande.server.server import _detect_audio_format
 
         assert (
-            _detect_audio_format(b"\x00\x00\x00\x18ftypisom")
-            == "mp4"
+            _detect_audio_format(b"\x00\x00\x00\x18ftypisom") == "mp4"
         )
 
 
@@ -365,7 +323,4 @@ class TestHelperSafety:
     def test_sanitise_filename_strips_dangerous(self):
         from akande.server.server import _sanitise_filename
 
-        assert (
-            _sanitise_filename('foo"\r\n\\bar')
-            == "foo____bar"
-        )
+        assert _sanitise_filename('foo"\r\n\\bar') == "foo____bar"

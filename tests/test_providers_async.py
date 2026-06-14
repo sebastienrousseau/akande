@@ -21,9 +21,7 @@ import pytest
 def _envelope(content: str):
     return SimpleNamespace(
         choices=[
-            SimpleNamespace(
-                message=SimpleNamespace(content=content)
-            )
+            SimpleNamespace(message=SimpleNamespace(content=content))
         ]
     )
 
@@ -43,9 +41,7 @@ class TestOpenAICompatAsync:
         )
 
         async def call():
-            return await p.generate_response(
-                "hi", "sys", "gpt-4o-mini"
-            )
+            return await p.generate_response("hi", "sys", "gpt-4o-mini")
 
         out = asyncio.run(call())
         assert out.choices[0].message.content == "hello"
@@ -64,9 +60,7 @@ class TestOpenAICompatAsync:
         )
 
         async def call():
-            return await p.generate_response(
-                "hi", "", "gpt-4o-mini"
-            )
+            return await p.generate_response("hi", "", "gpt-4o-mini")
 
         with pytest.raises(RuntimeError):
             asyncio.run(call())
@@ -81,9 +75,7 @@ class TestAnthropicAsync:
         p = AnthropicProvider.__new__(AnthropicProvider)
         p._default_model = "claude-3-haiku-20240307"
         p.client = MagicMock()
-        msg = SimpleNamespace(
-            content=[SimpleNamespace(text="ok")]
-        )
+        msg = SimpleNamespace(content=[SimpleNamespace(text="ok")])
         p.client.messages.create.return_value = msg
 
         async def call():
@@ -102,9 +94,7 @@ class TestAnthropicAsync:
         p = AnthropicProvider.__new__(AnthropicProvider)
         p._default_model = "claude-3-haiku-20240307"
         p.client = MagicMock()
-        msg = SimpleNamespace(
-            content=[SimpleNamespace(text="sync ok")]
-        )
+        msg = SimpleNamespace(content=[SimpleNamespace(text="sync ok")])
         p.client.messages.create.return_value = msg
         out = p.generate_response_sync(
             "hi", "", "claude-3-haiku-20240307"
@@ -119,9 +109,7 @@ class TestAnthropicAsync:
         p = AnthropicProvider.__new__(AnthropicProvider)
         p._default_model = "claude-3-haiku-20240307"
         p.client = MagicMock()
-        p.client.messages.create.side_effect = RuntimeError(
-            "x"
-        )
+        p.client.messages.create.side_effect = RuntimeError("x")
         with pytest.raises(RuntimeError):
             p.generate_response_sync(
                 "hi", "", "claude-3-haiku-20240307"
@@ -138,8 +126,8 @@ class TestGoogleProviderAsync:
         p._default_model = "gemini-1.5-flash"
         p._genai = MagicMock()
         gen_model = MagicMock()
-        gen_model.generate_content.return_value = (
-            SimpleNamespace(text="g-ok")
+        gen_model.generate_content.return_value = SimpleNamespace(
+            text="g-ok"
         )
         p._genai.GenerativeModel.return_value = gen_model
 
@@ -160,13 +148,11 @@ class TestGoogleProviderAsync:
         p._default_model = "gemini-1.5-flash"
         p._genai = MagicMock()
         gen_model = MagicMock()
-        gen_model.generate_content.return_value = (
-            SimpleNamespace(text="sync-g")
+        gen_model.generate_content.return_value = SimpleNamespace(
+            text="sync-g"
         )
         p._genai.GenerativeModel.return_value = gen_model
-        out = p.generate_response_sync(
-            "hi", "", "gemini-1.5-flash"
-        )
+        out = p.generate_response_sync("hi", "", "gemini-1.5-flash")
         assert out.choices[0].message.content == "sync-g"
 
     def test_provider_name_property(self):
@@ -193,11 +179,7 @@ class TestMistralAsync:
         p = self._make()
         p.client.chat.complete.return_value = SimpleNamespace(
             choices=[
-                SimpleNamespace(
-                    message=SimpleNamespace(
-                        content="m-ok"
-                    )
-                )
+                SimpleNamespace(message=SimpleNamespace(content="m-ok"))
             ]
         )
 
@@ -213,9 +195,7 @@ class TestMistralAsync:
         p = self._make()
         p.client.chat.complete.return_value = SimpleNamespace(
             choices=[
-                SimpleNamespace(
-                    message=SimpleNamespace(content=None)
-                )
+                SimpleNamespace(message=SimpleNamespace(content=None))
             ]
         )
 
@@ -235,9 +215,7 @@ class TestMistralAsync:
         ]
         p.client.chat.complete.return_value = SimpleNamespace(
             choices=[
-                SimpleNamespace(
-                    message=SimpleNamespace(content=chunks)
-                )
+                SimpleNamespace(message=SimpleNamespace(content=chunks))
             ]
         )
 
@@ -253,25 +231,17 @@ class TestMistralAsync:
         p = self._make()
         p.client.chat.complete.return_value = SimpleNamespace(
             choices=[
-                SimpleNamespace(
-                    message=SimpleNamespace(content="s-m")
-                )
+                SimpleNamespace(message=SimpleNamespace(content="s-m"))
             ]
         )
-        out = p.generate_response_sync(
-            "hi", "", "mistral-small-latest"
-        )
+        out = p.generate_response_sync("hi", "", "mistral-small-latest")
         assert out.choices[0].message.content == "s-m"
 
     def test_sync_raises(self):
         p = self._make()
-        p.client.chat.complete.side_effect = RuntimeError(
-            "x"
-        )
+        p.client.chat.complete.side_effect = RuntimeError("x")
         with pytest.raises(RuntimeError):
-            p.generate_response_sync(
-                "hi", "", "mistral-small-latest"
-            )
+            p.generate_response_sync("hi", "", "mistral-small-latest")
 
 
 class TestCohereAsync:
@@ -295,9 +265,7 @@ class TestCohereAsync:
         p.client.chat.return_value = response
 
         async def call():
-            return await p.generate_response(
-                "hi", "sys", "command-r"
-            )
+            return await p.generate_response("hi", "sys", "command-r")
 
         out = asyncio.run(call())
         assert out.choices[0].message.content == "c-ok"
@@ -309,14 +277,10 @@ class TestCohereAsync:
         )
 
         async def call():
-            return await p.generate_response(
-                "hi", "sys", "command-r"
-            )
+            return await p.generate_response("hi", "sys", "command-r")
 
         out = asyncio.run(call())
-        assert (
-            out.choices[0].message.content == ""
-        )
+        assert out.choices[0].message.content == ""
 
 
 class TestHuggingFaceAsync:
@@ -331,9 +295,7 @@ class TestHuggingFaceAsync:
         p.client.chat_completion.return_value = SimpleNamespace(
             choices=[
                 SimpleNamespace(
-                    message=SimpleNamespace(
-                        content="hf-ok"
-                    )
+                    message=SimpleNamespace(content="hf-ok")
                 )
             ]
         )
@@ -368,9 +330,7 @@ class TestRegistryDispatch:
             def provider_name(self):
                 return "stub"
 
-            async def generate_response(
-                self, *a, **k
-            ):
+            async def generate_response(self, *a, **k):
                 return None
 
             def generate_response_sync(self, *a, **k):
@@ -400,9 +360,7 @@ class TestProviderResponseShape:
         from akande.providers.response import ProviderResponse
 
         wrapped = ProviderResponse("hello")
-        assert (
-            wrapped.choices[0].message.content == "hello"
-        )
+        assert wrapped.choices[0].message.content == "hello"
 
     def test_provider_response_repr(self):
         from akande.providers.response import ProviderResponse

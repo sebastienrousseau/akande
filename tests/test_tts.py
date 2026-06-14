@@ -68,9 +68,7 @@ class TestKokoroBackendImportError:
         # command rather than a generic ModuleNotFoundError.
         from akande.tts.kokoro_backend import KokoroBackend
 
-        with pytest.raises(
-            ImportError, match="kokoro-onnx"
-        ):
+        with pytest.raises(ImportError, match="kokoro-onnx"):
             KokoroBackend()
 
 

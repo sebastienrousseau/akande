@@ -82,8 +82,7 @@ class TestRateLimiter:
                 results.append(limiter.is_allowed("127.0.0.1"))
 
         threads = [
-            threading.Thread(target=make_requests)
-            for _ in range(4)
+            threading.Thread(target=make_requests) for _ in range(4)
         ]
         for t in threads:
             t.start()
@@ -109,9 +108,7 @@ class TestHashIp:
 
 
 class TestAkandeServerInit:
-    @patch(
-        "akande.server.server.LLM_PROVIDER", "openai"
-    )
+    @patch("akande.server.server.LLM_PROVIDER", "openai")
     @patch(
         "akande.server.server.OPENAI_API_KEY",
         "sk-test-1234567890abcdef",
@@ -123,14 +120,10 @@ class TestAkandeServerInit:
         assert server.public_dir is not None
         assert server.cache is not None
 
-    @patch(
-        "akande.server.server.LLM_PROVIDER", "openai"
-    )
+    @patch("akande.server.server.LLM_PROVIDER", "openai")
     @patch("akande.server.server.OPENAI_API_KEY", None)
     def test_init_fails_without_api_key(self):
-        with pytest.raises(
-            RuntimeError, match="OPENAI_API_KEY"
-        ):
+        with pytest.raises(RuntimeError, match="OPENAI_API_KEY"):
             AkandeServer()
 
 
@@ -199,16 +192,12 @@ class TestProcessAudio:
             from speech_recognition import UnknownValueError
 
             # Patch the module-level _recognizer
-            with patch(
-                "akande.server.server._recognizer"
-            ) as mock_rec:
+            with patch("akande.server.server._recognizer") as mock_rec:
                 mock_rec.recognize_google.side_effect = (
                     UnknownValueError()
                 )
 
-                result = AkandeServer.process_audio(
-                    str(wav_path)
-                )
+                result = AkandeServer.process_audio(str(wav_path))
                 assert result["success"] is False
                 assert "could not be understood" in result["error"]
 
@@ -220,9 +209,7 @@ class TestCacheStoresRawMarkdown:
     )
     @patch("akande.server.server.OpenAIImpl")
     @patch("akande.server.server.cherrypy")
-    def test_cache_stores_raw_markdown(
-        self, mock_cp, mock_impl
-    ):
+    def test_cache_stores_raw_markdown(self, mock_cp, mock_impl):
         mock_cp.request = MagicMock()
         mock_cp.request.remote.ip = "127.0.0.1"
         mock_cp.request.headers = {
@@ -234,19 +221,17 @@ class TestCacheStoresRawMarkdown:
         raw_md = "**Bold** and _italic_ text"
         mock_response = MagicMock()
         mock_response.choices = [
-            MagicMock(
-                message=MagicMock(content=raw_md)
-            )
+            MagicMock(message=MagicMock(content=raw_md))
         ]
-        mock_cp.request.body.read.return_value = (
-            json.dumps({"question": "test"}).encode()
-        )
+        mock_cp.request.body.read.return_value = json.dumps(
+            {"question": "test"}
+        ).encode()
 
         server = AkandeServer()
         server.cache = MagicMock()
         server.cache.get.return_value = None
-        server.openai_service.generate_response_sync = (
-            MagicMock(return_value=mock_response)
+        server.openai_service.generate_response_sync = MagicMock(
+            return_value=mock_response
         )
         server._rate_limiter = MagicMock()
         server._rate_limiter.is_allowed.return_value = True
@@ -263,9 +248,7 @@ class TestCacheStoresRawMarkdown:
     )
     @patch("akande.server.server.OpenAIImpl")
     @patch("akande.server.server.cherrypy")
-    def test_cache_hit_strips_at_boundary(
-        self, mock_cp, mock_impl
-    ):
+    def test_cache_hit_strips_at_boundary(self, mock_cp, mock_impl):
         mock_cp.request = MagicMock()
         mock_cp.request.remote.ip = "127.0.0.1"
         mock_cp.request.headers = {
@@ -273,15 +256,13 @@ class TestCacheStoresRawMarkdown:
         }
         mock_cp.response = MagicMock()
         mock_cp.response.headers = {}
-        mock_cp.request.body.read.return_value = (
-            json.dumps({"question": "test"}).encode()
-        )
+        mock_cp.request.body.read.return_value = json.dumps(
+            {"question": "test"}
+        ).encode()
 
         server = AkandeServer()
         server.cache = MagicMock()
-        server.cache.get.return_value = (
-            "**Bold** and _italic_ text"
-        )
+        server.cache.get.return_value = "**Bold** and _italic_ text"
         server._rate_limiter = MagicMock()
         server._rate_limiter.is_allowed.return_value = True
 
@@ -300,9 +281,7 @@ class TestMetricsEndpoint:
     )
     @patch("akande.server.server.OpenAIImpl")
     @patch("akande.server.server.cherrypy")
-    def test_metrics_returns_json(
-        self, mock_cp, mock_impl
-    ):
+    def test_metrics_returns_json(self, mock_cp, mock_impl):
         mock_cp.response = MagicMock()
         mock_cp.response.headers = {}
         server = AkandeServer()

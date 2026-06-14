@@ -32,12 +32,10 @@ class TestConvertToWavBranches:
 
         stub = MagicMock()
         if raise_on_call:
-            stub.from_file.side_effect = (
-                __import__(
-                    "pydub.exceptions",
-                    fromlist=["CouldntDecodeError"],
-                ).CouldntDecodeError("bad")
-            )
+            stub.from_file.side_effect = __import__(
+                "pydub.exceptions",
+                fromlist=["CouldntDecodeError"],
+            ).CouldntDecodeError("bad")
         else:
             stub.from_file.return_value = _Seg()
         return stub
@@ -46,9 +44,7 @@ class TestConvertToWavBranches:
         from akande.server.server import AkandeServer
 
         stub = self._patch_audio_segment()
-        with patch(
-            "akande.server.server.AudioSegment", stub
-        ):
+        with patch("akande.server.server.AudioSegment", stub):
             path = AkandeServer.convert_to_wav(
                 b"x" * 10, content_type="audio/webm"
             )
@@ -59,9 +55,7 @@ class TestConvertToWavBranches:
         from akande.server.server import AkandeServer
 
         stub = self._patch_audio_segment()
-        with patch(
-            "akande.server.server.AudioSegment", stub
-        ):
+        with patch("akande.server.server.AudioSegment", stub):
             # Magic ID3 → mp3
             path = AkandeServer.convert_to_wav(
                 b"ID3" + b"\x00" * 32, content_type=""
@@ -73,9 +67,7 @@ class TestConvertToWavBranches:
         from akande.server.server import AkandeServer
 
         stub = self._patch_audio_segment()
-        with patch(
-            "akande.server.server.AudioSegment", stub
-        ):
+        with patch("akande.server.server.AudioSegment", stub):
             path = AkandeServer.convert_to_wav(
                 b"garbage-not-magic",
                 content_type="",
@@ -89,9 +81,7 @@ class TestConvertToWavBranches:
         from akande.server.server import AkandeServer
 
         stub = self._patch_audio_segment(raise_on_call=True)
-        with patch(
-            "akande.server.server.AudioSegment", stub
-        ):
+        with patch("akande.server.server.AudioSegment", stub):
             with pytest.raises(RuntimeError):
                 AkandeServer.convert_to_wav(b"x")
 
@@ -102,17 +92,11 @@ class TestProcessAudio:
 
         wav = tmp_path / "x.wav"
         wav.write_bytes(b"RIFF" + b"\x00" * 100)
-        with patch(
-            "akande.server.server._recognizer"
-        ) as rec:
+        with patch("akande.server.server._recognizer") as rec:
             rec.recognize_google.return_value = "hello"
             rec.record.return_value = "audio-data"
-            with patch(
-                "akande.server.server.sr.AudioFile"
-            ) as af:
-                af.return_value.__enter__.return_value = (
-                    MagicMock()
-                )
+            with patch("akande.server.server.sr.AudioFile") as af:
+                af.return_value.__enter__.return_value = MagicMock()
                 out = AkandeServer.process_audio(str(wav))
         assert out["success"] is True
         assert out["text"] == "hello"
@@ -124,19 +108,11 @@ class TestProcessAudio:
 
         wav = tmp_path / "x.wav"
         wav.write_bytes(b"RIFF" + b"\x00" * 100)
-        with patch(
-            "akande.server.server._recognizer"
-        ) as rec:
-            rec.recognize_google.side_effect = (
-                sr.UnknownValueError()
-            )
+        with patch("akande.server.server._recognizer") as rec:
+            rec.recognize_google.side_effect = sr.UnknownValueError()
             rec.record.return_value = "audio-data"
-            with patch(
-                "akande.server.server.sr.AudioFile"
-            ) as af:
-                af.return_value.__enter__.return_value = (
-                    MagicMock()
-                )
+            with patch("akande.server.server.sr.AudioFile") as af:
+                af.return_value.__enter__.return_value = MagicMock()
                 out = AkandeServer.process_audio(str(wav))
         assert out["success"] is False
         assert "understood" in out["error"]
@@ -148,19 +124,11 @@ class TestProcessAudio:
 
         wav = tmp_path / "x.wav"
         wav.write_bytes(b"RIFF" + b"\x00" * 100)
-        with patch(
-            "akande.server.server._recognizer"
-        ) as rec:
-            rec.recognize_google.side_effect = (
-                sr.RequestError("up")
-            )
+        with patch("akande.server.server._recognizer") as rec:
+            rec.recognize_google.side_effect = sr.RequestError("up")
             rec.record.return_value = "audio-data"
-            with patch(
-                "akande.server.server.sr.AudioFile"
-            ) as af:
-                af.return_value.__enter__.return_value = (
-                    MagicMock()
-                )
+            with patch("akande.server.server.sr.AudioFile") as af:
+                af.return_value.__enter__.return_value = MagicMock()
                 out = AkandeServer.process_audio(str(wav))
         assert out["success"] is False
         assert "service" in out["error"]

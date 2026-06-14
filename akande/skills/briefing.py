@@ -45,9 +45,7 @@ class BriefingSkill(Skill):
             name="briefing", args={"text": text}, raw_text=text
         )
 
-    def handle(
-        self, intent: Intent, ctx: SkillContext
-    ) -> SkillResult:
+    def handle(self, intent: Intent, ctx: SkillContext) -> SkillResult:
         question = str(intent.args.get("text") or "")
         provider = get_provider()
         response = provider.generate_response_sync(
@@ -57,9 +55,7 @@ class BriefingSkill(Skill):
             None,
         )
         try:
-            content = str(
-                response.choices[0].message.content or ""
-            )
+            content = str(response.choices[0].message.content or "")
         except (AttributeError, IndexError, TypeError):
             content = ""
         return SkillResult(
@@ -68,8 +64,6 @@ class BriefingSkill(Skill):
                 "provider": getattr(
                     provider, "provider_name", "unknown"
                 ),
-                "model": (
-                    OPENAI_DEFAULT_MODEL or "gpt-4o-mini"
-                ),
+                "model": (OPENAI_DEFAULT_MODEL or "gpt-4o-mini"),
             },
         )

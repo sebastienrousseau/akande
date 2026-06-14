@@ -136,9 +136,7 @@ def main() -> int:
             print(f"OK   {module} (optional)")
         else:
             optional_skips += 1
-            print(
-                f"SKIP {module} (optional dep missing)"
-            )
+            print(f"SKIP {module} (optional dep missing)")
 
     total = len(REQUIRED_MODULES) + len(OPTIONAL_MODULES)
     print(

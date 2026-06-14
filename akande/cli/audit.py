@@ -69,10 +69,16 @@ def verify_watermark_command(
         )
         return 3
 
-    suffix = path.suffix.lower().lstrip(".")  # pragma: no cover - needs audioseal
-    fmt = suffix if suffix in {"mp3", "wav"} else "mp3"  # pragma: no cover
+    suffix = path.suffix.lower().lstrip(
+        "."
+    )  # pragma: no cover - needs audioseal
+    fmt = (
+        suffix if suffix in {"mp3", "wav"} else "mp3"
+    )  # pragma: no cover
     data = path.read_bytes()  # pragma: no cover
-    present, confidence = detect_watermark(data, fmt=fmt)  # pragma: no cover
+    present, confidence = detect_watermark(
+        data, fmt=fmt
+    )  # pragma: no cover
     threshold = float(getattr(ns, "threshold", 0.5))  # pragma: no cover
     found = confidence >= threshold  # pragma: no cover
 

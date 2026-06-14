@@ -73,13 +73,9 @@ class TestMCPCLIBranches:
     def test_serve_missing_mcp_returns_3(self, capsys):
         from akande.cli.mcp import mcp_command
 
-        with patch.dict(
-            "sys.modules", {"akande.mcp.server": None}
-        ):
+        with patch.dict("sys.modules", {"akande.mcp.server": None}):
             # Force the import inside _serve to fail.
-            ns = argparse.Namespace(
-                mcp_command="serve", http=False
-            )
+            ns = argparse.Namespace(mcp_command="serve", http=False)
             with patch(
                 "akande.cli.mcp._serve",
                 return_value=3,
@@ -100,9 +96,7 @@ class TestMCPCLIBranches:
             "akande.mcp.client.load_config",
             return_value=servers,
         ):
-            ns = argparse.Namespace(
-                mcp_command="list", server="nope"
-            )
+            ns = argparse.Namespace(mcp_command="list", server="nope")
             rc = mcp_command(ns)
         assert rc == 2
 
@@ -119,9 +113,7 @@ class TestMCPCLIBranches:
             "akande.mcp.client.load_config",
             return_value=servers,
         ):
-            ns = argparse.Namespace(
-                mcp_command="list", server=None
-            )
+            ns = argparse.Namespace(mcp_command="list", server=None)
             rc = mcp_command(ns)
         assert rc == 0
         body = json.loads(capsys.readouterr().out)
@@ -130,9 +122,7 @@ class TestMCPCLIBranches:
     def test_unknown_subcommand(self, capsys):
         from akande.cli.mcp import mcp_command
 
-        ns = argparse.Namespace(
-            mcp_command="bogus"
-        )
+        ns = argparse.Namespace(mcp_command="bogus")
         rc = mcp_command(ns)
         assert rc == 2
 
@@ -161,18 +151,15 @@ class TestPricingExtras:
         from akande.pricing import cheapest_meeting
 
         # An impossible tier returns None.
-        assert (
-            cheapest_meeting("super-duper-top") is None
-        )
+        assert cheapest_meeting("super-duper-top") is None
 
 
 class TestRouterFallbackPath:
     def test_router_falls_back_when_no_qualifier(self, monkeypatch):
+        monkeypatch.setenv("AKANDE_ROUTER", "cost_optimised")
         monkeypatch.setenv(
-            "AKANDE_ROUTER", "cost_optimised"
-        )
-        monkeypatch.setenv(
-            "AKANDE_ROUTER_MIN_TIER", "super-duper",
+            "AKANDE_ROUTER_MIN_TIER",
+            "super-duper",
         )
         from akande.router import route
 

@@ -23,11 +23,7 @@ logger = logging.getLogger(__name__)
 
 def route() -> tuple[str, str]:
     """Return ``(provider_name, model)`` per the active router."""
-    policy = (
-        os.getenv("AKANDE_ROUTER", "passthrough")
-        .strip()
-        .lower()
-    )
+    policy = os.getenv("AKANDE_ROUTER", "passthrough").strip().lower()
     if policy == "cost_optimised":
         return _cost_optimised()
     return _passthrough()
@@ -45,9 +41,7 @@ def _passthrough() -> tuple[str, str]:
 
 
 def _cost_optimised() -> tuple[str, str]:
-    minimum = os.getenv(
-        "AKANDE_ROUTER_MIN_TIER", "medium"
-    )
+    minimum = os.getenv("AKANDE_ROUTER_MIN_TIER", "medium")
     mode = active_mode()
     pick = cheapest_meeting(
         minimum, local_only=not mode.allow_remote_providers

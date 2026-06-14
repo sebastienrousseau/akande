@@ -13,9 +13,7 @@ from akande.tts.base import TTSSynthesisResult
 class _FakeSTT:
     name = "fake_stt"
 
-    def transcribe(
-        self, audio, *, fmt="wav", sample_rate=None
-    ):
+    def transcribe(self, audio, *, fmt="wav", sample_rate=None):
         return STTResult(text="what is QE?", language="en")
 
 
@@ -32,15 +30,19 @@ class _FakeTTS:
 class TestCascade:
     def test_drives_stt_briefing_tts(self, monkeypatch):
         monkeypatch.delenv("AKANDE_S2S", raising=False)
-        with patch(
-            "akande.pipeline.get_stt_backend",
-            return_value=_FakeSTT(),
-        ), patch(
-            "akande.pipeline.get_tts_backend",
-            return_value=_FakeTTS(),
-        ), patch(
-            "akande.pipeline.get_s2s_provider",
-            return_value=None,
+        with (
+            patch(
+                "akande.pipeline.get_stt_backend",
+                return_value=_FakeSTT(),
+            ),
+            patch(
+                "akande.pipeline.get_tts_backend",
+                return_value=_FakeTTS(),
+            ),
+            patch(
+                "akande.pipeline.get_s2s_provider",
+                return_value=None,
+            ),
         ):
             result = respond_to_audio(
                 b"USER", briefing_fn=lambda t: f"Re: {t}"
@@ -52,31 +54,29 @@ class TestCascade:
         assert result.s2s_used is False
         assert result.fmt == "mp3"
 
-    def test_empty_transcript_default_briefing(
-        self, monkeypatch
-    ):
+    def test_empty_transcript_default_briefing(self, monkeypatch):
         class _Silent:
-            def transcribe(
-                self, audio, *, fmt="wav", sample_rate=None
-            ):
+            def transcribe(self, audio, *, fmt="wav", sample_rate=None):
                 return STTResult(text="")
 
         monkeypatch.delenv("AKANDE_S2S", raising=False)
-        with patch(
-            "akande.pipeline.get_stt_backend",
-            return_value=_Silent(),
-        ), patch(
-            "akande.pipeline.get_tts_backend",
-            return_value=_FakeTTS(),
-        ), patch(
-            "akande.pipeline.get_s2s_provider",
-            return_value=None,
+        with (
+            patch(
+                "akande.pipeline.get_stt_backend",
+                return_value=_Silent(),
+            ),
+            patch(
+                "akande.pipeline.get_tts_backend",
+                return_value=_FakeTTS(),
+            ),
+            patch(
+                "akande.pipeline.get_s2s_provider",
+                return_value=None,
+            ),
         ):
             from akande.pipeline import _default_briefing_fn
 
-            assert "couldn't catch" in _default_briefing_fn(
-                ""
-            )
+            assert "couldn't catch" in _default_briefing_fn("")
 
 
 class _FakeS2S:

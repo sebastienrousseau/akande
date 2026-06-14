@@ -51,9 +51,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
-def _percentile(
-    values: list[float], pct: float
-) -> float:
+def _percentile(values: list[float], pct: float) -> float:
     if not values:
         return 0.0
     s = sorted(values)
@@ -63,9 +61,7 @@ def _percentile(
     return s[lo] + (s[hi] - s[lo]) * (k - lo)
 
 
-def _summary(
-    label: str, values: list[float]
-) -> dict[str, Any]:
+def _summary(label: str, values: list[float]) -> dict[str, Any]:
     return {
         "label": label,
         "count": len(values),
@@ -120,9 +116,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         prompt = "What is quantitative easing?"
 
         def stt_call() -> str:
-            return stt_backend.transcribe(
-                b"\x00" * 32_000, fmt="wav"
-            ).text or prompt
+            return (
+                stt_backend.transcribe(b"\x00" * 32_000, fmt="wav").text
+                or prompt
+            )
 
         def llm_call() -> str:
             r = provider.generate_response_sync(
@@ -131,14 +128,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 OPENAI_DEFAULT_MODEL or "gpt-4o-mini",
                 None,
             )
-            return str(
-                r.choices[0].message.content or ""
-            )
+            return str(r.choices[0].message.content or "")
 
         def tts_call() -> bytes:
-            return tts_backend.synthesise(
-                "hello world"
-            ).audio
+            return tts_backend.synthesise("hello world").audio
     else:
         stt_call = _fake_stt
         llm_call = lambda: _fake_llm("q")  # noqa: E731
@@ -164,8 +157,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
 def _render(stats: dict[str, Any]) -> str:
     stages = ["stt", "llm", "tts", "e2e"]
-    rows = ["| stage | P50 (ms) | P95 (ms) | mean (ms) |",
-            "|---|---|---|---|"]
+    rows = [
+        "| stage | P50 (ms) | P95 (ms) | mean (ms) |",
+        "|---|---|---|---|",
+    ]
     for stage in stages:
         s = stats[stage]
         rows.append(

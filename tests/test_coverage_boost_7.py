@@ -120,9 +120,7 @@ class TestUtilsRegexBranches:
     def test_markdown_table_branch(self):
         from akande.utils import strip_markdown
 
-        out = strip_markdown(
-            "|h1|h2|\n|--|--|\n|a|b|"
-        )
+        out = strip_markdown("|h1|h2|\n|--|--|\n|a|b|")
         # The transformer keeps content but removes pipes.
         assert isinstance(out, str)
 
@@ -134,10 +132,9 @@ class TestAkandeCacheBranch:
         # generate_response so the branch fires.
         from akande.akande import Akande
 
-        with patch(
-            "akande.akande.SQLiteCache"
-        ), patch(
-            "akande.akande.sr.Recognizer"
+        with (
+            patch("akande.akande.SQLiteCache"),
+            patch("akande.akande.sr.Recognizer"),
         ):
             metrics = MagicMock()
             akande = Akande(
@@ -146,22 +143,18 @@ class TestAkandeCacheBranch:
             )
         # cache miss → provider gets called
         akande.cache.get.return_value = None
-        akande.openai_service.generate_response = (
-            __import__("unittest").mock.AsyncMock(
-                return_value=SimpleNamespace(
-                    choices=[
-                        SimpleNamespace(
-                            message=SimpleNamespace(
-                                content="r"
-                            )
-                        )
-                    ]
-                )
+        akande.openai_service.generate_response = __import__(
+            "unittest"
+        ).mock.AsyncMock(
+            return_value=SimpleNamespace(
+                choices=[
+                    SimpleNamespace(
+                        message=SimpleNamespace(content="r")
+                    )
+                ]
             )
         )
 
-        result = asyncio.run(
-            akande.generate_response("ask")
-        )
+        result = asyncio.run(akande.generate_response("ask"))
         assert result == "r"
         metrics.record.assert_called()

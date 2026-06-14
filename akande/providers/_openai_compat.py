@@ -45,10 +45,7 @@ class OpenAICompatProvider(LLMProvider):
         from akande.config import API_CALL_TIMEOUT
 
         api_key = self._api_key
-        if (
-            not api_key
-            and self._provider_name in _LOCAL_PROVIDERS
-        ):
+        if not api_key and self._provider_name in _LOCAL_PROVIDERS:
             api_key = self._provider_name
         elif not api_key:
             raise ValueError(
@@ -219,7 +216,11 @@ class OpenAICompatProvider(LLMProvider):
                 delta = ""
                 try:
                     delta = item.choices[0].delta.content or ""
-                except (AttributeError, IndexError, TypeError):  # pragma: no cover - defensive fallback
+                except (
+                    AttributeError,
+                    IndexError,
+                    TypeError,
+                ):  # pragma: no cover - defensive fallback
                     delta = ""
                 if delta:
                     chunk_count += 1
@@ -307,7 +308,11 @@ class OpenAICompatProvider(LLMProvider):
                 delta = ""
                 try:
                     delta = item.choices[0].delta.content or ""
-                except (AttributeError, IndexError, TypeError):  # pragma: no cover - defensive fallback
+                except (
+                    AttributeError,
+                    IndexError,
+                    TypeError,
+                ):  # pragma: no cover - defensive fallback
                     delta = ""
                 if delta:
                     chunk_count += 1

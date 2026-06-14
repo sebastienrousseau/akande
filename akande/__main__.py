@@ -60,10 +60,7 @@ def _build_akande() -> Akande:  # pragma: no cover - boot path
                 },
             },
         )
-        print(
-            f"Error: Could not load provider "
-            f"'{provider_name}': {e}"
-        )
+        print(f"Error: Could not load provider '{provider_name}': {e}")
         sys.exit(1)
 
     openai_service: OpenAIImpl | LLMProvider
@@ -98,12 +95,16 @@ def run():
     if exit_code is not None:
         sys.exit(exit_code)
 
-    directory_path = get_output_directory()  # pragma: no cover - interactive
+    directory_path = (
+        get_output_directory()
+    )  # pragma: no cover - interactive
     filename = get_output_filename(".log")  # pragma: no cover
     file_path = directory_path / filename  # pragma: no cover
 
     log_level = logging.INFO  # pragma: no cover
-    log_format = "%(asctime)s - %(levelname)s - %(message)s"  # pragma: no cover
+    log_format = (
+        "%(asctime)s - %(levelname)s - %(message)s"  # pragma: no cover
+    )
     basic_config(  # pragma: no cover
         filename=str(file_path),
         level=log_level,
@@ -124,9 +125,15 @@ def run():
         console=False,
     )
     # Suppress CherryPy's own console logging in TUI mode
-    logging.getLogger("cherrypy").setLevel(logging.WARNING)  # pragma: no cover
-    logging.getLogger("cherrypy.error").setLevel(logging.WARNING)  # pragma: no cover
-    logging.getLogger("cherrypy.access").setLevel(logging.WARNING)  # pragma: no cover
+    logging.getLogger("cherrypy").setLevel(
+        logging.WARNING
+    )  # pragma: no cover
+    logging.getLogger("cherrypy.error").setLevel(
+        logging.WARNING
+    )  # pragma: no cover
+    logging.getLogger("cherrypy.access").setLevel(
+        logging.WARNING
+    )  # pragma: no cover
 
     from .tui import AkandeApp  # pragma: no cover
 

@@ -57,9 +57,7 @@ class WebSearchSkill(Skill):
             raw_text=text,
         )
 
-    def handle(
-        self, intent: Intent, ctx: SkillContext
-    ) -> SkillResult:
+    def handle(self, intent: Intent, ctx: SkillContext) -> SkillResult:
         query = str(intent.args.get("query") or "").strip()
         result = self._tool.run({"query": query})
         citations: list[str] = []

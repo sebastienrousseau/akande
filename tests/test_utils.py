@@ -37,14 +37,12 @@ class TestValidateApiKey:
 
     def test_wrong_prefix(self):
         assert (
-            validate_api_key("wrong-prefix-abcdefghijklmnop")
-            is False
+            validate_api_key("wrong-prefix-abcdefghijklmnop") is False
         )
 
     def test_almost_valid_prefix(self):
         assert (
-            validate_api_key("ska-abcdefghijklmnopqrstuvwxyz")
-            is False
+            validate_api_key("ska-abcdefghijklmnopqrstuvwxyz") is False
         )
 
 
@@ -114,18 +112,14 @@ class TestGeneratePdf:
         pdf_files = list(tmp_path.rglob("*.pdf"))
         assert len(pdf_files) == 1
 
-    def test_generates_pdf_without_logo(
-        self, tmp_path, monkeypatch
-    ):
+    def test_generates_pdf_without_logo(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         generate_pdf("question", "response text")
 
         pdf_files = list(tmp_path.rglob("*.pdf"))
         assert len(pdf_files) == 1
 
-    def test_generates_pdf_with_sections(
-        self, tmp_path, monkeypatch
-    ):
+    def test_generates_pdf_with_sections(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         response = (
             "Overview\nIntro text\n"
@@ -138,9 +132,7 @@ class TestGeneratePdf:
         pdf_files = list(tmp_path.rglob("*.pdf"))
         assert len(pdf_files) == 1
 
-    def test_escapes_markup_in_question(
-        self, tmp_path, monkeypatch
-    ):
+    def test_escapes_markup_in_question(self, tmp_path, monkeypatch):
         """User input with XML/HTML should be escaped."""
         monkeypatch.chdir(tmp_path)
         # This should not crash even with markup chars

@@ -49,32 +49,34 @@ class TestFailOpen:
             "akande.watermark._audioseal_available",
             return_value=False,
         ):
-            present, confidence = detect_watermark(
-                b"raw", fmt="mp3"
-            )
+            present, confidence = detect_watermark(b"raw", fmt="mp3")
         assert present is False
         assert confidence == 0.0
 
 
 class TestWarnThrottle:
     def test_first_call_warns(self, caplog):
-        with patch(
-            "akande.watermark._audioseal_available",
-            return_value=False,
-        ), caplog.at_level("WARNING"):
+        with (
+            patch(
+                "akande.watermark._audioseal_available",
+                return_value=False,
+            ),
+            caplog.at_level("WARNING"),
+        ):
             watermark_audio(b"x", fmt="mp3")
         assert any(
             "AudioSeal not installed" in r.message
             for r in caplog.records
         )
 
-    def test_repeat_within_window_skips_warning(
-        self, caplog
-    ):
-        with patch(
-            "akande.watermark._audioseal_available",
-            return_value=False,
-        ), caplog.at_level("WARNING"):
+    def test_repeat_within_window_skips_warning(self, caplog):
+        with (
+            patch(
+                "akande.watermark._audioseal_available",
+                return_value=False,
+            ),
+            caplog.at_level("WARNING"),
+        ):
             watermark_audio(b"x", fmt="mp3")
             caplog.clear()
             watermark_audio(b"x", fmt="mp3")
@@ -85,9 +87,7 @@ class TestWarnThrottle:
 
 
 class TestThrottleWindow:
-    def test_repeat_after_window_warns_again(
-        self, caplog
-    ):
+    def test_repeat_after_window_warns_again(self, caplog):
         with patch(
             "akande.watermark._audioseal_available",
             return_value=False,
@@ -98,9 +98,7 @@ class TestThrottleWindow:
             # Fast-forward by overriding the internal timestamp so
             # the next call thinks the throttle window has elapsed.
             watermark._LAST_MISSING_WARN_AT = (
-                time.time()
-                - watermark._MISSING_WARN_INTERVAL_S
-                - 1.0
+                time.time() - watermark._MISSING_WARN_INTERVAL_S - 1.0
             )
             with caplog.at_level("WARNING"):
                 watermark_audio(b"x", fmt="mp3")
@@ -123,16 +121,17 @@ class TestResetHelper:
 
 class TestExceptionPath:
     def test_synthesis_failure_falls_open(self):
-        with patch(
-            "akande.watermark._audioseal_available",
-            return_value=True,
-        ), patch(
-            "akande.watermark._bytes_to_tensor",
-            side_effect=RuntimeError("boom"),
+        with (
+            patch(
+                "akande.watermark._audioseal_available",
+                return_value=True,
+            ),
+            patch(
+                "akande.watermark._bytes_to_tensor",
+                side_effect=RuntimeError("boom"),
+            ),
         ):
-            out = watermark_audio(
-                b"original", fmt="mp3"
-            )
+            out = watermark_audio(b"original", fmt="mp3")
         # Per the docstring contract: a watermark *failure* must
         # never block delivery; the unwatermarked audio is what
         # the user hears.
@@ -170,10 +169,10 @@ class TestRoundTripIntegration:  # pragma: no cover - depends on optional dep
     def test_watermark_detected_in_clean_signal(self):
         original = self._silence(seconds=1.0)
         marked = watermark_audio(original, fmt="wav")
-        present, confidence = detect_watermark(
-            marked, fmt="wav"
+        present, confidence = detect_watermark(marked, fmt="wav")
+        assert present, (
+            f"watermark not detected (conf={confidence:.3f})"
         )
-        assert present, f"watermark not detected (conf={confidence:.3f})"
         # Article-50 reference benchmark is 98% bit-accuracy on
         # MP3 128 kbps; the clean detection floor should be much
         # higher.  We sanity-check at 0.7 rather than 0.5 so a

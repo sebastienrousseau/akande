@@ -77,13 +77,9 @@ class ToolRegistry:
 
     def register(self, tool: Tool) -> None:
         if not tool.name:
-            raise ValueError(
-                "tool must declare a non-empty name"
-            )
+            raise ValueError("tool must declare a non-empty name")
         if tool.name in self._tools:
-            raise ValueError(
-                f"tool {tool.name!r} already registered"
-            )
+            raise ValueError(f"tool {tool.name!r} already registered")
         self._tools[tool.name] = tool
 
     def disable(self, name: str) -> None:
@@ -93,24 +89,18 @@ class ToolRegistry:
         self._disabled.discard(name)
 
     def names(self) -> list[str]:
-        return sorted(
-            n for n in self._tools if n not in self._disabled
-        )
+        return sorted(n for n in self._tools if n not in self._disabled)
 
     def get(self, name: str) -> Tool | None:
         if name in self._disabled:
             return None
         return self._tools.get(name)
 
-    def call(
-        self, name: str, args: dict[str, Any]
-    ) -> ToolResult:
+    def call(self, name: str, args: dict[str, Any]) -> ToolResult:
         """Dispatch by name.  Logs every call for audit purposes."""
         tool = self.get(name)
         if tool is None:
-            raise ToolError(
-                f"unknown or disabled tool: {name!r}"
-            )
+            raise ToolError(f"unknown or disabled tool: {name!r}")
         logger.info(
             "Tool invoked",
             extra={
@@ -121,7 +111,4 @@ class ToolRegistry:
         return tool.run(args)
 
     def all_mcp_dicts(self) -> list[dict[str, Any]]:
-        return [
-            self._tools[n].to_mcp_dict()
-            for n in self.names()
-        ]
+        return [self._tools[n].to_mcp_dict() for n in self.names()]

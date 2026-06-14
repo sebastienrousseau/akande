@@ -45,9 +45,7 @@ def _dump_user(
         out.append(
             {
                 "conversation": dataclasses.asdict(conv),
-                "turns": [
-                    dataclasses.asdict(t) for t in turns
-                ],
+                "turns": [dataclasses.asdict(t) for t in turns],
             }
         )
 
@@ -55,9 +53,7 @@ def _dump_user(
     memory_enabled = False
     if memory is not None and memory.enabled:
         memory_enabled = True
-        for hit in memory.recall(
-            "", limit=10_000
-        ) or []:
+        for hit in memory.recall("", limit=10_000) or []:
             memories.append(
                 {
                     "text": hit.text,
@@ -142,9 +138,7 @@ def _delete(ns: argparse.Namespace) -> int:
         return 1
     for conv in conversations:
         store.delete(conv.id)
-    memory_deleted = (
-        memory.forget_all() if memory.enabled else 0
-    )
+    memory_deleted = memory.forget_all() if memory.enabled else 0
     print(
         f"Deleted {len(conversations)} conversations and "
         f"{memory_deleted} memories for "

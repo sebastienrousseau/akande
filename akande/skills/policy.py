@@ -43,9 +43,7 @@ class ConsentRequired(RuntimeError):
 
 
 def _akande_home() -> Path:
-    home = os.getenv("AKANDE_HOME") or str(
-        Path.home() / ".akande"
-    )
+    home = os.getenv("AKANDE_HOME") or str(Path.home() / ".akande")
     path = Path(home)
     path.mkdir(parents=True, exist_ok=True, mode=0o700)
     return path
@@ -64,11 +62,9 @@ def _now_iso() -> str:
 class SkillPolicy:
     """Persistent per-skill enable / consent state."""
 
-    def __init__(
-        self, policy_path: Path | None = None
-    ) -> None:
-        self.policy_path = (
-            policy_path or (_policy_dir() / POLICY_FILE_NAME)
+    def __init__(self, policy_path: Path | None = None) -> None:
+        self.policy_path = policy_path or (
+            _policy_dir() / POLICY_FILE_NAME
         )
         self._state: dict[str, dict[str, Any]] = {}
         self._load()
@@ -99,9 +95,7 @@ class SkillPolicy:
                 "enabled": bool(entry.get("enabled", True)),
                 "consented_at": (
                     entry.get("consented_at")
-                    if isinstance(
-                        entry.get("consented_at"), str
-                    )
+                    if isinstance(entry.get("consented_at"), str)
                     else None
                 ),
             }

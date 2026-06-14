@@ -74,7 +74,9 @@ def build_server(
 
     # -- akande.briefing -------------------------------------------
     @app.tool()
-    def briefing(question: str) -> str:  # pragma: no cover - mcp tool callback
+    def briefing(
+        question: str,
+    ) -> str:  # pragma: no cover - mcp tool callback
         """Generate a BLUF-formatted executive briefing for a question.
 
         Calls the LLM provider configured by ``LLM_PROVIDER``
@@ -94,15 +96,15 @@ def build_server(
             None,
         )
         try:
-            return str(
-                response.choices[0].message.content or ""
-            )
+            return str(response.choices[0].message.content or "")
         except (AttributeError, IndexError, TypeError):
             return ""
 
     # -- akande.verify_audit ---------------------------------------
     @app.tool()
-    def verify_audit(path: str) -> str:  # pragma: no cover - mcp tool callback
+    def verify_audit(
+        path: str,
+    ) -> str:  # pragma: no cover - mcp tool callback
         """Verify the Ed25519 signature on a sidecar audit JSON.
 
         Pass the path to either the ``.audit.json`` sidecar or the
@@ -130,7 +132,9 @@ def build_server(
 
     # -- akande.verify_watermark -----------------------------------
     @app.tool()
-    def verify_watermark(path: str) -> str:  # pragma: no cover - mcp tool callback
+    def verify_watermark(
+        path: str,
+    ) -> str:  # pragma: no cover - mcp tool callback
         """Detect the AudioSeal watermark in an audio file.
 
         Returns ``PRESENT``/``ABSENT`` plus the mean detector
@@ -150,8 +154,7 @@ def build_server(
             return f"FAIL audio file not found: {target}"
         if not _audioseal_available():
             return (
-                "FAIL audioseal not installed — cannot "
-                "verify watermark"
+                "FAIL audioseal not installed — cannot verify watermark"
             )
         suffix = target.suffix.lower().lstrip(".")
         fmt = suffix if suffix in {"mp3", "wav"} else "mp3"
@@ -243,7 +246,9 @@ def _register_tool(app: Any, tool: Any) -> None:
     name = tool.name
     description = tool.description
 
-    def _runner(**kwargs: Any) -> str:  # pragma: no cover - mcp tool callback
+    def _runner(
+        **kwargs: Any,
+    ) -> str:  # pragma: no cover - mcp tool callback
         try:
             result = tool.run(kwargs)
         except ToolError as exc:
@@ -257,7 +262,9 @@ def _register_tool(app: Any, tool: Any) -> None:
     app.add_tool(_runner, name=name, description=description)
 
 
-def serve(stdio: bool = True) -> None:  # pragma: no cover - spawns real mcp server
+def serve(
+    stdio: bool = True,
+) -> None:  # pragma: no cover - spawns real mcp server
     """Run the server on stdio (default) or via FastMCP's HTTP transport."""
     app = build_server()
     if stdio:

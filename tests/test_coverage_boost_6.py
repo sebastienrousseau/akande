@@ -15,9 +15,7 @@ from unittest.mock import MagicMock, patch
 
 
 class TestAuditSidecarVerify:
-    def test_verify_sidecar_round_trip(
-        self, tmp_path, monkeypatch
-    ):
+    def test_verify_sidecar_round_trip(self, tmp_path, monkeypatch):
         monkeypatch.setenv("AKANDE_HOME", str(tmp_path))
         from akande.audit import (
             _reset_manager_for_tests,
@@ -123,9 +121,7 @@ class TestPolicyEdges:
 
 
 class TestSkillsBasePluginDiscovery:
-    def test_discover_plugins_swallows_load_failure(
-        self, caplog
-    ):
+    def test_discover_plugins_swallows_load_failure(self, caplog):
         from akande.skills.base import SkillRegistry
 
         reg = SkillRegistry()
@@ -136,9 +132,7 @@ class TestSkillsBasePluginDiscovery:
             def load(self):
                 raise RuntimeError("broken plugin")
 
-        with patch(
-            "importlib.metadata.entry_points"
-        ) as ep:
+        with patch("importlib.metadata.entry_points") as ep:
             ep.return_value.select.return_value = [_BadEP()]
             with caplog.at_level("WARNING"):
                 reg.discover_plugins()
@@ -148,9 +142,7 @@ class TestSkillsBasePluginDiscovery:
             for r in caplog.records
         )
 
-    def test_discover_plugins_skips_non_skill(
-        self, caplog
-    ):
+    def test_discover_plugins_skips_non_skill(self, caplog):
         from akande.skills.base import SkillRegistry
 
         reg = SkillRegistry()
@@ -161,12 +153,8 @@ class TestSkillsBasePluginDiscovery:
             def load(self):
                 return "not a skill"
 
-        with patch(
-            "importlib.metadata.entry_points"
-        ) as ep:
-            ep.return_value.select.return_value = [
-                _NotASkillEP()
-            ]
+        with patch("importlib.metadata.entry_points") as ep:
+            ep.return_value.select.return_value = [_NotASkillEP()]
             with caplog.at_level("WARNING"):
                 reg.discover_plugins()
 
@@ -180,17 +168,13 @@ class TestMemoryRecallShapes:
     def test_normalise_hits_results_key(self):
         from akande.memory import _normalise_hits
 
-        out = _normalise_hits(
-            {"results": [{"text": "X"}]}
-        )
+        out = _normalise_hits({"results": [{"text": "X"}]})
         assert out[0].text == "X"
 
     def test_normalise_hits_memories_key(self):
         from akande.memory import _normalise_hits
 
-        out = _normalise_hits(
-            {"memories": [{"memory": "M"}]}
-        )
+        out = _normalise_hits({"memories": [{"memory": "M"}]})
         assert out[0].text == "M"
 
     def test_normalise_hits_empty_dict(self):
@@ -206,15 +190,11 @@ class TestMemoryRecallShapes:
 
 
 class TestInstallLocalLoadEnvBranches:
-    def test_load_env_handles_lines_without_equals(
-        self, tmp_path
-    ):
+    def test_load_env_handles_lines_without_equals(self, tmp_path):
         from akande.cli.install_local import _load_env
 
         p = tmp_path / ".env"
-        p.write_text(
-            "# comment\nNO_EQUALS_LINE\nFOO=bar\n   \n"
-        )
+        p.write_text("# comment\nNO_EQUALS_LINE\nFOO=bar\n   \n")
         result = _load_env(p)
         assert result == {"FOO": "bar"}
 
@@ -231,9 +211,7 @@ class TestWebSearchDDGEmpty:
         tool = WebSearchTool()
         monkeypatch.delenv("BRAVE_API_KEY", raising=False)
         monkeypatch.delenv("TAVILY_API_KEY", raising=False)
-        with patch.object(
-            tool, "_duckduckgo", return_value=[]
-        ):
+        with patch.object(tool, "_duckduckgo", return_value=[]):
             result = tool.run({"query": "q"})
         assert "No results" in result.content
 
@@ -249,12 +227,8 @@ class TestFetchURLMarkdown:
 
         tool = FetchURLTool()
         resp = MagicMock()
-        resp.headers.get_content_type.return_value = (
-            "text/markdown"
-        )
-        resp.read.return_value = (
-            b"# Heading\n\n- item\n- item\n"
-        )
+        resp.headers.get_content_type.return_value = "text/markdown"
+        resp.read.return_value = b"# Heading\n\n- item\n- item\n"
         resp.__enter__.return_value = resp
         with patch(
             "akande.tools.fetch_url.urllib.request.urlopen",
@@ -319,23 +293,23 @@ class TestServerStaticSuccess:
         # Pick the one allowed file.
         allowed_name = next(iter(ALLOWED_STATIC_FILES))
         db = ConversationDB(str(tmp_path / "x.db"))
-        with patch(
-            "akande.server.server.validate_api_key",
-            return_value=True,
-        ), patch("akande.server.server.OpenAIImpl"):
+        with (
+            patch(
+                "akande.server.server.validate_api_key",
+                return_value=True,
+            ),
+            patch("akande.server.server.OpenAIImpl"),
+        ):
             srv = AkandeServer()
         srv.conversations = ConversationStore(db=db)
         srv.public_dir = tmp_path
-        (tmp_path / allowed_name).write_text(
-            "console.log('hi');"
-        )
+        (tmp_path / allowed_name).write_text("console.log('hi');")
 
         req = MagicMock()
         req.remote.ip = "127.0.0.1"
-        with patch.object(
-            cherrypy, "request", req
-        ), patch.object(
-            cherrypy, "response", MagicMock()
+        with (
+            patch.object(cherrypy, "request", req),
+            patch.object(cherrypy, "response", MagicMock()),
         ):
             body = srv.static(allowed_name)
         assert "console.log" in body

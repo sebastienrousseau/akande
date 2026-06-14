@@ -125,9 +125,7 @@ def init(force: bool = False) -> bool:
         }
     )
 
-    otlp_endpoint = os.getenv(
-        "OTEL_EXPORTER_OTLP_ENDPOINT"
-    )
+    otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 
     tracer_provider = TracerProvider(resource=resource)
     span_exporter: Any
@@ -172,9 +170,7 @@ def init(force: bool = False) -> bool:
         extra={
             "event": "Telemetry:Initialised",
             "extra_data": {
-                "exporter": (
-                    "otlp" if otlp_endpoint else "console"
-                ),
+                "exporter": ("otlp" if otlp_endpoint else "console"),
                 "endpoint": otlp_endpoint or "(console)",
             },
         },
@@ -249,9 +245,7 @@ def record_metric(
     hist = cache.get(name)
     if hist is None:
         try:
-            hist = _meter.create_histogram(
-                name, unit=unit
-            )
+            hist = _meter.create_histogram(name, unit=unit)
             cache[name] = hist
         except Exception:  # pragma: no cover
             return

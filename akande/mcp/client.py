@@ -109,9 +109,7 @@ def load_config(
             continue
         command = str(spec.get("command", "")).strip()
         if not command:
-            logger.warning(
-                "Skipping MCP server %r: no command", name
-            )
+            logger.warning("Skipping MCP server %r: no command", name)
             continue
         out[name] = MCPServerConfig(
             name=name,
@@ -147,9 +145,7 @@ def load_policy(
                 else None
             ),
             deny=set(spec.get("deny") or []),
-            require_confirm=set(
-                spec.get("require_confirm") or []
-            ),
+            require_confirm=set(spec.get("require_confirm") or []),
         )
     return out
 
@@ -164,9 +160,7 @@ def admitted_tools(
     rules = policies.get(server)
     if rules is None:
         return list(upstream_tool_names)
-    return [
-        name for name in upstream_tool_names if rules.admits(name)
-    ]
+    return [name for name in upstream_tool_names if rules.admits(name)]
 
 
 def _require_mcp_sdk() -> Any:

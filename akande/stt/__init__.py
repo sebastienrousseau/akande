@@ -40,8 +40,10 @@ def get_stt_backend(
 ) -> STTBackend:
     """Resolve the active STT backend from name or env."""
     key = (
-        name or os.getenv("AKANDE_STT") or "speech_recognition"
-    ).strip().lower()
+        (name or os.getenv("AKANDE_STT") or "speech_recognition")
+        .strip()
+        .lower()
+    )
     if key in {"speech_recognition", "sr"}:
         return SpeechRecognitionBackend()
     if key in {"faster_whisper", "whisper"}:

@@ -33,16 +33,12 @@ from typing import Any
 _REDACT_PATTERNS = [
     # Email addresses
     (
-        re.compile(
-            r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}"
-        ),
+        re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}"),
         "[redacted:email]",
     ),
     # IBANs (country-code + check + 11–30 alphanum)
     (
-        re.compile(
-            r"\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b"
-        ),
+        re.compile(r"\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b"),
         "[redacted:iban]",
     ),
     # Credit-card-shaped 13–19-digit runs (Luhn not enforced — we
@@ -55,9 +51,7 @@ _REDACT_PATTERNS = [
     # *after* the credit-card pattern so a 16-digit grouped run
     # isn't misclassified as a phone.
     (
-        re.compile(
-            r"(?<!\w)\+?\d[\d\s\-().]{7,}\d(?!\w)"
-        ),
+        re.compile(r"(?<!\w)\+?\d[\d\s\-().]{7,}\d(?!\w)"),
         "[redacted:phone]",
     ),
 ]
@@ -78,17 +72,13 @@ def _redact_pii(text: str) -> str:
         )
 
         analyzer = AnalyzerEngine()
-        results = analyzer.analyze(
-            text=text, language="en"
-        )
+        results = analyzer.analyze(text=text, language="en")
         # Walk results in reverse so offsets stay valid as we splice.
-        for r in sorted(
-            results, key=lambda x: x.start, reverse=True
-        ):
+        for r in sorted(results, key=lambda x: x.start, reverse=True):
             text = (
                 text[: r.start]
                 + f"[redacted:{r.entity_type.lower()}]"
-                + text[r.end:]
+                + text[r.end :]
             )
         return text
     except ImportError:

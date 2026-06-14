@@ -41,7 +41,9 @@ class OpenAIRealtimeProvider(S2SProvider):
                 "OPENAI_API_KEY is required for the OpenAI "
                 "Realtime S2S provider."
             )
-        self._api_key = api_key  # pragma: no cover - needs OPENAI_API_KEY env
+        self._api_key = (
+            api_key  # pragma: no cover - needs OPENAI_API_KEY env
+        )
         self._model = os.getenv(  # pragma: no cover
             "AKANDE_S2S_MODEL", DEFAULT_MODEL
         )
@@ -64,10 +66,7 @@ class OpenAIRealtimeProvider(S2SProvider):
                 "provider.  Install with: pip install websockets"
             ) from exc
 
-        url = (
-            "wss://api.openai.com/v1/realtime?model="
-            + self._model
-        )
+        url = "wss://api.openai.com/v1/realtime?model=" + self._model
         headers = [
             ("Authorization", f"Bearer {self._api_key}"),
             ("OpenAI-Beta", "realtime=v1"),
@@ -91,12 +90,8 @@ class OpenAIRealtimeProvider(S2SProvider):
                     audio=encoded,
                 )
             )
-            conn.send(
-                _envelope("input_audio_buffer.commit")
-            )
-            conn.send(
-                _envelope("response.create")
-            )
+            conn.send(_envelope("input_audio_buffer.commit"))
+            conn.send(_envelope("response.create"))
             for raw in conn:
                 event = _decode(raw)
                 etype = event.get("type", "")
@@ -105,15 +100,12 @@ class OpenAIRealtimeProvider(S2SProvider):
                         base64.b64decode(event["delta"])
                     )
                 elif etype.endswith("audio_transcript.delta"):
-                    text_parts.append(
-                        str(event.get("delta", ""))
-                    )
+                    text_parts.append(str(event.get("delta", "")))
                 elif etype == "response.done":
                     break
                 elif etype == "error":
                     raise RuntimeError(
-                        f"OpenAI Realtime error: "
-                        f"{event.get('error')}"
+                        f"OpenAI Realtime error: {event.get('error')}"
                     )
         return S2SResult(
             audio=b"".join(audio_chunks),

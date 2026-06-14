@@ -29,9 +29,7 @@ class _Echo(LLMProvider):
         return SimpleNamespace(
             choices=[
                 SimpleNamespace(
-                    message=SimpleNamespace(
-                        content=user_prompt
-                    )
+                    message=SimpleNamespace(content=user_prompt)
                 )
             ]
         )
@@ -69,22 +67,15 @@ class TestDefaultMessagesShim:
 
         async def collect():
             out = []
-            async for d in echo.generate_stream_messages(
-                msgs, "m"
-            ):
+            async for d in echo.generate_stream_messages(msgs, "m"):
                 out.append(d)
             return out
 
         asyncio.run(collect())
         assert echo.captured["system_prompt"] == "you are X"
-        assert (
-            "current question" in echo.captured["user_prompt"]
-        )
+        assert "current question" in echo.captured["user_prompt"]
         # Prior turns are folded into a <previous_conversation> block.
-        assert (
-            "<previous_conversation>"
-            in echo.captured["user_prompt"]
-        )
+        assert "<previous_conversation>" in echo.captured["user_prompt"]
         assert "older answer" in echo.captured["user_prompt"]
 
     def test_no_history_skips_prior_block(self):
@@ -95,9 +86,7 @@ class TestDefaultMessagesShim:
         ]
 
         async def collect():
-            async for _ in echo.generate_stream_messages(
-                msgs, "m"
-            ):
+            async for _ in echo.generate_stream_messages(msgs, "m"):
                 pass
 
         asyncio.run(collect())
@@ -115,9 +104,7 @@ class TestDefaultMessagesShim:
         ]
 
         async def collect():
-            async for _ in echo.generate_stream_messages(
-                msgs, "m"
-            ):
+            async for _ in echo.generate_stream_messages(msgs, "m"):
                 pass
 
         asyncio.run(collect())
@@ -131,9 +118,7 @@ class TestOpenAICompatMessagesNative:
     def _chunk(self, content):
         return SimpleNamespace(
             choices=[
-                SimpleNamespace(
-                    delta=SimpleNamespace(content=content)
-                )
+                SimpleNamespace(delta=SimpleNamespace(content=content))
             ]
         )
 

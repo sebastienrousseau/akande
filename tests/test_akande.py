@@ -47,9 +47,7 @@ class TestAkandeInit:
 class TestHashPrompt:
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
-    def test_hash_deterministic(
-        self, mock_recognizer, mock_cache
-    ):
+    def test_hash_deterministic(self, mock_recognizer, mock_cache):
         mock_service = MagicMock()
         akande = Akande(openai_service=mock_service)
         hash1 = akande.hash_prompt("test")
@@ -58,9 +56,7 @@ class TestHashPrompt:
 
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
-    def test_hash_different_inputs(
-        self, mock_recognizer, mock_cache
-    ):
+    def test_hash_different_inputs(self, mock_recognizer, mock_cache):
         mock_service = MagicMock()
         akande = Akande(openai_service=mock_service)
         hash1 = akande.hash_prompt("test1")
@@ -71,9 +67,7 @@ class TestHashPrompt:
 class TestGenerateResponse:
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
-    def test_cache_hit(
-        self, mock_recognizer, mock_cache_cls
-    ):
+    def test_cache_hit(self, mock_recognizer, mock_cache_cls):
         mock_cache = MagicMock()
         mock_cache.get.return_value = "cached response"
         mock_cache_cls.return_value = mock_cache
@@ -88,18 +82,14 @@ class TestGenerateResponse:
 
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
-    def test_cache_miss(
-        self, mock_recognizer, mock_cache_cls
-    ):
+    def test_cache_miss(self, mock_recognizer, mock_cache_cls):
         mock_cache = MagicMock()
         mock_cache.get.return_value = None
         mock_cache_cls.return_value = mock_cache
 
         mock_response = MagicMock()
         mock_response.choices = [
-            MagicMock(
-                message=MagicMock(content="  new response  ")
-            )
+            MagicMock(message=MagicMock(content="  new response  "))
         ]
 
         mock_service = MagicMock()
@@ -132,9 +122,7 @@ class TestGenerateResponse:
         akande.cache = mock_cache
 
         with pytest.raises(LLMError) as exc_info:
-            asyncio.run(
-                akande.generate_response("test")
-            )
+            asyncio.run(akande.generate_response("test"))
         assert "error occurred" in exc_info.value.user_message.lower()
 
     @patch("akande.akande.SQLiteCache")
@@ -172,9 +160,7 @@ class TestGenerateResponse:
         akande.cache = mock_cache
 
         result = asyncio.run(
-            akande.generate_response(
-                "test", correlation_id="test-123"
-            )
+            akande.generate_response("test", correlation_id="test-123")
         )
         assert result == "cached"
 
@@ -182,9 +168,7 @@ class TestGenerateResponse:
 class TestServerLifecycle:
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
-    def test_run_server_sets_running(
-        self, mock_recognizer, mock_cache
-    ):
+    def test_run_server_sets_running(self, mock_recognizer, mock_cache):
         mock_service = MagicMock()
         akande = Akande(openai_service=mock_service)
 
@@ -268,9 +252,7 @@ class TestCancellation:
         akande.cancel_pending()
 
         with pytest.raises(LLMError, match="cancelled"):
-            asyncio.run(
-                akande.generate_response("test")
-            )
+            asyncio.run(akande.generate_response("test"))
 
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
@@ -300,8 +282,6 @@ class TestPIIProtection:
         akande.cache = mock_cache
 
         with patch("akande.akande.logging") as mock_logging:
-            asyncio.run(
-                akande.generate_response("my secret prompt")
-            )
+            asyncio.run(akande.generate_response("my secret prompt"))
             log_calls = str(mock_logging.info.call_args_list)
             assert "my secret prompt" not in log_calls

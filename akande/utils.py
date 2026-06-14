@@ -126,9 +126,7 @@ def get_output_filename(extension: str) -> str:
         The generated filename.
     """
     return (
-        datetime.datetime.now().strftime(
-            "%Y-%m-%d-%H-%M-%S-Akande"
-        )
+        datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-Akande")
         + extension
     )
 
@@ -273,7 +271,9 @@ def generate_pdf(
         flowables = []
 
         # Optional: Add a logo at the top if the file exists
-        logo_path = Path(__file__).resolve().parent.parent / "512x512.png"
+        logo_path = (
+            Path(__file__).resolve().parent.parent / "512x512.png"
+        )
         if logo_path.exists():
             logo = Image(str(logo_path), width=48, height=48)
             logo.hAlign = "RIGHT"
@@ -283,9 +283,7 @@ def generate_pdf(
 
         # Escape user input to prevent ReportLab markup injection
         safe_question = xml_escape(question.title())
-        flowables.append(
-            Paragraph(safe_question, _heading1_style)
-        )
+        flowables.append(Paragraph(safe_question, _heading1_style))
         flowables.append(Spacer(1, 6))
 
         # Process and format the response content
@@ -296,13 +294,9 @@ def generate_pdf(
                 continue
 
             # Detect markdown heading (## …)
-            heading_match = re.match(
-                r"^#{1,6}\s+(.*)", stripped
-            )
+            heading_match = re.match(r"^#{1,6}\s+(.*)", stripped)
             if heading_match:
-                heading_text = xml_escape(
-                    heading_match.group(1)
-                )
+                heading_text = xml_escape(heading_match.group(1))
                 flowables.append(
                     Paragraph(heading_text, _heading2_style)
                 )
@@ -321,9 +315,7 @@ def generate_pdf(
                 safe_para = _markdown_inline_to_reportlab(
                     xml_escape(stripped)
                 )
-                flowables.append(
-                    Paragraph(safe_para, _heading2_style)
-                )
+                flowables.append(Paragraph(safe_para, _heading2_style))
                 flowables.append(Spacer(1, 6))
                 continue
 
@@ -334,20 +326,18 @@ def generate_pdf(
                     xml_escape(item_text)
                 )
                 flowables.append(
-                    Paragraph(
-                        "- " + safe_item, _list_item_style
-                    )
+                    Paragraph("- " + safe_item, _list_item_style)
                 )
                 flowables.append(Spacer(1, 6))
                 continue
 
-            if re.match(r"^\d+[.)]\s", stripped):  # pragma: no cover - exercised in integration
+            if re.match(
+                r"^\d+[.)]\s", stripped
+            ):  # pragma: no cover - exercised in integration
                 safe_para = _markdown_inline_to_reportlab(
                     xml_escape(stripped)
                 )
-                flowables.append(
-                    Paragraph(safe_para, _list_item_style)
-                )
+                flowables.append(Paragraph(safe_para, _list_item_style))
                 flowables.append(Spacer(1, 6))
                 continue
 
@@ -355,9 +345,7 @@ def generate_pdf(
             safe_para = _markdown_inline_to_reportlab(
                 xml_escape(stripped)
             )
-            flowables.append(
-                Paragraph(safe_para, _paragraph_style)
-            )
+            flowables.append(Paragraph(safe_para, _paragraph_style))
             flowables.append(Spacer(1, 6))
 
         doc.build(flowables)

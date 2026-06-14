@@ -126,9 +126,7 @@ class ConversationStore:
             existing = self.get(conv_id)
             if existing:
                 return existing
-            return self.create(
-                user_id=user_id, conv_id=conv_id
-            )
+            return self.create(user_id=user_id, conv_id=conv_id)
         return self.create(user_id=user_id)
 
     def list(
@@ -183,9 +181,7 @@ class ConversationStore:
         ``system``; the DB check constraint enforces this.
         """
         if role not in {"user", "assistant", "system"}:
-            raise ValueError(
-                f"invalid turn role: {role!r}"
-            )
+            raise ValueError(f"invalid turn role: {role!r}")
         with self.db.lock:
             cur = self.db.conn.execute(
                 "INSERT INTO turns (conv_id, role, content, "
@@ -238,7 +234,9 @@ class ConversationStore:
         limit: int = DEFAULT_RECENT_TURNS,
     ) -> builtins.list[dict[str, str]]:
         """Return recent turns shaped for an LLM ``messages`` arg."""
-        return [t.to_message() for t in self.recent_turns(conv_id, limit)]
+        return [
+            t.to_message() for t in self.recent_turns(conv_id, limit)
+        ]
 
     def _fetch_conversation(self, conv_id: str) -> Conversation:
         result = self.get(conv_id)

@@ -49,9 +49,7 @@ class HuggingFaceProvider(LLMProvider):
                 "is required for the Hugging Face provider."
             )
         self.client = InferenceClient(token=api_key)
-        self._default_model = (
-            "mistralai/Mistral-7B-Instruct-v0.2"
-        )
+        self._default_model = "mistralai/Mistral-7B-Instruct-v0.2"
 
     def _call(
         self,
@@ -119,9 +117,7 @@ class HuggingFaceProvider(LLMProvider):
                     "event": "LLM:RequestFailed",
                     "extra_data": {
                         "provider": "huggingface",
-                        "model": (
-                            model or self._default_model
-                        ),
+                        "model": (model or self._default_model),
                         "latency_ms": round(latency, 2),
                     },
                 },
@@ -172,9 +168,7 @@ class HuggingFaceProvider(LLMProvider):
                     "event": "LLM:RequestFailed",
                     "extra_data": {
                         "provider": "huggingface",
-                        "model": (
-                            model or self._default_model
-                        ),
+                        "model": (model or self._default_model),
                         "latency_ms": round(latency, 2),
                     },
                 },

@@ -54,9 +54,7 @@ class TestFriendlyLLMError:
         assert "credits" in msg.lower()
 
     def test_connection_error(self):
-        exc = openai.APIConnectionError(
-            request=MagicMock()
-        )
+        exc = openai.APIConnectionError(request=MagicMock())
         msg = _friendly_llm_error(exc)
         assert "connect" in msg.lower()
 
@@ -77,9 +75,10 @@ class TestFriendlyLLMError:
 @pytest.fixture
 def akande(tmp_path):
     """Construct an Akande instance with isolated cache + mocks."""
-    with patch(
-        "akande.akande.SQLiteCache"
-    ), patch("akande.akande.sr.Recognizer"):
+    with (
+        patch("akande.akande.SQLiteCache"),
+        patch("akande.akande.sr.Recognizer"),
+    ):
         instance = Akande(openai_service=MagicMock())
     instance.cache = MagicMock()
     return instance
@@ -106,7 +105,9 @@ class TestPrintHelpers:
     def test_banner_prints(self, akande, capsys):
         akande._print_banner()
         out = capsys.readouterr().out
-        assert "Àkàndé" in out or "Akande" in out.lower() or len(out) > 0
+        assert (
+            "Àkàndé" in out or "Akande" in out.lower() or len(out) > 0
+        )
 
     def test_menu_prints(self, akande, capsys):
         akande._print_menu()
@@ -129,18 +130,14 @@ class TestServerThreadLifecycle:
             asyncio.run(akande.run_server())
             # Thread was spawned and recorded.
             assert akande.server_thread is not None
-            assert isinstance(
-                akande.server_thread, threading.Thread
-            )
+            assert isinstance(akande.server_thread, threading.Thread)
             asyncio.run(akande.stop_server())
             cp.engine.exit.assert_called()
         # stop_server signals the engine but leaves the thread
         # object on the instance for cleanup elsewhere.
         assert not akande.server_running
 
-    def test_run_server_idempotent_when_already_running(
-        self, akande
-    ):
+    def test_run_server_idempotent_when_already_running(self, akande):
         akande._server_running.set()
         # When already running, run_server() should skip spawning.
         akande.server_thread = None
@@ -151,9 +148,7 @@ class TestServerThreadLifecycle:
 class TestGenerateResponseCacheHit:
     def test_cache_hit_short_circuits(self, akande):
         akande.cache.get.return_value = "cached"
-        result = asyncio.run(
-            akande.generate_response("ask")
-        )
+        result = asyncio.run(akande.generate_response("ask"))
         assert result == "cached"
         # Provider should not be called when cache hits.
         akande.openai_service.generate_response.assert_not_called()

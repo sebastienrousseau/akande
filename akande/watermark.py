@@ -92,9 +92,7 @@ def _get_generator() -> Any:  # pragma: no cover - needs audioseal
         return _generator
     from audioseal import AudioSeal  # type: ignore[import-not-found]
 
-    _generator = AudioSeal.load_generator(
-        "audioseal_wm_16bits"
-    )
+    _generator = AudioSeal.load_generator("audioseal_wm_16bits")
     return _generator
 
 
@@ -104,9 +102,7 @@ def _get_detector() -> Any:  # pragma: no cover - needs audioseal
         return _detector
     from audioseal import AudioSeal  # type: ignore[import-not-found]
 
-    _detector = AudioSeal.load_detector(
-        "audioseal_detector_16bits"
-    )
+    _detector = AudioSeal.load_detector("audioseal_detector_16bits")
     return _detector
 
 
@@ -131,9 +127,7 @@ def _bytes_to_tensor(  # pragma: no cover - needs audioseal + torch
             channels=1,
         )
     else:
-        audio = AudioSegment.from_file(
-            io.BytesIO(data), format=fmt
-        )
+        audio = AudioSegment.from_file(io.BytesIO(data), format=fmt)
     audio = audio.set_channels(1)
     samples = audio.get_array_of_samples()
     import numpy as np  # type: ignore[import-not-found]
@@ -153,9 +147,7 @@ def _tensor_to_bytes(  # pragma: no cover - needs torch
     from pydub import AudioSegment
 
     arr = tensor.squeeze().detach().cpu().numpy()
-    pcm16 = (arr * 32767.0).clip(-32768, 32767).astype(
-        np.int16
-    )
+    pcm16 = (arr * 32767.0).clip(-32768, 32767).astype(np.int16)
     audio = AudioSegment(
         data=pcm16.tobytes(),
         sample_width=2,
@@ -191,7 +183,9 @@ def watermark_audio(
         # extras installed.
         import torchaudio.functional as F  # type: ignore[import-not-found]  # pragma: no cover
 
-        tensor, sample_rate = _bytes_to_tensor(audio, fmt)  # pragma: no cover
+        tensor, sample_rate = _bytes_to_tensor(
+            audio, fmt
+        )  # pragma: no cover
         if sample_rate != WATERMARK_SAMPLE_RATE:  # pragma: no cover
             tensor = F.resample(
                 tensor.squeeze(0),
@@ -248,7 +242,9 @@ def detect_watermark(
     try:
         import torchaudio.functional as F  # type: ignore[import-not-found]  # pragma: no cover
 
-        tensor, sample_rate = _bytes_to_tensor(audio, fmt)  # pragma: no cover
+        tensor, sample_rate = _bytes_to_tensor(
+            audio, fmt
+        )  # pragma: no cover
         if sample_rate != WATERMARK_SAMPLE_RATE:  # pragma: no cover
             tensor = F.resample(
                 tensor.squeeze(0),

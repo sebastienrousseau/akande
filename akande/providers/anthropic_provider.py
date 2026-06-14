@@ -121,9 +121,7 @@ class AnthropicProvider(LLMProvider):
                     "event": "LLM:RequestFailed",
                     "extra_data": {
                         "provider": "anthropic",
-                        "model": (
-                            model or self._default_model
-                        ),
+                        "model": (model or self._default_model),
                         "latency_ms": round(latency, 2),
                     },
                 },
@@ -185,9 +183,7 @@ class AnthropicProvider(LLMProvider):
             )
 
         try:
-            stream_ctx = await loop.run_in_executor(
-                None, _open_stream
-            )
+            stream_ctx = await loop.run_in_executor(None, _open_stream)
             stream = await loop.run_in_executor(
                 None, stream_ctx.__enter__
             )
@@ -225,9 +221,7 @@ class AnthropicProvider(LLMProvider):
             try:
                 await loop.run_in_executor(
                     None,
-                    lambda: stream_ctx.__exit__(
-                        None, None, None
-                    ),
+                    lambda: stream_ctx.__exit__(None, None, None),
                 )
             except Exception:  # pragma: no cover - best-effort close
                 pass
@@ -264,10 +258,7 @@ class AnthropicProvider(LLMProvider):
         system_text = ""
         chat_messages: list[dict[str, str]] = []
         for msg in messages:
-            if (
-                msg.get("role") == "system"
-                and not system_text
-            ):
+            if msg.get("role") == "system" and not system_text:
                 system_text = msg.get("content", "")
                 continue
             chat_messages.append(
@@ -301,9 +292,7 @@ class AnthropicProvider(LLMProvider):
             )
 
         try:
-            stream_ctx = await loop.run_in_executor(
-                None, _open_stream
-            )
+            stream_ctx = await loop.run_in_executor(None, _open_stream)
             stream = await loop.run_in_executor(
                 None, stream_ctx.__enter__
             )
@@ -341,9 +330,7 @@ class AnthropicProvider(LLMProvider):
             try:
                 await loop.run_in_executor(
                     None,
-                    lambda: stream_ctx.__exit__(
-                        None, None, None
-                    ),
+                    lambda: stream_ctx.__exit__(None, None, None),
                 )
             except Exception:  # pragma: no cover
                 pass
@@ -392,9 +379,7 @@ class AnthropicProvider(LLMProvider):
                     "event": "LLM:RequestFailed",
                     "extra_data": {
                         "provider": "anthropic",
-                        "model": (
-                            model or self._default_model
-                        ),
+                        "model": (model or self._default_model),
                         "latency_ms": round(latency, 2),
                     },
                 },

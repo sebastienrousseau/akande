@@ -19,10 +19,13 @@ def server(tmp_path):
 
     db = ConversationDB(str(tmp_path / "conversations.db"))
 
-    with patch(
-        "akande.server.server.validate_api_key",
-        return_value=True,
-    ), patch("akande.server.server.OpenAIImpl"):
+    with (
+        patch(
+            "akande.server.server.validate_api_key",
+            return_value=True,
+        ),
+        patch("akande.server.server.OpenAIImpl"),
+    ):
         srv = AkandeServer()
 
     srv.conversations = ConversationStore(db=db)
@@ -54,9 +57,7 @@ class TestStreamEndpoint:
     def test_emits_meta_deltas_and_done(self, server):
         conv = server.conversations.create()
         events = _parse_sse_events(
-            server._sse_briefing(
-                conv.id, "what is QE?", "corr-xyz"
-            )
+            server._sse_briefing(conv.id, "what is QE?", "corr-xyz")
         )
         kinds = [e["type"] for e in events]
         assert kinds[0] == "meta"
@@ -112,21 +113,23 @@ class TestStreamRoute:
 
     def test_rejects_invalid_json(self, server):
         req = self._make_request(b"not json")
-        with patch.object(cherrypy, "request", req), patch.object(
-            cherrypy, "response", MagicMock()
-        ), patch(
-            "akande.server.server.AKANDE_API_KEY", None
+        with (
+            patch.object(cherrypy, "request", req),
+            patch.object(cherrypy, "response", MagicMock()),
+            patch("akande.server.server.AKANDE_API_KEY", None),
         ):
             result = server.stream()
         # 400 path returns bytes containing the JSON error.
         assert b"Invalid JSON" in result
 
     def test_rejects_empty_question(self, server):
-        req = self._make_request(json.dumps({"question": "   "}).encode())
-        with patch.object(cherrypy, "request", req), patch.object(
-            cherrypy, "response", MagicMock()
-        ), patch(
-            "akande.server.server.AKANDE_API_KEY", None
+        req = self._make_request(
+            json.dumps({"question": "   "}).encode()
+        )
+        with (
+            patch.object(cherrypy, "request", req),
+            patch.object(cherrypy, "response", MagicMock()),
+            patch("akande.server.server.AKANDE_API_KEY", None),
         ):
             result = server.stream()
         assert b"non-empty string" in result
@@ -136,10 +139,10 @@ class TestStreamRoute:
             {"question": "Hi", "conversation_id": 42}
         ).encode()
         req = self._make_request(body)
-        with patch.object(cherrypy, "request", req), patch.object(
-            cherrypy, "response", MagicMock()
-        ), patch(
-            "akande.server.server.AKANDE_API_KEY", None
+        with (
+            patch.object(cherrypy, "request", req),
+            patch.object(cherrypy, "response", MagicMock()),
+            patch("akande.server.server.AKANDE_API_KEY", None),
         ):
             result = server.stream()
         assert b"conversation_id" in result

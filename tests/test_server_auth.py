@@ -61,68 +61,53 @@ class TestApiKeyCheck:
     def _make_server():
         from akande.server.server import AkandeServer
 
-        with patch(
-            "akande.server.server.validate_api_key",
-            return_value=True,
-        ), patch(
-            "akande.server.server.OpenAIImpl"
+        with (
+            patch(
+                "akande.server.server.validate_api_key",
+                return_value=True,
+            ),
+            patch("akande.server.server.OpenAIImpl"),
         ):
             return AkandeServer()
 
     def test_noop_when_env_key_unset(self):
-        with patch(
-            "akande.server.server.AKANDE_API_KEY", None
-        ):
+        with patch("akande.server.server.AKANDE_API_KEY", None):
             server = self._make_server()
             request = MagicMock()
             request.headers = {}
-            with patch.object(
-                cherrypy, "request", request
-            ):
+            with patch.object(cherrypy, "request", request):
                 # Must not raise.
                 server._check_api_key()
 
     def test_rejects_missing_header_when_key_set(self):
-        with patch(
-            "akande.server.server.AKANDE_API_KEY", "expected"
-        ):
+        with patch("akande.server.server.AKANDE_API_KEY", "expected"):
             server = self._make_server()
             request = MagicMock()
             request.headers = {}
             request.remote.ip = "10.0.0.1"
             request.path_info = "/process_question"
-            with patch.object(
-                cherrypy, "request", request
-            ):
+            with patch.object(cherrypy, "request", request):
                 with pytest.raises(cherrypy.HTTPError) as exc:
                     server._check_api_key()
                 assert exc.value.status == 401
 
     def test_rejects_wrong_header_when_key_set(self):
-        with patch(
-            "akande.server.server.AKANDE_API_KEY", "expected"
-        ):
+        with patch("akande.server.server.AKANDE_API_KEY", "expected"):
             server = self._make_server()
             request = MagicMock()
             request.headers = {"X-Akande-Key": "wrong"}
             request.remote.ip = "10.0.0.2"
             request.path_info = "/process_question"
-            with patch.object(
-                cherrypy, "request", request
-            ):
+            with patch.object(cherrypy, "request", request):
                 with pytest.raises(cherrypy.HTTPError) as exc:
                     server._check_api_key()
                 assert exc.value.status == 401
 
     def test_allows_matching_header_when_key_set(self):
-        with patch(
-            "akande.server.server.AKANDE_API_KEY", "expected"
-        ):
+        with patch("akande.server.server.AKANDE_API_KEY", "expected"):
             server = self._make_server()
             request = MagicMock()
             request.headers = {"X-Akande-Key": "expected"}
-            with patch.object(
-                cherrypy, "request", request
-            ):
+            with patch.object(cherrypy, "request", request):
                 # Must not raise.
                 server._check_api_key()

@@ -44,9 +44,7 @@ def _envelope(
         content=content,
         tool_calls=tool_calls or [],
     )
-    return SimpleNamespace(
-        choices=[SimpleNamespace(message=msg)]
-    )
+    return SimpleNamespace(choices=[SimpleNamespace(message=msg)])
 
 
 class _StubProvider:
@@ -104,14 +102,10 @@ class TestLoop:
             ToolRegistry(),
         )
         assert provider.calls == []
-        assert out.messages == [
-            {"role": "user", "content": "hi"}
-        ]
+        assert out.messages == [{"role": "user", "content": "hi"}]
 
     def test_terminates_when_no_tool_calls(self):
-        provider = _StubProvider(
-            _envelope(content="just answering")
-        )
+        provider = _StubProvider(_envelope(content="just answering"))
         out = run_tool_calling_loop(
             provider,
             [{"role": "user", "content": "hi"}],
@@ -122,9 +116,7 @@ class TestLoop:
         assert out.iterations == 1
         # The assistant message is appended to the conversation.
         assert out.messages[-1]["role"] == "assistant"
-        assert (
-            out.messages[-1]["content"] == "just answering"
-        )
+        assert out.messages[-1]["content"] == "just answering"
 
     def test_dispatches_a_tool_call_then_stops(self):
         tool_call = {
@@ -186,8 +178,7 @@ class TestLoop:
             },
         }
         responses = [
-            _envelope(tool_calls=[tool_call])
-            for _ in range(10)
+            _envelope(tool_calls=[tool_call]) for _ in range(10)
         ]
         provider = _StubProvider(*responses)
         out = run_tool_calling_loop(

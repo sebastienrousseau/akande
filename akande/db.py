@@ -106,15 +106,12 @@ class ConversationDB:
         """Apply pending migrations idempotently."""
         with self.lock:
             cur = self.conn.cursor()
-            current = cur.execute(
-                "PRAGMA user_version"
-            ).fetchone()[0]
+            current = cur.execute("PRAGMA user_version").fetchone()[0]
             if current < 1:
                 self.conn.executescript(_SCHEMA_V1)
             if current < CURRENT_SCHEMA_VERSION:
                 self.conn.execute(
-                    f"PRAGMA user_version = "
-                    f"{CURRENT_SCHEMA_VERSION}"
+                    f"PRAGMA user_version = {CURRENT_SCHEMA_VERSION}"
                 )
                 logger.info(
                     "Conversation DB migrated",

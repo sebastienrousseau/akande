@@ -30,9 +30,7 @@ DEFAULT_DISCLOSURE = (
     "be inaccurate.  Audio output is AI-generated."
 )
 
-SHORT_DISCLOSURE = (
-    "You are interacting with Àkàndé, an AI assistant."
-)
+SHORT_DISCLOSURE = "You are interacting with Àkàndé, an AI assistant."
 
 
 def get_disclosure_text(

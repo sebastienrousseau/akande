@@ -44,9 +44,7 @@ class TestWebSearchBackends:
             }
         }
         resp = MagicMock()
-        resp.read.return_value = json.dumps(
-            payload
-        ).encode()
+        resp.read.return_value = json.dumps(payload).encode()
         resp.__enter__.return_value = resp
         with patch(
             "akande.tools.web_search.urllib.request.urlopen",
@@ -59,12 +57,15 @@ class TestWebSearchBackends:
     def test_brave_failure_falls_back(self, monkeypatch):
         tool = self._tool()
         monkeypatch.setenv("BRAVE_API_KEY", "x")
-        with patch.object(
-            tool, "_brave", side_effect=RuntimeError("boom")
-        ), patch.object(
-            tool,
-            "_duckduckgo",
-            return_value=[{"title": "ddg"}],
+        with (
+            patch.object(
+                tool, "_brave", side_effect=RuntimeError("boom")
+            ),
+            patch.object(
+                tool,
+                "_duckduckgo",
+                return_value=[{"title": "ddg"}],
+            ),
         ):
             backend, results = tool._search("q", 5)
         assert backend == "duckduckgo"
@@ -83,9 +84,7 @@ class TestWebSearchBackends:
             ]
         }
         resp = MagicMock()
-        resp.read.return_value = json.dumps(
-            payload
-        ).encode()
+        resp.read.return_value = json.dumps(payload).encode()
         resp.__enter__.return_value = resp
         with patch(
             "akande.tools.web_search.urllib.request.urlopen",
@@ -134,9 +133,7 @@ class TestWebSearchBackends:
         )
 
         wrapped = "/l/?uddg=https%3A%2F%2Fexample.com%2F"
-        assert _unwrap_duckduckgo_url(wrapped).endswith(
-            "example.com/"
-        )
+        assert _unwrap_duckduckgo_url(wrapped).endswith("example.com/")
         assert _unwrap_duckduckgo_url("https://plain.com") == (
             "https://plain.com"
         )
@@ -159,9 +156,7 @@ class TestFetchURLBranches:
         from akande.tools.fetch_url import FetchURLTool
 
         tool = FetchURLTool()
-        err = HTTPError(
-            "https://x.com", 503, "down", {}, None
-        )
+        err = HTTPError("https://x.com", 503, "down", {}, None)
         with patch(
             "akande.tools.fetch_url.urllib.request.urlopen",
             side_effect=err,
@@ -209,9 +204,7 @@ class TestFetchURLBranches:
         tool = FetchURLTool()
         big = b"a" * (MAX_BYTES + 2)
         resp = MagicMock()
-        resp.headers.get_content_type.return_value = (
-            "text/plain"
-        )
+        resp.headers.get_content_type.return_value = "text/plain"
         resp.read.return_value = big
         resp.__enter__.return_value = resp
         with patch(
@@ -227,9 +220,7 @@ class TestFetchURLBranches:
         tool = FetchURLTool()
         body = b"<html><body>" + b"x" * 20000 + b"</body></html>"
         resp = MagicMock()
-        resp.headers.get_content_type.return_value = (
-            "text/html"
-        )
+        resp.headers.get_content_type.return_value = "text/html"
         resp.read.return_value = body
         resp.__enter__.return_value = resp
         with patch(
@@ -253,17 +244,20 @@ class TestWeatherSkillBranches:
         from akande.skills.weather import WeatherSkill
 
         s = WeatherSkill()
-        with patch.object(
-            s,
-            "_geocode",
-            return_value=(40.7, -74.0, "New York, NY, US"),
-        ), patch.object(
-            s,
-            "_forecast",
-            return_value={
-                "temperature_2m": 15,
-                "weather_code": 95,
-            },
+        with (
+            patch.object(
+                s,
+                "_geocode",
+                return_value=(40.7, -74.0, "New York, NY, US"),
+            ),
+            patch.object(
+                s,
+                "_forecast",
+                return_value={
+                    "temperature_2m": 15,
+                    "weather_code": 95,
+                },
+            ),
         ):
             result = s.handle(
                 Intent(
@@ -283,14 +277,17 @@ class TestWeatherSkillBranches:
         )
 
         s = WeatherSkill()
-        with patch.object(
-            s,
-            "_geocode",
-            return_value=(0.0, 0.0, "Anywhere"),
-        ), patch.object(
-            s,
-            "_forecast",
-            side_effect=_SkillFetchError("upstream"),
+        with (
+            patch.object(
+                s,
+                "_geocode",
+                return_value=(0.0, 0.0, "Anywhere"),
+            ),
+            patch.object(
+                s,
+                "_forecast",
+                side_effect=_SkillFetchError("upstream"),
+            ),
         ):
             result = s.handle(
                 Intent(
@@ -300,16 +297,12 @@ class TestWeatherSkillBranches:
                 SkillContext(),
             )
         assert "Could not fetch" in result.content
-        assert (
-            result.metadata["error"] == "forecast_failed"
-        )
+        assert result.metadata["error"] == "forecast_failed"
 
     def test_render_handles_no_data(self):
         from akande.skills.weather import WeatherSkill
 
-        assert (
-            "no data" in WeatherSkill._render("X", {}).lower()
-        )
+        assert "no data" in WeatherSkill._render("X", {}).lower()
 
     def test_render_handles_unknown_code(self):
         from akande.skills.weather import WeatherSkill
@@ -326,9 +319,7 @@ class TestWeatherSkillBranches:
             _SkillFetchError,
         )
 
-        err = HTTPError(
-            "https://x.com", 500, "oops", {}, None
-        )
+        err = HTTPError("https://x.com", 500, "oops", {}, None)
         with patch(
             "akande.skills.weather.urllib.request.urlopen",
             side_effect=err,
@@ -350,9 +341,7 @@ class TestFinanceSkillBranches:
         s = FinanceSkill()
         with patch(
             "akande.skills.finance.urllib.request.urlopen",
-            side_effect=HTTPError(
-                "https://yahoo", 503, "x", {}, None
-            ),
+            side_effect=HTTPError("https://yahoo", 503, "x", {}, None),
         ):
             result = s.handle(
                 Intent(
@@ -429,15 +418,16 @@ class TestInstallLocalBranches:
             install_local_command,
         )
 
-        result_obj = SimpleNamespace(
-            returncode=1, stderr="ollama down"
-        )
-        with patch(
-            "akande.cli.install_local.shutil.which",
-            return_value="/bin/ollama",
-        ), patch(
-            "akande.cli.install_local.subprocess.run",
-            return_value=result_obj,
+        result_obj = SimpleNamespace(returncode=1, stderr="ollama down")
+        with (
+            patch(
+                "akande.cli.install_local.shutil.which",
+                return_value="/bin/ollama",
+            ),
+            patch(
+                "akande.cli.install_local.subprocess.run",
+                return_value=result_obj,
+            ),
         ):
             rc = install_local_command(
                 self._ns(
@@ -452,21 +442,20 @@ class TestInstallLocalBranches:
             install_local_command,
         )
 
-        result_obj = SimpleNamespace(
-            returncode=0, stderr=""
-        )
+        result_obj = SimpleNamespace(returncode=0, stderr="")
         env_target = tmp_path / ".env"
-        with patch(
-            "akande.cli.install_local.shutil.which",
-            return_value="/bin/ollama",
-        ), patch(
-            "akande.cli.install_local.subprocess.run",
-            return_value=result_obj,
+        with (
+            patch(
+                "akande.cli.install_local.shutil.which",
+                return_value="/bin/ollama",
+            ),
+            patch(
+                "akande.cli.install_local.subprocess.run",
+                return_value=result_obj,
+            ),
         ):
             rc = install_local_command(
-                self._ns(
-                    dry_run=False, env_path=str(env_target)
-                )
+                self._ns(dry_run=False, env_path=str(env_target))
             )
         assert rc == 0
         assert env_target.exists()
@@ -482,19 +471,16 @@ class TestMCPServerBuild:
         from akande.mcp import server as srv
 
         # Stub the tool functions before build_server walks them.
-        with patch(
-            "akande.providers.get_provider"
-        ) as gp, patch(
-            "akande.mcp.server._require_mcp_sdk"
-        ) as require:
+        with (
+            patch("akande.providers.get_provider") as gp,
+            patch("akande.mcp.server._require_mcp_sdk") as require,
+        ):
             provider = MagicMock()
             provider.generate_response_sync.return_value = (
                 SimpleNamespace(
                     choices=[
                         SimpleNamespace(
-                            message=SimpleNamespace(
-                                content="brief"
-                            )
+                            message=SimpleNamespace(content="brief")
                         )
                     ]
                 )
@@ -578,9 +564,7 @@ class TestUtilsBranches:
     def test_get_output_filename_has_ext(self):
         from akande.utils import get_output_filename
 
-        assert (
-            get_output_filename(".pdf").endswith(".pdf")
-        )
+        assert get_output_filename(".pdf").endswith(".pdf")
 
     def test_validate_api_key_too_short(self):
         from akande.utils import validate_api_key
@@ -593,9 +577,7 @@ class TestUtilsBranches:
     def test_strip_markdown(self):
         from akande.utils import strip_markdown
 
-        out = strip_markdown(
-            "**bold** *italic* `code`"
-        )
+        out = strip_markdown("**bold** *italic* `code`")
         # The stripper drops emphasis markers; exact preservation
         # of other tokens isn't the contract.
         assert "**" not in out
@@ -651,9 +633,7 @@ class TestRateLimitExtras:
     def test_cleanup_removes_stale(self):
         from akande.server.rate_limit import InMemoryRateLimiter
 
-        limiter = InMemoryRateLimiter(
-            window=1, max_requests=5
-        )
+        limiter = InMemoryRateLimiter(window=1, max_requests=5)
         limiter.is_allowed("alice")
         limiter.cleanup()
         # No exception → branch covered.

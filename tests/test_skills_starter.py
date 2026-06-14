@@ -17,22 +17,15 @@ from akande.skills.base import Intent, SkillContext
 
 class TestMatching:
     def test_weather_match(self):
-        intent = WeatherSkill().match(
-            "what is the weather in Paris?"
-        )
+        intent = WeatherSkill().match("what is the weather in Paris?")
         assert intent is not None
         assert intent.args["place"].lower().startswith("paris")
 
     def test_weather_no_match(self):
-        assert (
-            WeatherSkill().match("tell me about Paris")
-            is None
-        )
+        assert WeatherSkill().match("tell me about Paris") is None
 
     def test_finance_match_dollar_symbol(self):
-        intent = FinanceSkill().match(
-            "should I buy $AAPL today?"
-        )
+        intent = FinanceSkill().match("should I buy $AAPL today?")
         assert intent is not None
         assert intent.args["symbol"] == "AAPL"
 
@@ -49,9 +42,7 @@ class TestMatching:
             "search for quantitative easing"
         )
         assert intent is not None
-        assert (
-            intent.args["query"] == "quantitative easing"
-        )
+        assert intent.args["query"] == "quantitative easing"
 
     def test_web_search_no_match_on_plain_text(self):
         assert WebSearchSkill().match("hello") is None
@@ -95,9 +86,7 @@ class TestWeatherSkillHandle:
             )._SkillFetchError("no match"),
         ):
             result = skill.handle(
-                Intent(
-                    name="weather", args={"place": "Atlantis"}
-                ),
+                Intent(name="weather", args={"place": "Atlantis"}),
                 SkillContext(),
             )
         assert "Could not look up" in result.content
@@ -105,20 +94,23 @@ class TestWeatherSkillHandle:
 
     def test_renders_current_conditions(self):
         skill = WeatherSkill()
-        with patch.object(
-            skill,
-            "_geocode",
-            return_value=(48.86, 2.35, "Paris, France"),
-        ), patch.object(
-            skill,
-            "_forecast",
-            return_value={
-                "temperature_2m": 20,
-                "apparent_temperature": 19,
-                "relative_humidity_2m": 60,
-                "wind_speed_10m": 5,
-                "weather_code": 2,
-            },
+        with (
+            patch.object(
+                skill,
+                "_geocode",
+                return_value=(48.86, 2.35, "Paris, France"),
+            ),
+            patch.object(
+                skill,
+                "_forecast",
+                return_value={
+                    "temperature_2m": 20,
+                    "apparent_temperature": 19,
+                    "relative_humidity_2m": 60,
+                    "wind_speed_10m": 5,
+                    "weather_code": 2,
+                },
+            ),
         ):
             result = skill.handle(
                 Intent(
@@ -129,17 +121,13 @@ class TestWeatherSkillHandle:
             )
         assert "Paris, France" in result.content
         assert "partly cloudy" in result.content
-        assert result.citations == [
-            "https://open-meteo.com"
-        ]
+        assert result.citations == ["https://open-meteo.com"]
 
 
 class TestFinanceSkillHandle:
     def test_handles_no_quote(self):
         skill = FinanceSkill()
-        with patch.object(
-            skill, "_quote", return_value=None
-        ):
+        with patch.object(skill, "_quote", return_value=None):
             result = skill.handle(
                 Intent(
                     name="finance",
@@ -188,9 +176,7 @@ class TestWebSearchSkillHandle:
             "   snippet"
         )
         fake_result.metadata = {"count": 1}
-        with patch.object(
-            skill._tool, "run", return_value=fake_result
-        ):
+        with patch.object(skill._tool, "run", return_value=fake_result):
             result = skill.handle(
                 Intent(
                     name="web_search",
@@ -208,18 +194,14 @@ class TestBriefingSkillHandle:
         from akande.skills.briefing import BriefingSkill
 
         skill = BriefingSkill()
-        with patch(
-            "akande.skills.briefing.get_provider"
-        ) as gp:
+        with patch("akande.skills.briefing.get_provider") as gp:
             provider = MagicMock()
             provider.provider_name = "openai"
             provider.generate_response_sync.return_value = (
                 SimpleNamespace(
                     choices=[
                         SimpleNamespace(
-                            message=SimpleNamespace(
-                                content="brief"
-                            )
+                            message=SimpleNamespace(content="brief")
                         )
                     ]
                 )

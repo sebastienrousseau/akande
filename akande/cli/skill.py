@@ -29,8 +29,7 @@ def skill_command(ns: argparse.Namespace) -> int:
     if sub == "revoke":
         return _revoke(ns)
     print(
-        "usage: akande skill "
-        "{list,enable,disable,consent,revoke} …",
+        "usage: akande skill {list,enable,disable,consent,revoke} …",
         file=sys.stderr,
     )
     return 2

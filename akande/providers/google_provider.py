@@ -67,12 +67,8 @@ class GoogleProvider(LLMProvider):
             model_name=model_name,
             system_instruction=system_prompt,
         )
-        response = gen_model.generate_content(
-            user_prompt, **params
-        )
-        text = (
-            response.text if hasattr(response, "text") else ""
-        )
+        response = gen_model.generate_content(user_prompt, **params)
+        text = response.text if hasattr(response, "text") else ""
         return ProviderResponse(text)
 
     async def generate_response(
@@ -113,9 +109,7 @@ class GoogleProvider(LLMProvider):
                     "event": "LLM:RequestFailed",
                     "extra_data": {
                         "provider": "google",
-                        "model": (
-                            model or self._default_model
-                        ),
+                        "model": (model or self._default_model),
                         "latency_ms": round(latency, 2),
                     },
                 },
@@ -246,9 +240,7 @@ class GoogleProvider(LLMProvider):
                     "event": "LLM:RequestFailed",
                     "extra_data": {
                         "provider": "google",
-                        "model": (
-                            model or self._default_model
-                        ),
+                        "model": (model or self._default_model),
                         "latency_ms": round(latency, 2),
                     },
                 },

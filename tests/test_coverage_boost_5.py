@@ -61,9 +61,7 @@ class TestMaybeSignBriefing:
 
 
 class TestAuditKeyManagerEdges:
-    def test_public_key_returns_object(
-        self, tmp_path, monkeypatch
-    ):
+    def test_public_key_returns_object(self, tmp_path, monkeypatch):
         monkeypatch.setenv("AKANDE_HOME", str(tmp_path))
         from akande.audit import (
             KeyManager,
@@ -102,11 +100,12 @@ class TestMemoryInitWithMem0:
         bad_mem0.Memory.side_effect = RuntimeError(
             "embedding model failed to load"
         )
-        with patch(
-            "akande.memory._mem0_available",
-            return_value=True,
-        ), patch.dict(
-            "sys.modules", {"mem0": bad_mem0}
+        with (
+            patch(
+                "akande.memory._mem0_available",
+                return_value=True,
+            ),
+            patch.dict("sys.modules", {"mem0": bad_mem0}),
         ):
             ms = MemoryStore()
         # Constructor must not raise — disabled gracefully.
@@ -123,18 +122,14 @@ class TestToolCallingMisc:
         from akande.tools.calling import _first_system
 
         assert _first_system([]) == ""
-        assert _first_system(
-            [{"role": "user", "content": "x"}]
-        ) == ""
+        assert _first_system([{"role": "user", "content": "x"}]) == ""
 
     def test_last_user_content_handles_no_user(self):
         from akande.tools.calling import _last_user_content
 
         # All-assistant message list — empty string fallback.
         assert (
-            _last_user_content(
-                [{"role": "assistant", "content": "x"}]
-            )
+            _last_user_content([{"role": "assistant", "content": "x"}])
             == ""
         )
 
@@ -145,38 +140,40 @@ class TestToolCallingMisc:
 
 
 class TestInstallLocalPlatformHints:
-    def test_linux_install_hint(
-        self, capsys, monkeypatch
-    ):
+    def test_linux_install_hint(self, capsys, monkeypatch):
         from akande.cli.install_local import (
             _check_ollama_binary,
         )
 
-        with patch(
-            "akande.cli.install_local.shutil.which",
-            return_value=None,
-        ), patch(
-            "akande.cli.install_local.platform.system",
-            return_value="Linux",
+        with (
+            patch(
+                "akande.cli.install_local.shutil.which",
+                return_value=None,
+            ),
+            patch(
+                "akande.cli.install_local.platform.system",
+                return_value="Linux",
+            ),
         ):
             ok = _check_ollama_binary(dry_run=False)
         assert ok is False
         err = capsys.readouterr().err
         assert "ollama" in err.lower()
 
-    def test_unknown_platform_install_hint(
-        self, capsys
-    ):
+    def test_unknown_platform_install_hint(self, capsys):
         from akande.cli.install_local import (
             _check_ollama_binary,
         )
 
-        with patch(
-            "akande.cli.install_local.shutil.which",
-            return_value=None,
-        ), patch(
-            "akande.cli.install_local.platform.system",
-            return_value="Plan9",
+        with (
+            patch(
+                "akande.cli.install_local.shutil.which",
+                return_value=None,
+            ),
+            patch(
+                "akande.cli.install_local.platform.system",
+                return_value="Plan9",
+            ),
         ):
             ok = _check_ollama_binary(dry_run=False)
         assert ok is False
@@ -197,9 +194,7 @@ class TestTelemetryEnvBranches:
 
         telemetry._reset_for_tests()
 
-    def test_init_when_otel_not_installed(
-        self, monkeypatch
-    ):
+    def test_init_when_otel_not_installed(self, monkeypatch):
         from akande import telemetry
         from akande.profiles import Profile
 
@@ -215,12 +210,15 @@ class TestTelemetryEnvBranches:
             eu_residency_hint=False,
             safety_envelope=False,
         )
-        with patch(
-            "akande.telemetry._opentelemetry_available",
-            return_value=False,
-        ), patch(
-            "akande.profiles.active_profile",
-            return_value=permissive,
+        with (
+            patch(
+                "akande.telemetry._opentelemetry_available",
+                return_value=False,
+            ),
+            patch(
+                "akande.profiles.active_profile",
+                return_value=permissive,
+            ),
         ):
             ok = telemetry.init(force=True)
         assert ok is False
@@ -232,9 +230,7 @@ class TestTelemetryEnvBranches:
 
 
 class TestServerHelperExtras:
-    def test_get_correlation_id_falls_back_to_uuid(
-        self, tmp_path
-    ):
+    def test_get_correlation_id_falls_back_to_uuid(self, tmp_path):
         import cherrypy
 
         from akande.conversation import ConversationStore
@@ -242,10 +238,13 @@ class TestServerHelperExtras:
         from akande.server.server import AkandeServer
 
         db = ConversationDB(str(tmp_path / "x.db"))
-        with patch(
-            "akande.server.server.validate_api_key",
-            return_value=True,
-        ), patch("akande.server.server.OpenAIImpl"):
+        with (
+            patch(
+                "akande.server.server.validate_api_key",
+                return_value=True,
+            ),
+            patch("akande.server.server.OpenAIImpl"),
+        ):
             srv = AkandeServer()
         srv.conversations = ConversationStore(db=db)
 
@@ -272,16 +271,10 @@ class TestOpenAICompatSyncMore:
         p._provider_name = "openai"
         p._default_model = "gpt-4o-mini"
         p.client = MagicMock()
-        p.client.chat.completions.create.return_value = (
-            SimpleNamespace(
-                choices=[
-                    SimpleNamespace(
-                        message=SimpleNamespace(
-                            content="ok"
-                        )
-                    )
-                ]
-            )
+        p.client.chat.completions.create.return_value = SimpleNamespace(
+            choices=[
+                SimpleNamespace(message=SimpleNamespace(content="ok"))
+            ]
         )
 
         out = p.generate_response_sync(
@@ -290,9 +283,7 @@ class TestOpenAICompatSyncMore:
             "gpt-4o-mini",
             params={"temperature": 0.0},
         )
-        assert (
-            out.choices[0].message.content == "ok"
-        )
+        assert out.choices[0].message.content == "ok"
         # The params dict was forwarded.
         call = p.client.chat.completions.create.call_args
         assert call.kwargs["temperature"] == 0.0

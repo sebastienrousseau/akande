@@ -48,14 +48,10 @@ class TestLoadConfig:
         fs = servers["filesystem"]
         assert isinstance(fs, MCPServerConfig)
         assert fs.command == "npx"
-        assert (
-            "/tmp/notes" in fs.args
-        )
+        assert "/tmp/notes" in fs.args
         assert servers["github"].env == {"GITHUB_TOKEN": "x"}
 
-    def test_skips_entries_without_command(
-        self, tmp_path, caplog
-    ):
+    def test_skips_entries_without_command(self, tmp_path, caplog):
         cfg_path = tmp_path / "mcp.json"
         cfg_path.write_text(
             json.dumps(
@@ -75,32 +71,31 @@ class TestLoadConfig:
 
 class TestPolicy:
     def test_no_rules_admits_everything(self):
-        assert admitted_tools(
-            "fs", ["read", "write"], {}
-        ) == ["read", "write"]
+        assert admitted_tools("fs", ["read", "write"], {}) == [
+            "read",
+            "write",
+        ]
 
     def test_allow_filters_in(self):
         rules = {"fs": MCPPolicy(allow={"read"})}
-        assert admitted_tools(
-            "fs", ["read", "write"], rules
-        ) == ["read"]
+        assert admitted_tools("fs", ["read", "write"], rules) == [
+            "read"
+        ]
 
     def test_deny_filters_out(self):
         rules = {"fs": MCPPolicy(deny={"write"})}
-        assert admitted_tools(
-            "fs", ["read", "write"], rules
-        ) == ["read"]
+        assert admitted_tools("fs", ["read", "write"], rules) == [
+            "read"
+        ]
 
     def test_deny_overrides_allow(self):
         # If a tool appears in both, deny wins.
         rules = {
-            "fs": MCPPolicy(
-                allow={"read", "write"}, deny={"write"}
-            )
+            "fs": MCPPolicy(allow={"read", "write"}, deny={"write"})
         }
-        assert admitted_tools(
-            "fs", ["read", "write"], rules
-        ) == ["read"]
+        assert admitted_tools("fs", ["read", "write"], rules) == [
+            "read"
+        ]
 
     def test_needs_confirm(self):
         p = MCPPolicy(require_confirm={"delete"})
@@ -148,12 +143,8 @@ class TestServerBuild:
         from akande.mcp import server as srv
 
         def _no_mcp():
-            raise ImportError(
-                "The 'mcp' package is required ..."
-            )
+            raise ImportError("The 'mcp' package is required ...")
 
-        monkeypatch.setattr(
-            srv, "_require_mcp_sdk", _no_mcp
-        )
+        monkeypatch.setattr(srv, "_require_mcp_sdk", _no_mcp)
         with pytest.raises(ImportError, match="mcp"):
             srv.build_server()

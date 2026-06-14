@@ -50,9 +50,7 @@ class TestExport:
             data_cli, "ConversationStore", return_value=store
         ):
             out_path = tmp_path / "dump.json"
-            rc = data_command(
-                _ns(output=str(out_path), user="alice")
-            )
+            rc = data_command(_ns(output=str(out_path), user="alice"))
         assert rc == 0
         body = json.loads(out_path.read_text())
         assert body["user_id"] == "alice"
@@ -81,9 +79,7 @@ class TestExport:
 
 
 class TestDelete:
-    def test_refuses_without_yes(
-        self, isolated_home, capsys, tmp_path
-    ):
+    def test_refuses_without_yes(self, isolated_home, capsys, tmp_path):
         from akande.cli import data as data_cli
         from akande.conversation import ConversationStore
         from akande.db import ConversationDB
@@ -106,9 +102,7 @@ class TestDelete:
         # Nothing was deleted.
         assert len(store.list(user_id="bob")) == 1
 
-    def test_deletes_when_yes(
-        self, isolated_home, capsys, tmp_path
-    ):
+    def test_deletes_when_yes(self, isolated_home, capsys, tmp_path):
         from akande.cli import data as data_cli
         from akande.conversation import ConversationStore
         from akande.db import ConversationDB
@@ -131,9 +125,7 @@ class TestDelete:
         assert rc == 0
         assert store.list(user_id="bob") == []
 
-    def test_no_user_is_noop(
-        self, isolated_home, capsys, tmp_path
-    ):
+    def test_no_user_is_noop(self, isolated_home, capsys, tmp_path):
         from akande.cli import data as data_cli
         from akande.conversation import ConversationStore
         from akande.db import ConversationDB

@@ -27,9 +27,7 @@ class LMStudioProvider(OpenAICompatProvider):
     _provider_name = "lmstudio"
 
     def __init__(self) -> None:
-        host = os.getenv(
-            "LMSTUDIO_HOST", "http://localhost:1234"
-        )
+        host = os.getenv("LMSTUDIO_HOST", "http://localhost:1234")
         self._api_key = "lm-studio"
         self._base_url = f"{host}/v1"
         self._default_model = "local-model"

@@ -21,9 +21,7 @@ logger = logging.getLogger(__name__)
 class GTTSBackend(TTSBackend):
     name = "gtts"
 
-    def __init__(
-        self, lang: str = "en", tld: str = "co.uk"
-    ) -> None:
+    def __init__(self, lang: str = "en", tld: str = "co.uk") -> None:
         self._default_lang = lang
         self._tld = tld
 

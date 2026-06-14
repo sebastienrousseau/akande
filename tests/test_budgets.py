@@ -28,9 +28,7 @@ class TestBudgetConstants:
         assert CACHE_BUDGET_MS > 0
 
     def test_e2e_exceeds_component_budgets(self):
-        assert E2E_BUDGET_MS >= (
-            TTS_BUDGET_MS + LLM_BUDGET_MS
-        )
+        assert E2E_BUDGET_MS >= (TTS_BUDGET_MS + LLM_BUDGET_MS)
 
     def test_cache_budget_is_smallest(self):
         assert CACHE_BUDGET_MS < TTS_BUDGET_MS
@@ -50,9 +48,7 @@ class TestCacheLookupWithinBudget:
         from akande.cache import SQLiteCache
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            cache = SQLiteCache(
-                Path(tmpdir) / "test.db"
-            )
+            cache = SQLiteCache(Path(tmpdir) / "test.db")
             cache.set("test_key", "test_value")
 
             start = time.time()

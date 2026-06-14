@@ -33,8 +33,7 @@ from .base import Tool, ToolError, ToolResult
 logger = logging.getLogger(__name__)
 
 USER_AGENT = (
-    "akande/0.0.6 (+https://github.com/sebastienrousseau/"
-    "akande)"
+    "akande/0.0.6 (+https://github.com/sebastienrousseau/akande)"
 )
 DEFAULT_LIMIT = 5
 TIMEOUT_S = 8.0
@@ -61,8 +60,7 @@ class WebSearchTool(Tool):
                 "limit": {
                     "type": "integer",
                     "description": (
-                        "Maximum number of results (default 5, "
-                        "max 10)"
+                        "Maximum number of results (default 5, max 10)"
                     ),
                     "minimum": 1,
                     "maximum": 10,
@@ -74,9 +72,7 @@ class WebSearchTool(Tool):
     def run(self, args: dict[str, Any]) -> ToolResult:
         query = (args.get("query") or "").strip()
         if not query:
-            raise ToolError(
-                "web_search requires a non-empty 'query'"
-            )
+            raise ToolError("web_search requires a non-empty 'query'")
         limit = int(args.get("limit") or DEFAULT_LIMIT)
         limit = max(1, min(limit, 10))
 
@@ -120,7 +116,9 @@ class WebSearchTool(Tool):
         if os.getenv("TAVILY_API_KEY"):
             try:
                 return "tavily", self._tavily(query, limit)
-            except Exception as exc:  # pragma: no cover - upstream failure logging
+            except (
+                Exception
+            ) as exc:  # pragma: no cover - upstream failure logging
                 logger.warning(
                     "Tavily search failed",
                     exc_info=True,
@@ -133,21 +131,15 @@ class WebSearchTool(Tool):
                 )
         return "duckduckgo", self._duckduckgo(query, limit)
 
-    def _brave(
-        self, query: str, limit: int
-    ) -> list[dict[str, str]]:
+    def _brave(self, query: str, limit: int) -> list[dict[str, str]]:
         url = (
             "https://api.search.brave.com/res/v1/web/search?"
-            + urllib.parse.urlencode(
-                {"q": query, "count": limit}
-            )
+            + urllib.parse.urlencode({"q": query, "count": limit})
         )
         req = urllib.request.Request(
             url,
             headers={
-                "X-Subscription-Token": os.environ[
-                    "BRAVE_API_KEY"
-                ],
+                "X-Subscription-Token": os.environ["BRAVE_API_KEY"],
                 "Accept": "application/json",
                 "User-Agent": USER_AGENT,
             },
@@ -168,9 +160,7 @@ class WebSearchTool(Tool):
             for r in web[:limit]
         ]
 
-    def _tavily(
-        self, query: str, limit: int
-    ) -> list[dict[str, str]]:
+    def _tavily(self, query: str, limit: int) -> list[dict[str, str]]:
         body = json.dumps(
             {
                 "api_key": os.environ["TAVILY_API_KEY"],
@@ -204,9 +194,8 @@ class WebSearchTool(Tool):
     def _duckduckgo(
         self, query: str, limit: int
     ) -> list[dict[str, str]]:
-        url = (
-            "https://duckduckgo.com/html/?"
-            + urllib.parse.urlencode({"q": query})
+        url = "https://duckduckgo.com/html/?" + urllib.parse.urlencode(
+            {"q": query}
         )
         req = urllib.request.Request(
             url, headers={"User-Agent": USER_AGENT}
@@ -216,9 +205,7 @@ class WebSearchTool(Tool):
             with urllib.request.urlopen(  # nosec B310
                 req, timeout=TIMEOUT_S
             ) as resp:
-                html = resp.read().decode(
-                    "utf-8", errors="ignore"
-                )
+                html = resp.read().decode("utf-8", errors="ignore")
         except urllib.error.URLError as exc:
             raise ToolError(
                 f"web_search backend unreachable: {exc.reason}"

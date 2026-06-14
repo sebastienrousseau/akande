@@ -77,9 +77,7 @@ class ProviderRegistry:
         self,
         lazy_map: dict[str, tuple] | None = None,
     ):
-        self._classes: dict[
-            str, type[LLMProvider]
-        ] = {}
+        self._classes: dict[str, type[LLMProvider]] = {}
         self._instances: dict[str, LLMProvider] = {}
         self._lazy_map: dict[str, tuple] = (
             dict(lazy_map) if lazy_map else {}
@@ -109,9 +107,7 @@ class ProviderRegistry:
         names.update(self._lazy_map.keys())
         return sorted(names)
 
-    def _resolve_class(
-        self, name: str
-    ) -> type[LLMProvider]:
+    def _resolve_class(self, name: str) -> type[LLMProvider]:
         """Resolve a provider class, importing lazily."""
         if name in self._classes:
             return self._classes[name]
