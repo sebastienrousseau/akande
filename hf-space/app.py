@@ -21,12 +21,11 @@ from __future__ import annotations
 
 import os
 import tempfile
-from pathlib import Path
 
 import gradio as gr  # type: ignore[import-not-found]
 
 from akande.disclosure import get_disclosure_text
-from akande.profiles import EU, active_profile
+from akande.profiles import active_profile
 from akande.tts import get_tts_backend
 from akande.watermark import watermark_audio
 

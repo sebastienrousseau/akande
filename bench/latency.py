@@ -21,10 +21,10 @@ import statistics
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 
-def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="bench/latency.py",
         description=__doc__.splitlines()[0],
@@ -52,7 +52,7 @@ def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
 
 
 def _percentile(
-    values: List[float], pct: float
+    values: list[float], pct: float
 ) -> float:
     if not values:
         return 0.0
@@ -64,8 +64,8 @@ def _percentile(
 
 
 def _summary(
-    label: str, values: List[float]
-) -> Dict[str, Any]:
+    label: str, values: list[float]
+) -> dict[str, Any]:
     return {
         "label": label,
         "count": len(values),
@@ -81,8 +81,8 @@ def _summary(
     }
 
 
-def time_calls(fn, n: int) -> List[float]:
-    out: List[float] = []
+def time_calls(fn, n: int) -> list[float]:
+    out: list[float] = []
     for _ in range(n):
         start = time.time()
         fn()
@@ -106,7 +106,7 @@ def _fake_tts(text: str) -> bytes:
     return b"\x00" * (len(text) * 4)
 
 
-def run(args: argparse.Namespace) -> Dict[str, Any]:
+def run(args: argparse.Namespace) -> dict[str, Any]:
     if args.real:
         from akande.config import OPENAI_DEFAULT_MODEL
         from akande.providers import get_provider
@@ -149,8 +149,8 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
     llm_ms = time_calls(llm_call, n)
     tts_ms = time_calls(tts_call, n)
     e2e_ms = [
-        s + l + t
-        for s, l, t in zip(stt_ms, llm_ms, tts_ms)
+        s + llm + t
+        for s, llm, t in zip(stt_ms, llm_ms, tts_ms, strict=False)
     ]
     return {
         "mode": "real" if args.real else "synthetic",
@@ -162,7 +162,7 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
     }
 
 
-def _render(stats: Dict[str, Any]) -> str:
+def _render(stats: dict[str, Any]) -> str:
     stages = ["stt", "llm", "tts", "e2e"]
     rows = ["| stage | P50 (ms) | P95 (ms) | mean (ms) |",
             "|---|---|---|---|"]
@@ -187,7 +187,7 @@ def _render(stats: Dict[str, Any]) -> str:
     return body
 
 
-def main(argv: List[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     stats = run(args)
     out_path = Path(args.output)

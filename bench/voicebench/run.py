@@ -32,13 +32,14 @@ import os
 import statistics
 import sys
 import time
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any
 
 logger = logging.getLogger("voicebench")
 
 
-def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="bench/voicebench/run.py",
         description=__doc__.splitlines()[0],
@@ -76,7 +77,7 @@ def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
 
 def iter_prompts(
     path: Path, limit: int = 0
-) -> Iterable[Dict[str, Any]]:
+) -> Iterable[dict[str, Any]]:
     """Yield ``{prompt, category}`` records from a JSONL file."""
     with path.open("r", encoding="utf-8") as fh:
         for i, line in enumerate(fh):
@@ -94,10 +95,10 @@ def iter_prompts(
 
 
 def score_prompt(
-    record: Dict[str, Any],
+    record: dict[str, Any],
     provider: Any,
     model: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Score a single prompt.
 
     The "score" here is the latency + response length; the
@@ -134,9 +135,9 @@ def score_prompt(
     }
 
 
-def aggregate(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+def aggregate(rows: list[dict[str, Any]]) -> dict[str, Any]:
     """Compute summary stats per category + overall."""
-    by_cat: Dict[str, List[Dict[str, Any]]] = {}
+    by_cat: dict[str, list[dict[str, Any]]] = {}
     for row in rows:
         by_cat.setdefault(row["category"], []).append(row)
     out = {
@@ -149,7 +150,7 @@ def aggregate(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     return out
 
 
-def _summary(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     ok = [r for r in rows if r["ok"]]
     latencies = [r["latency_ms"] for r in ok]
     char_counts = [r["response_chars"] for r in ok]
@@ -184,7 +185,7 @@ def _summary(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def _percentile(
-    values: List[float], pct: float
+    values: list[float], pct: float
 ) -> float:
     """Linear-interpolation percentile.  Pure-python so no numpy dep."""
     if not values:
@@ -196,7 +197,7 @@ def _percentile(
     return s[lo] + (s[hi] - s[lo]) * (k - lo)
 
 
-def main(argv: List[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ns = parse_args(argv)
     prompts_path = Path(ns.prompts)
     out_path = Path(ns.output)
@@ -211,7 +212,7 @@ def main(argv: List[str] | None = None) -> int:
     from akande.providers import get_provider
 
     provider = get_provider(ns.provider)
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for record in iter_prompts(prompts_path, limit=ns.limit):
         rows.append(score_prompt(record, provider, ns.model))
     payload = {
