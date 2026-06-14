@@ -192,8 +192,27 @@ def dispatch_subcommand(
     Returns ``None`` if no recognised subcommand is present (so the
     caller proceeds to the interactive loop).  Returns an integer
     exit code otherwise.
+
+    Special cases:
+    - ``akande --help`` / ``akande -h``: print the top-level help
+      and exit 0.  Without this, the caller would fall through to
+      ``_build_akande()`` which complains about a missing
+      ``OPENAI_API_KEY`` — a confusing first-run experience.
+    - ``akande --version`` / ``-V``: print the installed package
+      version and exit 0.
     """
     args_list = list(argv if argv is not None else sys.argv[1:])
+    if args_list and args_list[0] in {"--help", "-h"}:
+        _build_parser().print_help()
+        return 0
+    if args_list and args_list[0] in {"--version", "-V"}:
+        try:
+            from importlib.metadata import version
+
+            print(version("akande"))
+        except Exception:
+            print("akande (version unknown)")
+        return 0
     if not args_list or args_list[0] not in KNOWN_SUBCOMMANDS:
         return None
     parser = _build_parser()

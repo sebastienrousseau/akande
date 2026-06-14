@@ -54,6 +54,27 @@ pip-audit --strict
 
 All five must pass before a PR is mergeable.
 
+### One-command regression suite
+
+For the "does a fresh install actually work?" question — what you
+want before a release tag or when reviewing someone else's
+environment-sensitive PR — run:
+
+```bash
+./scripts/regression.sh                # tears down + recreates the venv
+./scripts/regression.sh --keep-venv    # keep the venv for inspection
+./scripts/regression.sh --skip-gates   # only validate install + smoke
+```
+
+The script runs six phases (fresh venv → install → import smoke →
+CLI smoke → quality gates → summary) and writes per-phase logs to
+`.regression-logs/` so a failure tells you exactly which step
+regressed.
+
+A fast subset for tight loops is wired into `make smoke` — it
+re-runs the import and CLI smoke tests against the *active* venv
+without tearing anything down.
+
 ## Pull-request workflow
 
 1. Fork the repo and create a feature branch from `main`

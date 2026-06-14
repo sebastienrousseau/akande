@@ -88,6 +88,9 @@ celerybeat-schedule
 # virtualenv
 .venv
 .venv-*/
+
+# Per-phase logs from scripts/regression.sh
+.regression-logs/
 bandit-env
 myenv
 venv/
