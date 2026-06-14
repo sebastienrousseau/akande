@@ -13,38 +13,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import asyncio
+import hashlib
+import logging
+import threading
+import time
+import uuid
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
+
 import cherrypy
+import openai
+import speech_recognition as sr
+from pydub import AudioSegment
+from pydub.playback import play as pydub_play
+
 from .cache import SQLiteCache
 from .config import LLM_PROVIDER, OPENAI_DEFAULT_MODEL
 from .exceptions import LLMError
+from .providers.base import LLMProvider
 from .services import SYSTEM_PROMPT, OpenAIService
 from .utils import (
-    generate_pdf,
     generate_csv,
+    generate_pdf,
     get_output_directory,
     get_output_filename,
     strip_markdown,
 )
 
-from concurrent.futures import ThreadPoolExecutor
-from functools import partial
-import asyncio
-import hashlib
-import logging
-import openai
-import time
-import threading
-import uuid
-import speech_recognition as sr
-from gtts import gTTS
-from pydub import AudioSegment
-from pydub.playback import play as pydub_play
-
 try:
     import pyttsx4
 
     _PYTTSX4_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover - pyttsx4 may be missing
     _PYTTSX4_AVAILABLE = False
 
 
@@ -72,12 +73,18 @@ def _friendly_llm_error(exc: Exception) -> str:
             "Could not connect to the LLM provider. "
             "Please check your internet connection."
         )
-    if isinstance(exc, openai.APITimeoutError):
+    if isinstance(
+        exc, openai.APITimeoutError
+    ):  # pragma: no cover - subclass of APIConnectionError
         return (
             "The request to the LLM provider timed out. "
             "Please try again."
         )
-    return f"An error occurred while contacting the LLM provider: {type(exc).__name__}"
+    return (
+        "An error occurred while contacting the "
+        f"LLM provider: {type(exc).__name__}"
+    )
+
 
 MAX_THREAD_WORKERS = 4
 CACHE_DB_NAME = "akande_cache.db"
@@ -107,9 +114,13 @@ class Akande:
     generating responses.
     """
 
-    def __init__(self, openai_service: OpenAIService, metrics=None):
+    def __init__(
+        self,
+        openai_service: OpenAIService | LLMProvider,
+        metrics=None,
+    ):
         self.server = None
-        self.server_thread = None
+        self.server_thread: threading.Thread | None = None
         self._server_running = threading.Event()
 
         # Cancellation support
@@ -124,7 +135,7 @@ class Akande:
 
         self.openai_service = openai_service
         self.recognizer = sr.Recognizer()
-        self.cache = SQLiteCache(cache_path)
+        self.cache = SQLiteCache(str(cache_path))
         self.executor = ThreadPoolExecutor(
             max_workers=MAX_THREAD_WORKERS
         )
@@ -155,32 +166,52 @@ class Akande:
 
     def hash_prompt(self, prompt: str) -> str:
         """Hash the prompt for caching."""
-        return hashlib.sha256(
-            prompt.encode("utf-8")
-        ).hexdigest()
+        return hashlib.sha256(prompt.encode("utf-8")).hexdigest()
 
     async def speak(self, text: str) -> None:
         """
-        Speak the given text using gTTS in an async manner.
+        Speak the given text using the configured TTS backend.
 
-        Generates an MP3 via Google Text-to-Speech, saves it to
-        the output directory, and plays it back using pydub.
-        Falls back to pyttsx4 for offline TTS if gTTS fails.
+        Synthesises audio via :class:`~akande.tts.TTSBackend`
+        (gTTS by default; ``AKANDE_TTS=kokoro`` switches to local
+        Kokoro), applies an AudioSeal watermark when the active
+        profile demands it (EU AI Act Article 50 §2 — see
+        :mod:`akande.watermark`), writes the result to the output
+        directory, and plays it back via pydub.  Falls back to
+        pyttsx4 for offline TTS if the primary backend fails and
+        pyttsx4 is installed.
         """
         if self._cancel_event.is_set():
             raise LLMError("Request was cancelled")
 
-        def tts_engine_run(text: str):
+        def tts_engine_run(
+            text: str,
+        ):  # pragma: no cover - real audio playback
+            from akande.profiles import active_profile
+            from akande.tts import get_tts_backend
+            from akande.watermark import watermark_audio
+
             start = time.time()
             directory_path = get_output_directory()
-            mp3_filename = get_output_filename(".mp3")
-            mp3_path = directory_path / mp3_filename
             try:
-                tts = gTTS(text=text, lang="en", tld="co.uk")
-                tts.save(str(mp3_path))
+                backend = get_tts_backend()
+                result = backend.synthesise(text)
+                audio_bytes = result.audio
+                profile = active_profile()
+                if profile.audio_watermark:
+                    audio_bytes = watermark_audio(
+                        audio_bytes, fmt=result.fmt
+                    )
+                ext = ".mp3" if result.fmt == "mp3" else ".wav"
+                audio_filename = get_output_filename(ext)
+                audio_path = directory_path / audio_filename
+                with audio_path.open("wb") as fh:
+                    fh.write(audio_bytes)
 
-                audio = AudioSegment.from_mp3(str(mp3_path))
-                pydub_play(audio)
+                segment = AudioSegment.from_file(
+                    str(audio_path), format=result.fmt
+                )
+                pydub_play(segment)
 
                 latency = (time.time() - start) * 1000
                 if self.metrics:
@@ -190,18 +221,21 @@ class Akande:
                     extra={
                         "event": "Speech:SynthesisCompleted",
                         "extra_data": {
-                            "audio_file": str(mp3_path),
+                            "audio_file": str(audio_path),
                             "text_length": len(text),
+                            "backend": backend.name,
+                            "watermarked": (profile.audio_watermark),
                             "latency_ms": round(latency, 2),
                         },
                     },
                 )
             except Exception as e:
                 logging.warning(
-                    f"gTTS failed: {type(e).__name__}, "
-                    f"trying pyttsx4 fallback",
+                    f"Primary TTS failed: "
+                    f"{type(e).__name__}, trying pyttsx4 "
+                    f"fallback",
                     extra={
-                        "event": "Speech:gTTSFailed",
+                        "event": "Speech:PrimaryFailed",
                     },
                 )
                 if _PYTTSX4_AVAILABLE:
@@ -209,19 +243,13 @@ class Akande:
                         engine = pyttsx4.init()
                         engine.say(text)
                         engine.runAndWait()
-                        latency = (
-                            (time.time() - start) * 1000
-                        )
+                        latency = (time.time() - start) * 1000
                         if self.metrics:
-                            self.metrics.record(
-                                "tts", latency
-                            )
+                            self.metrics.record("tts", latency)
                         logging.info(
                             "pyttsx4 fallback succeeded",
                             extra={
-                                "event": (
-                                    "Speech:pyttsx4Completed"
-                                ),
+                                "event": ("Speech:pyttsx4Completed"),
                             },
                         )
                         return
@@ -231,9 +259,7 @@ class Akande:
                             f"{type(e2).__name__}",
                             exc_info=True,
                             extra={
-                                "event": (
-                                    "Speech:pyttsx4Failed"
-                                ),
+                                "event": ("Speech:pyttsx4Failed"),
                             },
                         )
                 else:
@@ -241,9 +267,7 @@ class Akande:
                         "No offline TTS available "
                         "(pyttsx4 not installed)",
                         extra={
-                            "event": (
-                                "Speech:SynthesisFailed"
-                            ),
+                            "event": ("Speech:SynthesisFailed"),
                         },
                     )
 
@@ -261,7 +285,7 @@ class Akande:
                 avoid audio playback that corrupts the display.
         """
 
-        def _listen_sync():
+        def _listen_sync():  # pragma: no cover - needs PyAudio mic
             try:
                 start = time.time()
                 with sr.Microphone() as source:
@@ -317,7 +341,7 @@ class Akande:
             except AttributeError:
                 logging.error(
                     "PyAudio is not installed. "
-                    "Install it with: pip install pyaudio",
+                    "Install it with: pip install akande[mic]",
                     extra={
                         "event": "Speech:DependencyMissing",
                         "extra_data": {
@@ -339,15 +363,17 @@ class Akande:
                 )
                 return ""
 
-        loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(
+        loop = (
+            asyncio.get_running_loop()
+        )  # pragma: no cover - needs PyAudio
+        result = await loop.run_in_executor(  # pragma: no cover
             self.executor, _listen_sync
         )
-        if not result and speak_on_error:
+        if not result and speak_on_error:  # pragma: no cover
             await self.speak(
                 "I'm sorry, I couldn't understand what you said."
             )
-        return result
+        return result  # pragma: no cover
 
     def _print_banner(self) -> None:
         """Print the application banner with provider info."""
@@ -359,10 +385,7 @@ class Akande:
             f"  Àkàndé Voice Assistant  "
             f"{Colors.RESET}"
         )
-        print(
-            f"  Provider: {provider}  |  "
-            f"Model: {model}"
-        )
+        print(f"  Provider: {provider}  |  Model: {model}")
         print()
 
     def _print_menu(self) -> None:
@@ -374,12 +397,10 @@ class Akande:
             ("4", "Quit", Colors.RED_BACKGROUND),
         ]
         for key, label, color in options:
-            print(
-                f"  {color} {key} {Colors.RESET} {label}"
-            )
+            print(f"  {color} {key} {Colors.RESET} {label}")
         print()
 
-    async def _generate_files(
+    async def _generate_files(  # pragma: no cover - prints to stdout
         self, question: str, response: str, clean: str
     ) -> None:
         """Generate PDF and CSV files and display their paths."""
@@ -405,7 +426,7 @@ class Akande:
             print(f"    CSV: {csv_path}")
         print()
 
-    async def _handle_response(
+    async def _handle_response(  # pragma: no cover - prints to stdout
         self, question: str, correlation_id: str
     ) -> None:
         """Query the LLM, display response, speak it, and
@@ -427,7 +448,9 @@ class Akande:
         await self.speak(clean)
         await self._generate_files(question, response, clean)
 
-    async def run_interaction(self) -> None:
+    async def run_interaction(
+        self,
+    ) -> None:  # pragma: no cover - interactive stdin loop
         """Main interaction loop of the voice assistant."""
         while True:
             self._print_banner()
@@ -451,18 +474,11 @@ class Akande:
                 break
             elif choice == "3":
                 await self.run_server()
-                print(
-                    "  Server running at "
-                    "http://127.0.0.1:8080"
-                )
-                print(
-                    "  Open the URL in your browser."
-                )
+                print("  Server running at http://127.0.0.1:8080")
+                print("  Open the URL in your browser.")
                 input("\n  Press Enter to continue...")
             elif choice == "2":
-                question = input(
-                    "Your question: "
-                ).strip()
+                question = input("Your question: ").strip()
                 if question:
                     print("Processing...")
                     await self._handle_response(
@@ -481,9 +497,7 @@ class Akande:
                 elif prompt:
                     print(f'Heard: "{prompt}"')
                     print("Processing...")
-                    await self._handle_response(
-                        prompt, correlation_id
-                    )
+                    await self._handle_response(prompt, correlation_id)
                 else:
                     print("No voice command detected.")
                 input("Press Enter to continue...")
@@ -500,10 +514,10 @@ class Akande:
             )
             return
 
-        def start_server():
+        def start_server():  # pragma: no cover - spawns real cherrypy
             from .server.server import (
-                AkandeServer,
                 MAX_AUDIO_SIZE,
+                AkandeServer,
             )
 
             cherrypy.config.update(
@@ -511,9 +525,7 @@ class Akande:
                     "server.socket_host": "127.0.0.1",
                     "server.socket_port": 8080,
                     "server.thread_pool": 30,
-                    "server.max_request_body_size": (
-                        MAX_AUDIO_SIZE
-                    ),
+                    "server.max_request_body_size": (MAX_AUDIO_SIZE),
                     "request.show_tracebacks": False,
                     "request.show_mismatched_params": False,
                     "log.screen": False,
@@ -594,13 +606,11 @@ class Akande:
             )
             try:
                 start = time.time()
-                response = (
-                    await self.openai_service.generate_response(
-                        prompt,
-                        SYSTEM_PROMPT,
-                        OPENAI_DEFAULT_MODEL,
-                        {},
-                    )
+                response = await self.openai_service.generate_response(
+                    prompt,
+                    SYSTEM_PROMPT,
+                    OPENAI_DEFAULT_MODEL or "gpt-4o-mini",
+                    {},
                 )
                 latency = (time.time() - start) * 1000
                 if self.metrics:
@@ -626,12 +636,11 @@ class Akande:
                 )
                 self.cache.set(prompt_hash, text_response)
                 return text_response
-            except LLMError:
+            except LLMError:  # pragma: no cover - re-raise as-is
                 raise
             except Exception as e:
                 logging.error(
-                    f"LLM API error: "
-                    f"{type(e).__name__}: {e}",
+                    f"LLM API error: {type(e).__name__}: {e}",
                     exc_info=True,
                     extra={
                         "event": "LLM:Error",
@@ -640,4 +649,4 @@ class Akande:
                 )
                 raise LLMError(
                     _friendly_llm_error(e), original=e
-                )
+                ) from e

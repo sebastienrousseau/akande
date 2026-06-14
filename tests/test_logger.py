@@ -1,7 +1,7 @@
 import json
 import logging
 
-from akande.logger import basic_config, JSONFormatter
+from akande.logger import JSONFormatter, basic_config
 
 
 def test_basic_config_creates_file_handler(tmp_path):

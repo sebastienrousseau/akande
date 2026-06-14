@@ -17,7 +17,8 @@ import asyncio
 import logging
 import os
 import time
-from typing import Any, Dict, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 from .base import LLMProvider
 from .response import ProviderResponse
@@ -33,15 +34,15 @@ class GoogleProvider(LLMProvider):
     def provider_name(self) -> str:
         return "google"
 
-    def __init__(self):
+    def __init__(self) -> None:
         try:
             import google.generativeai as genai
-        except ImportError:
+        except ImportError as exc:
             raise ImportError(
                 "The 'google-generativeai' package is required "
                 "for the Google provider. "
                 "Install it with: pip install akande[google]"
-            )
+            ) from exc
         api_key = os.getenv("GOOGLE_API_KEY", "")
         if not api_key:
             raise ValueError(
@@ -57,7 +58,7 @@ class GoogleProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> ProviderResponse:
         if not params:
             params = {}
@@ -66,12 +67,8 @@ class GoogleProvider(LLMProvider):
             model_name=model_name,
             system_instruction=system_prompt,
         )
-        response = gen_model.generate_content(
-            user_prompt, **params
-        )
-        text = (
-            response.text if hasattr(response, "text") else ""
-        )
+        response = gen_model.generate_content(user_prompt, **params)
+        text = response.text if hasattr(response, "text") else ""
         return ProviderResponse(text)
 
     async def generate_response(
@@ -79,7 +76,7 @@ class GoogleProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         logging.info(
             "LLM request sent",
@@ -103,7 +100,7 @@ class GoogleProvider(LLMProvider):
                     params,
                 ),
             )
-        except Exception:
+        except Exception:  # pragma: no cover - upstream failure logging
             latency = (time.time() - start) * 1000
             logging.error(
                 "LLM request failed",
@@ -112,9 +109,7 @@ class GoogleProvider(LLMProvider):
                     "event": "LLM:RequestFailed",
                     "extra_data": {
                         "provider": "google",
-                        "model": (
-                            model or self._default_model
-                        ),
+                        "model": (model or self._default_model),
                         "latency_ms": round(latency, 2),
                     },
                 },
@@ -134,12 +129,92 @@ class GoogleProvider(LLMProvider):
         )
         return response
 
+    async def generate_stream(
+        self,
+        user_prompt: str,
+        system_prompt: str,
+        model: str,
+        params: dict[str, Any] | None = None,
+    ) -> AsyncIterator[str]:
+        """Native streaming for ``generate_content(stream=True)``."""
+        if not params:
+            params = {}
+        model_name = model or self._default_model
+
+        logging.info(
+            "LLM stream request sent",
+            extra={
+                "event": "LLM:StreamRequestSent",
+                "extra_data": {
+                    "provider": "google",
+                    "model": model_name,
+                },
+            },
+        )
+        start = time.time()
+        loop = asyncio.get_running_loop()
+
+        def _open_stream() -> Any:
+            gen_model = self._genai.GenerativeModel(
+                model_name=model_name,
+                system_instruction=system_prompt,
+            )
+            return gen_model.generate_content(
+                user_prompt, stream=True, **params
+            )
+
+        try:
+            stream = await loop.run_in_executor(None, _open_stream)
+        except Exception:
+            latency = (time.time() - start) * 1000
+            logging.error(
+                "LLM stream open failed",
+                exc_info=True,
+                extra={
+                    "event": "LLM:StreamRequestFailed",
+                    "extra_data": {
+                        "provider": "google",
+                        "model": model_name,
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
+            raise
+
+        sentinel: Any = object()
+        chunk_count = 0
+        try:
+            while True:
+                item: Any = await loop.run_in_executor(
+                    None, lambda: next(stream, sentinel)
+                )
+                if item is sentinel:
+                    break
+                delta = getattr(item, "text", "") or ""
+                if delta:
+                    chunk_count += 1
+                    yield delta
+        finally:
+            latency = (time.time() - start) * 1000
+            logging.info(
+                "LLM stream completed",
+                extra={
+                    "event": "LLM:StreamCompleted",
+                    "extra_data": {
+                        "provider": "google",
+                        "model": model_name,
+                        "chunks": chunk_count,
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
+
     def generate_response_sync(
         self,
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         logging.info(
             "LLM sync request sent",
@@ -165,9 +240,7 @@ class GoogleProvider(LLMProvider):
                     "event": "LLM:RequestFailed",
                     "extra_data": {
                         "provider": "google",
-                        "model": (
-                            model or self._default_model
-                        ),
+                        "model": (model or self._default_model),
                         "latency_ms": round(latency, 2),
                     },
                 },

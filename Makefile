@@ -1,31 +1,69 @@
-# Basic Makefile for akande Application
+# Basic Makefile for the Àkàndé application.
+#
+# Common targets:
+#   make install         install the runtime + dev extras into the active venv
+#   make test            run pytest with coverage gate
+#   make lint            run flake8
+#   make typecheck       run mypy
+#   make audit           run bandit + pip-audit
+#   make regression      tear down everything + fresh install + full test sweep
+#   make smoke           fast smoke pass (imports + CLI --help)
+#   make run             launch the TUI / classic CLI
+#   make clean           remove build artefacts
 
-# Copyright (C) 2023-2024 Sebastien Rousseau.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-# implied.
-#
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright (C) 2023-2026 Sebastien Rousseau.
+# Apache-2.0 / MIT — see LICENSE-*.
 
-.PHONY: install run clean
+.PHONY: help install dev test lint typecheck audit smoke regression run clean
+
+help:
+	@echo "Common targets:"
+	@echo "  install      runtime + dev install into the active venv"
+	@echo "  test         pytest with coverage gate"
+	@echo "  lint         flake8"
+	@echo "  typecheck    mypy"
+	@echo "  audit        bandit + pip-audit"
+	@echo "  smoke        fast smoke: imports + CLI --help"
+	@echo "  regression   fresh-install + full gates (./scripts/regression.sh)"
+	@echo "  run          launch the assistant"
+	@echo "  clean        rm build artefacts"
 
 install:
-    pip install -r requirements.txt
+	pip install --upgrade pip setuptools wheel
+	pip install -e ".[all,dev]" mcp
+
+dev: install
+
+test:
+	pytest --cov=akande --cov-fail-under=63 -q
+
+lint:
+	flake8
+
+typecheck:
+	mypy akande
+
+audit:
+	bandit -r akande -ll -q
+	pip-audit --strict
+
+smoke:
+	python -m tests.smoke_imports
+	python -m akande --help > /dev/null
+	@echo "✓ smoke passed"
+
+regression:
+	./scripts/regression.sh
 
 run:
-    python -m akande
+	python -m akande
 
 clean:
-    rm -rf __pycache__
-    rm -rf build/
-    rm -rf dist/
-    rm -rf *.egg-info
+	rm -rf __pycache__
+	rm -rf build/
+	rm -rf dist/
+	rm -rf htmlcov/
+	rm -rf .pytest_cache/
+	rm -rf .mypy_cache/
+	rm -f  coverage.xml .coverage
+	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true

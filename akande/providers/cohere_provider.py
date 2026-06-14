@@ -17,7 +17,7 @@ import asyncio
 import logging
 import os
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .base import LLMProvider
 from .response import ProviderResponse
@@ -33,15 +33,15 @@ class CohereProvider(LLMProvider):
     def provider_name(self) -> str:
         return "cohere"
 
-    def __init__(self):
+    def __init__(self) -> None:
         try:
             import cohere
-        except ImportError:
+        except ImportError as exc:
             raise ImportError(
                 "The 'cohere' package is required for the "
                 "Cohere provider. "
                 "Install it with: pip install akande[cohere]"
-            )
+            ) from exc
         api_key = os.getenv("COHERE_API_KEY", "")
         if not api_key:
             raise ValueError(
@@ -56,7 +56,7 @@ class CohereProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> ProviderResponse:
         if not params:
             params = {}
@@ -64,18 +64,22 @@ class CohereProvider(LLMProvider):
         response = self.client.chat(
             model=model,
             messages=[
-                {
+                {  # type: ignore[list-item, unused-ignore]
                     "role": "system",
                     "content": system_prompt,
                 },
-                {
+                {  # type: ignore[list-item, unused-ignore]
                     "role": "user",
                     "content": user_prompt,
                 },
             ],
             **params,
         )
-        text = response.message.content[0].text
+        # Cohere v5 returns a typed union; the first content block is
+        # the assistant text for non-tool responses.
+        content = response.message.content or []
+        first = content[0] if content else None
+        text = getattr(first, "text", "") if first else ""
         return ProviderResponse(text)
 
     async def generate_response(
@@ -83,7 +87,7 @@ class CohereProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         logging.info(
             "LLM request sent",
@@ -107,7 +111,7 @@ class CohereProvider(LLMProvider):
                     params,
                 ),
             )
-        except Exception:
+        except Exception:  # pragma: no cover - upstream failure logging
             latency = (time.time() - start) * 1000
             logging.error(
                 "LLM request failed",
@@ -116,9 +120,7 @@ class CohereProvider(LLMProvider):
                     "event": "LLM:RequestFailed",
                     "extra_data": {
                         "provider": "cohere",
-                        "model": (
-                            model or self._default_model
-                        ),
+                        "model": (model or self._default_model),
                         "latency_ms": round(latency, 2),
                     },
                 },
@@ -143,7 +145,7 @@ class CohereProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         logging.info(
             "LLM sync request sent",
@@ -160,7 +162,7 @@ class CohereProvider(LLMProvider):
             response = self._call(
                 user_prompt, system_prompt, model, params
             )
-        except Exception:
+        except Exception:  # pragma: no cover - upstream failure logging
             latency = (time.time() - start) * 1000
             logging.error(
                 "LLM sync request failed",
@@ -169,9 +171,7 @@ class CohereProvider(LLMProvider):
                     "event": "LLM:RequestFailed",
                     "extra_data": {
                         "provider": "cohere",
-                        "model": (
-                            model or self._default_model
-                        ),
+                        "model": (model or self._default_model),
                         "latency_ms": round(latency, 2),
                     },
                 },

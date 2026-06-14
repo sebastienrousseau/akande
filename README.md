@@ -1,211 +1,398 @@
 <!-- markdownlint-disable MD033 MD041 -->
 
-<img
-src="https://kura.pro/akande/images/logos/akande.webp"
-align="right"
-alt="Akande Voice Assistant Logo"
-height="261"
-width="261"
-/>
+<p align="center">
+  <img src="https://cloudcdn.pro/clients/akande/v1/logos/akande.svg" alt="Àkàndé logo" width="160" />
+</p>
 
-<!-- markdownlint-enable MD033 MD041 -->
+<h1 align="center">Àkàndé</h1>
 
-# Àkàndé
+<p align="center">
+  A self-hosted, provider-agnostic voice assistant that delivers structured
+  executive briefings from any of ten LLM providers — including fully private
+  local inference via Ollama and LM Studio.
+</p>
 
-![Banner for Àkàndé - Voice Assistant][banner]
+<p align="center">
+  <a href="https://github.com/sebastienrousseau/akande/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/sebastienrousseau/akande/ci.yml?branch=main&style=for-the-badge&label=CI&logo=github" alt="CI" /></a>
+  <a href="https://github.com/sebastienrousseau/akande/actions/workflows/regression.yml"><img src="https://img.shields.io/github/actions/workflow/status/sebastienrousseau/akande/regression.yml?branch=main&style=for-the-badge&label=Regression&logo=github" alt="Regression" /></a>
+  <a href="https://pypi.org/project/akande/"><img src="https://img.shields.io/pypi/v/akande?style=for-the-badge&color=fc8d62&logo=pypi&logoColor=white" alt="PyPI" /></a>
+  <a href="https://pypi.org/project/akande/"><img src="https://img.shields.io/pypi/pyversions/akande?style=for-the-badge&logo=python&logoColor=white" alt="Python versions" /></a>
+  <a href="https://github.com/sebastienrousseau/akande/blob/main/LICENSE-APACHE"><img src="https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue?style=for-the-badge" alt="License" /></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/akande"><img src="https://img.shields.io/ossf-scorecard/github.com/sebastienrousseau/akande?style=for-the-badge&label=OpenSSF%20Scorecard&logo=openssf" alt="OpenSSF Scorecard" /></a>
+</p>
 
-Àkàndé is a self-hosted, provider-agnostic voice assistant that delivers
-structured executive briefings from any of 10 supported LLM providers.
-Ask a question by voice or text; receive a concise
-Overview / Solution / Conclusion / Recommendations briefing with
-automatic PDF and CSV artefact generation. Run it against OpenAI, or
-keep your data entirely private with Ollama or LM Studio on your own
-hardware.
+---
 
-The name "Àkàndé" (Yoruba: "firstborn") signifies a pioneering approach
-to voice-driven intelligence briefings.
+## Contents
 
-![divider][divider]
+**Getting started**
 
-## Why Àkàndé?
+- [Install](#install) — PyPI, source, system dependencies
+- [Quick Start](#quick-start) — voice briefing in ten lines
+- [Use as a library](#use-as-a-library) — programmatic API
 
-Ask a question. Get a structured briefing. Keep your data.
+**Surface**
 
-That is the entire workflow. Voice, text, or web -- Àkàndé listens,
-queries the LLM of your choice, and delivers a four-section executive
-briefing: Overview, Solution, Conclusion, Recommendations. PDF and CSV
-artefacts are generated automatically.
+- [Provider configuration](#provider-configuration) — ten providers behind one env var
+- [Profiles and modes](#profiles-and-modes) — `AKANDE_PROFILE` and `AKANDE_MODE`
+- [Interaction modes](#interaction-modes) — TUI, classic CLI, web server, MCP
+- [Subcommands](#subcommands) — `data`, `verify-audit`, `mcp`, `install-local`, `skill`
+- [Skills](#skills) — briefing, web search, weather, finance + consent policy
+- [Model Context Protocol](#model-context-protocol) — serve and consume MCP
 
-No framework to learn. No output parsing to build. No provider lock-in
-to accept.
+**Operational**
 
-Ten LLM providers -- including fully private local inference through
-Ollama and LM Studio -- all behind one environment variable. Your
-hardware. Your models. Your data.
+- [Compliance](#compliance) — EU AI Act Article 50 controls
+- [Troubleshooting](#troubleshooting)
+- [Trust](#trust) — test count, coverage, security gates
+- [Development](#development)
+- [License](#license)
 
-Every other tool gives you the engine and expects you to build the car.
-Àkàndé hands you the keys. This is how AI assistants should have always
-worked.
+---
 
-![divider][divider]
-
-## Who is Àkàndé for?
-
-**Python developers** who deploy it: clone, configure a provider, and
-run. Àkàndé is a standard Python package with a CLI entry point, a
-CherryPy web server mode, and 160 tests.
-
-**End users and executives** who interact with it: speak or type a
-question and receive a structured briefing read aloud and saved as
-PDF/CSV. No technical knowledge required once deployed.
-
-![divider][divider]
-
-## Quick Start
+## Install
 
 ### Prerequisites
 
-- Python 3.9+
-- PortAudio (for microphone input):
-  Ubuntu/Debian `sudo apt install portaudio19-dev`,
-  macOS `brew install portaudio`
-- ffmpeg (for audio conversion):
-  Ubuntu/Debian `sudo apt install ffmpeg`,
-  macOS `brew install ffmpeg`
+| Dependency | Why | Ubuntu / Debian | macOS |
+|---|---|---|---|
+| Python 3.10+ | Runtime | `sudo apt install python3.12 python3.12-venv` | `brew install python@3.12` |
+| `portaudio` *(optional)* | Microphone capture (`[mic]` extra) | `sudo apt install portaudio19-dev` | `brew install portaudio` |
+| `ffmpeg` | Audio decoding | `sudo apt install ffmpeg` | `brew install ffmpeg` |
 
-### Installation
+### From PyPI
 
 ```bash
-# Install system dependencies (required for PyAudio and audio conversion)
-# Ubuntu/Debian:
-sudo apt install portaudio19-dev ffmpeg
-# macOS:
-brew install portaudio ffmpeg
+# Core install — provider SDKs and mic capture are optional extras.
+pip install akande
 
+# Full kit: every provider + microphone + MCP.
+pip install "akande[all,mic,mcp]"
+```
+
+### From source
+
+```bash
 git clone https://github.com/sebastienrousseau/akande
 cd akande
 python -m venv .venv && source .venv/bin/activate
-pip install -e .
-
-cp .env.example .env
-# Edit .env: set OPENAI_API_KEY=sk-your-key-here
-
-python -m akande
+pip install -e ".[dev]"        # bundles every test-relevant extra
 ```
 
-Select option **2** ("Ask a question"), type your query, and receive a
-structured briefing.
+### Extras index
 
-![divider][divider]
+| Extra | Pulls in | Enables |
+|---|---|---|
+| `mic` | `pyaudio` | Microphone capture (requires PortAudio system headers) |
+| `anthropic` / `google` / `mistral` / `cohere` / `huggingface` / `groq` | the matching SDK | The corresponding `LLM_PROVIDER` value |
+| `offline-tts` | `pyttsx4` | Offline TTS fallback |
+| `tts-local` | `kokoro-onnx` | Local Kokoro-82M TTS (`AKANDE_TTS=kokoro`) |
+| `watermark` | `audioseal`, `torch` | AudioSeal voice watermarking (Article 50 §2) |
+| `redact` | `presidio-analyzer` | Higher-recall PII redaction in the cache |
+| `memory` | `mem0ai` | Long-term memory façade |
+| `mcp` | `mcp` | Run / consume Model Context Protocol servers |
+| `redis` | `redis` | Distributed rate limiter for the web server |
+| `all` | every provider SDK + `pyttsx4` | Provider-agnostic deployments |
+| `dev` | testing + lint + audit + every provider SDK + `mcp` | Local development |
 
-## Provider Configuration
+---
 
-Set `LLM_PROVIDER` in your `.env` file. Install extras for non-OpenAI
-providers.
+## Quick Start
 
-| Provider | `LLM_PROVIDER` | Required env vars | Install extras | Default model |
+```bash
+# 1. Install the core + the mic extra.
+pip install "akande[mic]"
+
+# 2. Point at a provider.
+export LLM_PROVIDER=openai
+export OPENAI_API_KEY=sk-your-key-here
+
+# 3. Launch the TUI.
+akande
+```
+
+The TUI accepts spoken or typed questions and renders the briefing as it
+streams in. PDF and CSV artefacts are written to a date-keyed output
+directory on every answered question.
+
+### Use as a library
+
+```python
+"""Ask Àkàndé a question programmatically."""
+import asyncio
+
+from akande.akande import Akande
+from akande.providers import get_provider
+
+
+async def main() -> None:
+    # 1. Pick any of the ten configured providers by name.
+    provider = get_provider("openai")             # honours $OPENAI_API_KEY
+    akande = Akande(openai_service=provider)
+
+    # 2. Ask a question.  The four-section briefing comes back as plain text.
+    question = "What is quantitative easing?"
+    response = await akande.openai_service.generate_response(
+        user_prompt=question,
+        system_prompt="You are an executive briefing assistant.",
+        model="gpt-4o-mini",
+    )
+
+    # 3. Print the structured briefing.  `choices[0].message.content` follows
+    # the OpenAI-shaped response envelope used by every provider.
+    print(response.choices[0].message.content)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+---
+
+## Provider configuration
+
+Set `LLM_PROVIDER` in your environment (or `.env` file). Each provider reads
+its own credentials from environment variables.
+
+| Provider | `LLM_PROVIDER` | Required env vars | Install | Default model |
 |---|---|---|---|---|
-| OpenAI | `openai` | `OPENAI_API_KEY` | *(included)* | `gpt-3.5-turbo` |
+| OpenAI | `openai` | `OPENAI_API_KEY` | *(included)* | `gpt-3.5-turbo`¹ |
 | Anthropic | `anthropic` | `ANTHROPIC_API_KEY` | `pip install akande[anthropic]` | `claude-3-haiku-20240307` |
 | Google Gemini | `google` | `GOOGLE_API_KEY` | `pip install akande[google]` | `gemini-pro` |
-| Ollama | `ollama` | `OLLAMA_HOST` | *(included)* | `llama3` |
-| Azure OpenAI | `azure_openai` | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` | *(included)* | `gpt-35-turbo` |
 | Mistral | `mistral` | `MISTRAL_API_KEY` | `pip install akande[mistral]` | `mistral-small-latest` |
 | Cohere | `cohere` | `COHERE_API_KEY` | `pip install akande[cohere]` | `command-r` |
 | Hugging Face | `huggingface` | `HUGGINGFACE_API_KEY` | `pip install akande[huggingface]` | `mistralai/Mistral-7B-Instruct-v0.2` |
-| Groq | `groq` | `GROQ_API_KEY` | *(included)* | `llama3-8b-8192` |
-| LM Studio | `lmstudio` | `LMSTUDIO_HOST` | *(included)* | `local-model` |
+| Groq | `groq` | `GROQ_API_KEY` | `pip install akande[groq]` | `llama3-8b-8192` |
+| Azure OpenAI | `azure_openai` | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` | *(included)* | `gpt-35-turbo` |
+| Ollama | `ollama` | `OLLAMA_HOST` *(optional)* | *(included)* | `llama3` |
+| LM Studio | `lmstudio` | `LMSTUDIO_HOST` *(optional)* | *(included)* | `local-model` |
 
-To install all optional provider SDKs: `pip install akande[all]`
+> ¹ Override per-call with the `model` argument or globally with
+> `OPENAI_DEFAULT_MODEL`.
 
-![divider][divider]
+Install every provider SDK at once with `pip install akande[all]`.
 
-## Interaction Modes
+---
 
-Àkàndé presents a CLI menu with four options:
+## Profiles and modes
 
-1. **Use voice** -- speak your question via microphone; response is read
-   aloud
-2. **Ask a question** -- type your question; response is printed and
-   read aloud
-3. **Start server** -- launches a web UI at `http://127.0.0.1:8080`
-   with voice and text input
-4. **Stop** -- exits the assistant
+Àkàndé exposes two orthogonal sovereignty switches.
 
-![divider][divider]
+`AKANDE_PROFILE` selects the compliance posture:
 
-## Example Interaction
+| Profile | EU residency | Audio watermark | Audit signing | Telemetry opt-in |
+|---|---|---|---|---|
+| `local` *(default)* | — | off | off | off |
+| `eu` | enforced | on | on | off |
+| `strict` | enforced | on | on | off |
+| `internal` | — | on | on | on (opt-in only) |
 
-**Question:** "What is quantitative easing?"
+`AKANDE_MODE` selects the network posture:
 
-> Overview
-> Quantitative easing (QE) is a monetary policy tool used by central
-> banks to stimulate economic activity when conventional interest rate
-> cuts are insufficient.
->
-> Solution
-> - Central banks purchase government bonds and other securities to
->   inject money into the economy
-> - This lowers long-term interest rates, encouraging borrowing and
->   investment
-> - QE increases the money supply without printing physical currency
->
-> Conclusion
-> QE can stabilise financial markets during crises but carries risks of
-> asset bubbles and currency devaluation.
->
-> Recommendations
-> - Monitor inflation indicators alongside QE announcements
-> - Consider the impact on bond yields for portfolio decisions
+| Mode | Provider gate | Cache writes |
+|---|---|---|
+| `online` *(default)* | any provider | enabled |
+| `offline` | `ollama` or `lmstudio` only | enabled |
 
-Each response is automatically saved as a timestamped PDF and CSV in the
-output directory.
+```bash
+# EU-residency-aware cloud setup
+export AKANDE_PROFILE=eu AKANDE_MODE=online
 
-![divider][divider]
+# Fully air-gapped local stack
+export AKANDE_PROFILE=strict AKANDE_MODE=offline LLM_PROVIDER=ollama
+```
+
+---
+
+## Interaction modes
+
+| Mode | How to launch | What you get |
+|---|---|---|
+| **TUI** *(default)* | `akande` | Textual chat UI with streaming, voice toggle, history, export |
+| **Classic CLI** | `akande --classic` | Numbered menu: voice, text, server, quit |
+| **Web server** | `akande` → start server (or library `Akande.start_server()`) | CherryPy server at `http://127.0.0.1:8080` with SSE briefing endpoint |
+| **MCP server** | `akande mcp serve` | Expose Àkàndé as MCP tools (Claude Desktop, Cursor, Continue) |
+| **Library** | `from akande.akande import Akande` | Programmatic embedding |
+
+---
+
+## Subcommands
+
+```bash
+akande --help                  # top-level help
+akande --version               # installed version
+
+# GDPR data subject controls (export / delete)
+akande data export --user alice --output alice.json
+akande data delete --user alice --yes
+
+# Audit verification — Ed25519-signed briefing sidecars
+akande verify-audit  path/to/briefing.audit.json
+akande verify-pdf    path/to/briefing.pdf
+akande verify-watermark path/to/briefing.mp3 --threshold 0.5
+
+# Model Context Protocol
+akande mcp serve                # stdio MCP server (Claude Desktop ready)
+akande mcp serve --http         # streamable HTTP transport
+akande mcp list                 # list configured upstream servers
+akande mcp list <server>        # introspect a server's tools
+
+# One-shot fully-offline bootstrap
+akande install-local --model llama3.1 --env-path .env
+
+# Skill management
+akande skill list
+akande skill enable web_search
+akande skill consent web_search
+akande skill revoke web_search
+```
+
+---
+
+## Skills
+
+Skills are specialised handlers the router picks over a generic LLM call.
+Five ship in the box; third-party skills register via the
+`akande.skills` entry-point group.
+
+| Skill | Match | Consent required | Offline-safe |
+|---|---|---|---|
+| `briefing` | default | no | yes |
+| `web_search` | `search`, `look up …`, `find …` | yes | no |
+| `weather` | `weather in …`, `forecast …` | no | no |
+| `finance` | `price of …`, `ticker …` | no | no |
+| `policy` *(gate)* | always — enforces consent | n/a | yes |
+
+```python
+"""Register a third-party skill via the entry-point group."""
+# pyproject.toml
+# [project.entry-points."akande.skills"]
+# my_skill = "my_package.skill:MySkill"
+
+from akande.skills.base import Skill, SkillMeta, Intent, SkillContext, SkillResult
+
+
+class MySkill(Skill):
+    @property
+    def meta(self) -> SkillMeta:
+        return SkillMeta(
+            name="my_skill",
+            description="One-line description of what this skill does.",
+            requires_consent=True,
+        )
+
+    def match(self, text: str) -> Intent | None:
+        if text.lower().startswith("my-skill:"):
+            return Intent(name="my_skill", raw_text=text)
+        return None
+
+    def handle(self, intent: Intent, ctx: SkillContext) -> SkillResult:
+        return SkillResult(content=f"Handled: {intent.raw_text}")
+```
+
+---
+
+## Model Context Protocol
+
+Àkàndé can serve **and** consume MCP. The server exposes the briefing,
+audit, and skill surface as MCP tools; the client introspects upstream
+servers configured in `~/.akande/mcp.json`.
+
+```bash
+# Serve over stdio for Claude Desktop / Cursor / Continue.
+akande mcp serve
+
+# Or streamable HTTP for HTTP-only hosts.
+akande mcp serve --http
+```
+
+Claude Desktop drop-in (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "akande": {
+      "command": "akande",
+      "args": ["mcp", "serve"]
+    }
+  }
+}
+```
+
+---
+
+## Compliance
+
+Àkàndé ships the controls required by EU AI Act Article 50 (in force
+2026-08-02) out of the box when `AKANDE_PROFILE=eu` (or `strict`):
+
+- **AI disclosure** — every briefing carries a machine-readable disclosure
+  block (`akande.disclosure`)
+- **AudioSeal watermark** — synthesised audio is watermarked when the
+  `[watermark]` extra is installed; absence is logged but never blocks
+- **Ed25519-signed audit sidecars** — every PDF + CSV is paired with a
+  `.audit.json` signed at write time; `akande verify-audit` re-verifies
+- **GDPR data export / delete** — `akande data export|delete` against
+  the SQLite conversation store
+- **Consent log** — voice-cloning prompts require explicit consent
+  recorded in the audit chain
+
+---
 
 ## Troubleshooting
 
 | Problem | Cause | Fix |
 |---|---|---|
-| `Could not find PyAudio` | PortAudio missing | Ubuntu: `sudo apt install portaudio19-dev`. macOS: `brew install portaudio`. Then `pip install pyaudio`. |
+| `Could not find PyAudio` | PortAudio system headers missing | Ubuntu: `sudo apt install portaudio19-dev`. macOS: `brew install portaudio`. Then `pip install akande[mic]`. |
 | `ffmpeg not found` | ffmpeg not installed | Ubuntu: `sudo apt install ffmpeg`. macOS: `brew install ffmpeg`. |
 | Microphone not detected | OS permissions | Grant microphone access in system settings. |
-| `ModuleNotFoundError: No module named 'anthropic'` | Provider SDK not installed | `pip install akande[anthropic]`. See the provider table above. |
-| `Invalid or missing OPENAI_API_KEY` | Key not set or malformed | Ensure `.env` contains a valid `sk-` prefixed key. |
+| `ModuleNotFoundError: No module named 'anthropic'` | Provider SDK not installed | `pip install akande[anthropic]` (or the relevant provider extra). |
+| `Invalid or missing OPENAI_API_KEY` | Key not set or malformed | Ensure your environment or `.env` contains a valid `sk-` prefixed key. |
+| `AKANDE_MODE=offline forbids provider openai` | Offline mode allows only local providers | Set `LLM_PROVIDER=ollama` or `LLM_PROVIDER=lmstudio`, or switch back to `AKANDE_MODE=online`. |
 
-![divider][divider]
-
-## Roadmap
-
-- Streaming responses for reduced time-to-first-token
-- Conversation memory with multi-turn context
-- Plugin system for domain-specific briefing templates
-- Docker image for single-command deployment
-
-![divider][divider]
+---
 
 ## Trust
 
-- **160 tests** covering providers, caching, services, server, and
-  utilities
-- **Apache 2.0 licence** -- permissive, enterprise-friendly
-- **Euxis-audited** architecture and security posture
+- **785 tests** + **95 % line coverage** in CI on every push and pull
+  request, on Python 3.10 / 3.11 / 3.12
+- **Quality gates**: ruff (lint + format), mypy (strict islands on the
+  provider surface), bandit (SAST), pip-audit (vulnerable-deps scan) —
+  all blocking
+- **Fresh-install regression matrix** (Ubuntu × 3.10/3.11/3.12 +
+  macOS × 3.12) reproduces the user install path on every push
+- **Security posture** documented in [SECURITY.md](SECURITY.md): CSP
+  nonces, custom-header CSRF, per-IP rate limiting (in-memory or Redis),
+  CSV-formula injection prevention, filename sanitisation, IP hashing
+  in logs
 
-![divider][divider]
+---
 
-## Contributing
+## Development
 
-Pull requests are welcome.
+```bash
+git clone https://github.com/sebastienrousseau/akande
+cd akande
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
 
-![divider][divider]
+# Quality gates (mirror CI)
+ruff check . && ruff format --check .
+mypy akande
+pytest -q                # uses the [pytest] cov gate (95 %)
+bandit -r akande
+pip-audit
+
+# Fresh-install regression on this machine
+./scripts/regression.sh
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development loop.
+
+---
 
 ## License
 
-This project is dual-licensed under the Apache License 2.0 and the MIT
-License -- see [LICENSE-APACHE](LICENSE-APACHE) and
-[LICENSE-MIT](LICENSE-MIT) for details.
-
-![divider][divider]
-
-[divider]: https://kura.pro/common/images/elements/divider.svg "Divider"
-[banner]: https://kura.pro/akande/images/titles/title-akande.webp "Banner for Àkàndé - Voice Assistant"
+Dual-licensed under the Apache License, Version 2.0 and the MIT License.
+See [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT) for
+the full text. You may pick whichever fits your project.

@@ -16,7 +16,8 @@
 import asyncio
 import logging
 import time
-from typing import Any, Dict, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 from .base import LLMProvider
 
@@ -37,16 +38,14 @@ class OpenAICompatProvider(LLMProvider):
     _api_key: str = ""
     _default_model: str = ""
 
-    def _init_client(self):
+    def _init_client(self) -> None:
         """Initialise the OpenAI-compatible client."""
         import openai
+
         from akande.config import API_CALL_TIMEOUT
 
         api_key = self._api_key
-        if (
-            not api_key
-            and self._provider_name in _LOCAL_PROVIDERS
-        ):
+        if not api_key and self._provider_name in _LOCAL_PROVIDERS:
             api_key = self._provider_name
         elif not api_key:
             raise ValueError(
@@ -55,7 +54,7 @@ class OpenAICompatProvider(LLMProvider):
                 f"Set the appropriate environment variable."
             )
 
-        kwargs: Dict[str, Any] = {
+        kwargs: dict[str, Any] = {
             "api_key": api_key,
             "timeout": API_CALL_TIMEOUT,
         }
@@ -72,7 +71,7 @@ class OpenAICompatProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         if not params:
             params = {}
@@ -137,12 +136,208 @@ class OpenAICompatProvider(LLMProvider):
         )
         return response
 
+    async def generate_stream(
+        self,
+        user_prompt: str,
+        system_prompt: str,
+        model: str,
+        params: dict[str, Any] | None = None,
+    ) -> AsyncIterator[str]:
+        """Native streaming for OpenAI-compatible chat completions.
+
+        Uses ``chat.completions.create(stream=True)`` and yields each
+        ``choices[0].delta.content`` chunk as it arrives.  The blocking
+        iterator is pumped on a thread-pool executor so concurrent
+        callers don't starve the event loop.
+        """
+        if not params:
+            params = {}
+        params = {**params, "stream": True}
+        model = model or self._default_model
+
+        logging.info(
+            "LLM stream request sent",
+            extra={
+                "event": "LLM:StreamRequestSent",
+                "extra_data": {
+                    "provider": self._provider_name,
+                    "model": model,
+                },
+            },
+        )
+        start = time.time()
+        loop = asyncio.get_running_loop()
+
+        def _open_stream() -> Any:
+            return self.client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": system_prompt,
+                    },
+                    {
+                        "role": "user",
+                        "content": user_prompt,
+                    },
+                ],
+                **params,
+            )
+
+        try:
+            stream = await loop.run_in_executor(None, _open_stream)
+        except Exception:  # pragma: no cover - upstream failure logging
+            latency = (time.time() - start) * 1000
+            logging.error(
+                "LLM stream open failed",
+                exc_info=True,
+                extra={
+                    "event": "LLM:StreamRequestFailed",
+                    "extra_data": {
+                        "provider": self._provider_name,
+                        "model": model,
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
+            raise
+
+        # Pump the synchronous iterator off the event loop one item
+        # at a time so we keep the main loop responsive.
+        sentinel: Any = object()
+        chunk_count = 0
+        try:
+            while True:
+                item: Any = await loop.run_in_executor(
+                    None, lambda: next(stream, sentinel)
+                )
+                if item is sentinel:
+                    break
+                delta = ""
+                try:
+                    delta = item.choices[0].delta.content or ""
+                except (
+                    AttributeError,
+                    IndexError,
+                    TypeError,
+                ):  # pragma: no cover - defensive fallback
+                    delta = ""
+                if delta:
+                    chunk_count += 1
+                    yield delta
+        finally:
+            latency = (time.time() - start) * 1000
+            logging.info(
+                "LLM stream completed",
+                extra={
+                    "event": "LLM:StreamCompleted",
+                    "extra_data": {
+                        "provider": self._provider_name,
+                        "model": model,
+                        "chunks": chunk_count,
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
+
+    async def generate_stream_messages(
+        self,
+        messages: list[dict[str, str]],
+        model: str,
+        params: dict[str, Any] | None = None,
+    ) -> AsyncIterator[str]:
+        """Native multi-turn streaming via the OpenAI ``messages=`` arg.
+
+        Passes the message list through unchanged so role-tagged
+        context (``system``/``user``/``assistant``) is preserved on
+        the wire.
+        """
+        if not params:
+            params = {}
+        params = {**params, "stream": True}
+        model = model or self._default_model
+
+        logging.info(
+            "LLM stream request sent",
+            extra={
+                "event": "LLM:StreamRequestSent",
+                "extra_data": {
+                    "provider": self._provider_name,
+                    "model": model,
+                    "messages": len(messages),
+                },
+            },
+        )
+        start = time.time()
+        loop = asyncio.get_running_loop()
+
+        def _open_stream() -> Any:
+            return self.client.chat.completions.create(
+                model=model,
+                messages=messages,  # type: ignore[arg-type]
+                **params,
+            )
+
+        try:
+            stream = await loop.run_in_executor(None, _open_stream)
+        except Exception:  # pragma: no cover - upstream failure logging
+            latency = (time.time() - start) * 1000
+            logging.error(
+                "LLM stream open failed",
+                exc_info=True,
+                extra={
+                    "event": "LLM:StreamRequestFailed",
+                    "extra_data": {
+                        "provider": self._provider_name,
+                        "model": model,
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
+            raise
+
+        sentinel: Any = object()
+        chunk_count = 0
+        try:
+            while True:
+                item: Any = await loop.run_in_executor(
+                    None, lambda: next(stream, sentinel)
+                )
+                if item is sentinel:
+                    break
+                delta = ""
+                try:
+                    delta = item.choices[0].delta.content or ""
+                except (
+                    AttributeError,
+                    IndexError,
+                    TypeError,
+                ):  # pragma: no cover - defensive fallback
+                    delta = ""
+                if delta:
+                    chunk_count += 1
+                    yield delta
+        finally:
+            latency = (time.time() - start) * 1000
+            logging.info(
+                "LLM stream completed",
+                extra={
+                    "event": "LLM:StreamCompleted",
+                    "extra_data": {
+                        "provider": self._provider_name,
+                        "model": model,
+                        "chunks": chunk_count,
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
+
     def generate_response_sync(
         self,
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         if not params:
             params = {}

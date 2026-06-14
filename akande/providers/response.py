@@ -44,6 +44,4 @@ class ProviderResponse:
     __slots__ = ("choices",)
 
     def __init__(self, content: str):
-        self.choices = [
-            ProviderChoice(ProviderMessage(content))
-        ]
+        self.choices = [ProviderChoice(ProviderMessage(content))]

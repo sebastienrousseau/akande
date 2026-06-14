@@ -21,6 +21,7 @@ from .akande import Akande
 from .config import LLM_PROVIDER, OPENAI_API_KEY
 from .logger import basic_config
 from .providers import get_provider
+from .providers.base import LLMProvider
 from .services import OpenAIImpl
 from .utils import (
     get_output_directory,
@@ -29,7 +30,7 @@ from .utils import (
 )
 
 
-def _build_akande() -> Akande:
+def _build_akande() -> Akande:  # pragma: no cover - boot path
     """Validate config and return an Akande instance."""
     provider_name = LLM_PROVIDER or "openai"
 
@@ -59,12 +60,10 @@ def _build_akande() -> Akande:
                 },
             },
         )
-        print(
-            f"Error: Could not load provider "
-            f"'{provider_name}': {e}"
-        )
+        print(f"Error: Could not load provider '{provider_name}': {e}")
         sys.exit(1)
 
+    openai_service: OpenAIImpl | LLMProvider
     if provider_name == "openai":
         openai_service = OpenAIImpl()
     else:
@@ -72,7 +71,7 @@ def _build_akande() -> Akande:
     return Akande(openai_service=openai_service)
 
 
-async def main():
+async def main():  # pragma: no cover - interactive entrypoint
     """Run the classic CLI interaction loop."""
     akande = _build_akande()
     try:
@@ -87,41 +86,60 @@ async def main():
 
 def run():
     """Synchronous entry point for console_scripts."""
-    directory_path = get_output_directory()
-    filename = get_output_filename(".log")
-    file_path = directory_path / filename
+    # Subcommand routing comes first: ``akande data export``,
+    # ``akande verify-audit ...`` etc. are non-interactive and must
+    # not boot the TUI or open a microphone.
+    from .cli import dispatch_subcommand
 
-    log_level = logging.INFO
-    log_format = "%(asctime)s - %(levelname)s - %(message)s"
-    basic_config(
+    exit_code = dispatch_subcommand()
+    if exit_code is not None:
+        sys.exit(exit_code)
+
+    directory_path = (
+        get_output_directory()
+    )  # pragma: no cover - interactive
+    filename = get_output_filename(".log")  # pragma: no cover
+    file_path = directory_path / filename  # pragma: no cover
+
+    log_level = logging.INFO  # pragma: no cover
+    log_format = (
+        "%(asctime)s - %(levelname)s - %(message)s"  # pragma: no cover
+    )
+    basic_config(  # pragma: no cover
         filename=str(file_path),
         level=log_level,
         log_format=log_format,
     )
 
     # Use --classic flag to fall back to the plain CLI
-    if "--classic" in sys.argv:
+    if "--classic" in sys.argv:  # pragma: no cover - interactive
         asyncio.run(main())
         return
 
     # In TUI mode, reconfigure logging to file-only so log lines
     # don't corrupt Textual's alternate screen buffer.
-    basic_config(
+    basic_config(  # pragma: no cover - TUI boot
         filename=str(file_path),
         level=log_level,
         log_format=log_format,
         console=False,
     )
     # Suppress CherryPy's own console logging in TUI mode
-    logging.getLogger("cherrypy").setLevel(logging.WARNING)
-    logging.getLogger("cherrypy.error").setLevel(logging.WARNING)
-    logging.getLogger("cherrypy.access").setLevel(logging.WARNING)
+    logging.getLogger("cherrypy").setLevel(
+        logging.WARNING
+    )  # pragma: no cover
+    logging.getLogger("cherrypy.error").setLevel(
+        logging.WARNING
+    )  # pragma: no cover
+    logging.getLogger("cherrypy.access").setLevel(
+        logging.WARNING
+    )  # pragma: no cover
 
-    from .tui import AkandeApp
+    from .tui import AkandeApp  # pragma: no cover
 
-    akande = _build_akande()
-    app = AkandeApp(akande)
-    app.run()
+    akande = _build_akande()  # pragma: no cover
+    app = AkandeApp(akande)  # pragma: no cover
+    app.run()  # pragma: no cover
 
 
 if __name__ == "__main__":

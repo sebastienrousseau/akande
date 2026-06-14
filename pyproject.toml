@@ -8,7 +8,7 @@ version = "0.0.5"
 description = "A self-hosted, provider-agnostic voice assistant that delivers structured executive briefings via voice or text from 10 LLM providers."
 readme = "README.md"
 license = {text = "Apache Software License"}
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     {name = "Sebastien Rousseau", email = "sebastian.rousseau@gmail.com"},
 ]
@@ -18,37 +18,93 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "openai>=1.12.0",
-    "pyaudio>=0.2.14",
+    "openai>=1.50,<2",
     "python-dotenv>=1.0.1",
     "gtts>=2.5.0",
     "reportlab>=4.1.0",
     "speechrecognition>=3.10.1",
     "cherrypy>=18.8.0",
     "pydub>=0.25.1",
-    "textual>=0.50.0",
+    "textual>=0.80,<1",
+    "cryptography>=46.0.7,<47",
 ]
 
 [project.optional-dependencies]
-anthropic = ["anthropic>=0.18.0"]
-google = ["google-generativeai>=0.4.0"]
-mistral = ["mistralai>=0.1.0"]
-cohere = ["cohere>=5.0.0"]
-huggingface = ["huggingface_hub>=0.20.0"]
+# Microphone capture for the interactive STT path.  Optional
+# because pyaudio links against portaudio at build time and CI
+# images don't ship the system headers; the rest of Àkàndé works
+# fine without it.
+mic = ["pyaudio>=0.2.14"]
+anthropic = ["anthropic>=0.40,<1"]
+google = ["google-generativeai>=0.7,<1"]
+mistral = ["mistralai>=1.0,<2"]
+cohere = ["cohere>=5.13,<6"]
+huggingface = ["huggingface_hub>=0.24,<1"]
 offline-tts = ["pyttsx4>=3.0.0"]
+groq = ["groq>=0.11,<1"]
+redis = ["redis>=5.0,<6"]
+# Optional local TTS backend (Kokoro-82M).  CPU-only, MIT-licensed,
+# ~80 MB ONNX model on first run.  Picked up by `AKANDE_TTS=kokoro`.
+tts-local = ["kokoro-onnx>=0.4,<1"]
+# AudioSeal watermarking (EU AI Act Article 50 §2).  Pulls torch +
+# torchaudio + numpy.  Required for full Article 50 coverage; the
+# package is fail-open without it (warns, does not block).
+watermark = [
+    "audioseal>=0.1,<1",
+    "torch>=2.1",
+    "torchaudio>=2.1",
+    "numpy>=1.26",
+]
+# Higher-recall PII redaction for the cache (presidio-analyzer).
+# Falls back to the regex set when not installed.
+redact = ["presidio-analyzer>=2.2,<3"]
+memory = ["mem0ai>=0.1,<1"]
+# Official Anthropic-maintained Model Context Protocol SDK.
+# Required to run `akande mcp serve` (the server side, exposing
+# Àkàndé to Claude Desktop / Cursor / Continue) and `akande mcp
+# list` (the client side, introspecting upstream servers).
+mcp = ["mcp>=0.9,<2"]
 all = [
-    "anthropic>=0.18.0",
-    "google-generativeai>=0.4.0",
-    "mistralai>=0.1.0",
-    "cohere>=5.0.0",
-    "huggingface_hub>=0.20.0",
+    "anthropic>=0.40,<1",
+    "google-generativeai>=0.7,<1",
+    "mistralai>=1.0,<2",
+    "cohere>=5.13,<6",
+    "huggingface_hub>=0.24,<1",
+    "groq>=0.11,<1",
     "pyttsx4>=3.0.0",
+]
+dev = [
+    "pytest>=9.0.3,<10",
+    "pytest-cov>=5.0,<7",
+    "pytest-asyncio>=1.0,<2",
+    "pytest-mock>=3.12,<4",
+    "respx>=0.21,<1",
+    "ruff>=0.6,<1",
+    "mypy>=1.10,<2",
+    "bandit>=1.7,<2",
+    "pip-audit>=2.7,<3",
+    "types-requests",
+    # Bundled into [dev] so the reusable CI workflow (which runs
+    # `pip install -e ".[dev]"`) has every optional surface
+    # exercised by the test suite — provider SDKs, MCP, mem0.
+    "anthropic>=0.40,<1",
+    "google-generativeai>=0.7,<1",
+    "mistralai>=1.0,<2",
+    "cohere>=5.13,<6",
+    "huggingface_hub>=0.24,<1",
+    "groq>=0.11,<1",
+    "pyttsx4>=3.0.0",
+    "mcp>=0.9,<2",
+    # mem0ai is intentionally excluded from [dev]: as of 2026-06
+    # the latest release (0.1.118) carries four unfixed CVEs
+    # (CVE-2026-31240/31241/31245, CVE-2026-7597 fixed only in
+    # the 2.0.0b2 beta).  The integration is mock-tested without
+    # the dep, so users opt in explicitly with `[memory]`.
 ]
 
 [project.scripts]
@@ -63,7 +119,7 @@ include = ["akande*"]
 
 [tool.black]
 line-length = 72
-target-version = ["py39", "py310", "py311", "py312"]
+target-version = ["py310", "py311", "py312"]
 
 [tool.isort]
 profile = "black"
@@ -74,6 +130,51 @@ force_grid_wrap = 0
 combine_as_imports = true
 known_first_party = "akande"
 
+[tool.ruff]
+target-version = "py310"
+line-length = 72
+src = ["akande", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["akande"]
+
+# Mypy configuration lives in ``mypy.ini`` so the strict islands
+# (providers/, cache, budgets, exceptions) and per-module ignores are
+# declared in one place.  Setting ``strict = true`` here would override
+# that and fail every untyped function in the codebase — out of scope
+# for v0.0.6-dev.1.  Raise typing strictness in ``mypy.ini`` instead.
+
 [tool.pytest.ini_options]
-addopts = ["--cov=akande", "--cov-report=term-missing", "--cov-report=xml", "--cov-report=html"]
+addopts = ["--cov=akande", "--cov-report=term-missing", "--cov-report=xml", "--cov-fail-under=95"]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["akande"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    # Defensive guards we never reach in CI.
+    "if __name__ == .__main__.:",
+    # Async-iterator empty-yield idiom used in skeleton implementations.
+    "if False:",
+    # The fallthrough ``...`` ellipsis on abstract methods.
+    "^\\s*\\.\\.\\.\\s*$",
+    # Logging / warning idioms that don't change behaviour.
+    "logger.debug",
+]

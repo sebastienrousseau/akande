@@ -44,8 +44,7 @@ class TestMetricsThreadSafety:
                 mc.record("stage", float(i))
 
         threads = [
-            threading.Thread(target=worker)
-            for _ in range(num_threads)
+            threading.Thread(target=worker) for _ in range(num_threads)
         ]
         for t in threads:
             t.start()
@@ -53,9 +52,7 @@ class TestMetricsThreadSafety:
             t.join(timeout=10)
 
         s = mc.summary()
-        assert s["stage"]["count"] == (
-            num_threads * per_thread
-        )
+        assert s["stage"]["count"] == (num_threads * per_thread)
 
 
 class TestResetClearsData:

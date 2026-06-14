@@ -10,16 +10,16 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from akande.providers.base import LLMProvider
+from akande.providers.registry import (
+    DEFAULT_PROVIDER,
+    ProviderRegistry,
+    _registry,
+    get_provider,
+)
 from akande.providers.response import (
-    ProviderResponse,
     ProviderChoice,
     ProviderMessage,
-)
-from akande.providers.registry import (
-    ProviderRegistry,
-    get_provider,
-    DEFAULT_PROVIDER,
-    _registry,
+    ProviderResponse,
 )
 
 
@@ -75,13 +75,19 @@ class TestLLMProviderABC:
                 return "dummy"
 
             async def generate_response(
-                self, user_prompt, system_prompt, model,
+                self,
+                user_prompt,
+                system_prompt,
+                model,
                 params=None,
             ):
                 return "ok"
 
             def generate_response_sync(
-                self, user_prompt, system_prompt, model,
+                self,
+                user_prompt,
+                system_prompt,
+                model,
                 params=None,
             ):
                 return "ok"
@@ -97,7 +103,6 @@ class TestLLMProviderABC:
 
 
 class TestProviderRegistry:
-
     def test_register_and_create(self):
         reg = ProviderRegistry()
 
@@ -106,14 +111,10 @@ class TestProviderRegistry:
             def provider_name(self):
                 return "fake"
 
-            async def generate_response(
-                self, up, sp, m, params=None
-            ):
+            async def generate_response(self, up, sp, m, params=None):
                 return None
 
-            def generate_response_sync(
-                self, up, sp, m, params=None
-            ):
+            def generate_response_sync(self, up, sp, m, params=None):
                 return None
 
         reg.register("fake", FakeProvider)
@@ -122,9 +123,7 @@ class TestProviderRegistry:
 
     def test_create_unknown_raises(self):
         reg = ProviderRegistry()
-        with pytest.raises(
-            ValueError, match="Unknown LLM provider"
-        ):
+        with pytest.raises(ValueError, match="Unknown LLM provider"):
             reg.create("nonexistent")
 
     def test_available_lists_registered(self):
@@ -135,14 +134,10 @@ class TestProviderRegistry:
             def provider_name(self):
                 return "fp"
 
-            async def generate_response(
-                self, up, sp, m, params=None
-            ):
+            async def generate_response(self, up, sp, m, params=None):
                 return None
 
-            def generate_response_sync(
-                self, up, sp, m, params=None
-            ):
+            def generate_response_sync(self, up, sp, m, params=None):
                 return None
 
         reg.register("alpha", FP)
@@ -158,14 +153,10 @@ class TestProviderRegistry:
             def provider_name(self):
                 return "fp"
 
-            async def generate_response(
-                self, up, sp, m, params=None
-            ):
+            async def generate_response(self, up, sp, m, params=None):
                 return None
 
-            def generate_response_sync(
-                self, up, sp, m, params=None
-            ):
+            def generate_response_sync(self, up, sp, m, params=None):
                 return None
 
         reg.register("cached", FP)
@@ -187,9 +178,16 @@ class TestProviderRegistry:
 
     def test_global_registry_provider_names(self):
         expected = {
-            "openai", "anthropic", "google", "ollama",
-            "azure_openai", "mistral", "cohere",
-            "huggingface", "groq", "lmstudio",
+            "openai",
+            "anthropic",
+            "google",
+            "ollama",
+            "azure_openai",
+            "mistral",
+            "cohere",
+            "huggingface",
+            "groq",
+            "lmstudio",
         }
         assert set(_registry.available) == expected
 
@@ -200,7 +198,6 @@ class TestProviderRegistry:
 
 
 class TestGetProvider:
-
     @patch("openai.OpenAI")
     @patch(
         "akande.config.OPENAI_API_KEY",
@@ -210,14 +207,13 @@ class TestGetProvider:
         from akande.providers.openai_provider import (
             OpenAIProvider,
         )
+
         provider = get_provider("openai")
         assert isinstance(provider, OpenAIProvider)
         assert provider.provider_name == "openai"
 
     def test_get_provider_unknown_raises(self):
-        with pytest.raises(
-            ValueError, match="Unknown LLM provider"
-        ):
+        with pytest.raises(ValueError, match="Unknown LLM provider"):
             get_provider("nonexistent_provider")
 
     @patch("openai.OpenAI")
@@ -226,12 +222,11 @@ class TestGetProvider:
         "sk-test-1234567890abcdef",
     )
     @patch("akande.config.LLM_PROVIDER", "openai")
-    def test_get_provider_default_from_config(
-        self, mock_openai_cls
-    ):
+    def test_get_provider_default_from_config(self, mock_openai_cls):
         from akande.providers.openai_provider import (
             OpenAIProvider,
         )
+
         provider = get_provider()
         assert isinstance(provider, OpenAIProvider)
 
@@ -249,7 +244,6 @@ class TestGetProvider:
 
 
 class TestDefaultProviderConstant:
-
     def test_default_is_openai(self):
         assert DEFAULT_PROVIDER == "openai"
 
@@ -260,7 +254,6 @@ class TestDefaultProviderConstant:
 
 
 class TestOpenAIProvider:
-
     @patch("openai.OpenAI")
     @patch(
         "akande.config.OPENAI_API_KEY",
@@ -270,6 +263,7 @@ class TestOpenAIProvider:
         from akande.providers.openai_provider import (
             OpenAIProvider,
         )
+
         assert OpenAIProvider().provider_name == "openai"
 
     @patch("openai.OpenAI")
@@ -281,15 +275,12 @@ class TestOpenAIProvider:
         from akande.providers.openai_provider import (
             OpenAIProvider,
         )
+
         mock_client = MagicMock()
         mock_cls.return_value = mock_client
-        mock_client.chat.completions.create.return_value = (
-            MagicMock()
-        )
+        mock_client.chat.completions.create.return_value = MagicMock()
         p = OpenAIProvider()
-        result = p.generate_response_sync(
-            "hello", "sys", "gpt-4"
-        )
+        result = p.generate_response_sync("hello", "sys", "gpt-4")
         mock_client.chat.completions.create.assert_called_once()
         assert result is not None
 
@@ -302,11 +293,10 @@ class TestOpenAIProvider:
         from akande.providers.openai_provider import (
             OpenAIProvider,
         )
+
         mock_client = MagicMock()
         mock_cls.return_value = mock_client
-        mock_client.chat.completions.create.return_value = (
-            MagicMock()
-        )
+        mock_client.chat.completions.create.return_value = MagicMock()
         p = OpenAIProvider()
         result = asyncio.run(
             p.generate_response("hello", "sys", "gpt-4")
@@ -322,21 +312,16 @@ class TestOpenAIProvider:
         from akande.providers.openai_provider import (
             OpenAIProvider,
         )
+
         mock_client = MagicMock()
         mock_cls.return_value = mock_client
-        mock_client.chat.completions.create.return_value = (
-            MagicMock()
-        )
+        mock_client.chat.completions.create.return_value = MagicMock()
         p = OpenAIProvider()
         p.generate_response_sync("user", "system", "gpt-4")
         args = mock_client.chat.completions.create.call_args
         msgs = args.kwargs.get("messages", [])
-        assert msgs[0] == {
-            "role": "system", "content": "system"
-        }
-        assert msgs[1] == {
-            "role": "user", "content": "user"
-        }
+        assert msgs[0] == {"role": "system", "content": "system"}
+        assert msgs[1] == {"role": "user", "content": "user"}
 
     @patch("openai.OpenAI")
     @patch(
@@ -347,11 +332,10 @@ class TestOpenAIProvider:
         from akande.providers.openai_provider import (
             OpenAIProvider,
         )
+
         mock_client = MagicMock()
         mock_cls.return_value = mock_client
-        mock_client.chat.completions.create.return_value = (
-            MagicMock()
-        )
+        mock_client.chat.completions.create.return_value = MagicMock()
         p = OpenAIProvider()
         p.generate_response_sync(
             "hi", "sys", "gpt-4", params={"temperature": 0.5}
@@ -372,6 +356,7 @@ class TestOpenAIProvider:
         from akande.providers.openai_provider import (
             OpenAIProvider,
         )
+
         p = OpenAIProvider()
         assert p._default_model == "gpt-4o"
 
@@ -384,16 +369,15 @@ class TestOpenAIProvider:
         from akande.providers.openai_provider import (
             OpenAIProvider,
         )
+
         mock_client = MagicMock()
         mock_cls.return_value = mock_client
-        mock_client.chat.completions.create.side_effect = (
-            RuntimeError("api down")
+        mock_client.chat.completions.create.side_effect = RuntimeError(
+            "api down"
         )
         p = OpenAIProvider()
         with pytest.raises(RuntimeError, match="api down"):
-            p.generate_response_sync(
-                "hi", "sys", "gpt-4"
-            )
+            p.generate_response_sync("hi", "sys", "gpt-4")
 
 
 # ────────────────────────────────────────────────────────────
@@ -402,12 +386,12 @@ class TestOpenAIProvider:
 
 
 class TestOllamaProvider:
-
     @patch("openai.OpenAI")
     def test_provider_name(self, mock_cls):
         from akande.providers.ollama_provider import (
             OllamaProvider,
         )
+
         p = OllamaProvider()
         assert p.provider_name == "ollama"
 
@@ -416,6 +400,7 @@ class TestOllamaProvider:
         from akande.providers.ollama_provider import (
             OllamaProvider,
         )
+
         p = OllamaProvider()
         assert p._base_url == "http://localhost:11434/v1"
 
@@ -428,6 +413,7 @@ class TestOllamaProvider:
         from akande.providers.ollama_provider import (
             OllamaProvider,
         )
+
         p = OllamaProvider()
         assert p._base_url == "http://remote:11434/v1"
 
@@ -436,65 +422,55 @@ class TestOllamaProvider:
         from akande.providers.ollama_provider import (
             OllamaProvider,
         )
+
         mock_client = MagicMock()
         mock_cls.return_value = mock_client
-        mock_client.chat.completions.create.return_value = (
-            MagicMock()
-        )
+        mock_client.chat.completions.create.return_value = MagicMock()
         p = OllamaProvider()
-        result = p.generate_response_sync(
-            "hi", "sys", "llama3"
-        )
+        result = p.generate_response_sync("hi", "sys", "llama3")
         assert result is not None
 
 
 class TestGroqProvider:
-
     @patch("openai.OpenAI")
-    @patch.dict(
-        "os.environ", {"GROQ_API_KEY": "gsk_testkey123"}
-    )
+    @patch.dict("os.environ", {"GROQ_API_KEY": "gsk_testkey123"})
     def test_provider_name(self, mock_cls):
         from akande.providers.groq_provider import (
             GroqProvider,
         )
+
         p = GroqProvider()
         assert p.provider_name == "groq"
 
     @patch("openai.OpenAI")
-    @patch.dict(
-        "os.environ", {"GROQ_API_KEY": "gsk_testkey123"}
-    )
+    @patch.dict("os.environ", {"GROQ_API_KEY": "gsk_testkey123"})
     def test_base_url(self, mock_cls):
         from akande.providers.groq_provider import (
             GroqProvider,
         )
+
         p = GroqProvider()
         assert "groq.com" in p._base_url
 
     @patch("openai.OpenAI")
-    @patch.dict(
-        "os.environ", {"GROQ_API_KEY": "gsk_testkey123"}
-    )
+    @patch.dict("os.environ", {"GROQ_API_KEY": "gsk_testkey123"})
     def test_sync_call(self, mock_cls):
         from akande.providers.groq_provider import (
             GroqProvider,
         )
+
         mock_client = MagicMock()
         mock_cls.return_value = mock_client
-        mock_client.chat.completions.create.return_value = (
-            MagicMock()
-        )
+        mock_client.chat.completions.create.return_value = MagicMock()
         p = GroqProvider()
-        result = p.generate_response_sync(
-            "hi", "sys", "llama3-8b-8192"
-        )
+        result = p.generate_response_sync("hi", "sys", "llama3-8b-8192")
         assert result is not None
 
     def test_missing_api_key_raises(self):
         from akande.providers.groq_provider import (
             GroqProvider,
         )
+
         with patch.dict("os.environ", {}, clear=True):
             with patch.dict(
                 "os.environ",
@@ -505,12 +481,12 @@ class TestGroqProvider:
 
 
 class TestLMStudioProvider:
-
     @patch("openai.OpenAI")
     def test_provider_name(self, mock_cls):
         from akande.providers.lmstudio_provider import (
             LMStudioProvider,
         )
+
         p = LMStudioProvider()
         assert p.provider_name == "lmstudio"
 
@@ -519,6 +495,7 @@ class TestLMStudioProvider:
         from akande.providers.lmstudio_provider import (
             LMStudioProvider,
         )
+
         p = LMStudioProvider()
         assert p._base_url == "http://localhost:1234/v1"
 
@@ -531,6 +508,7 @@ class TestLMStudioProvider:
         from akande.providers.lmstudio_provider import (
             LMStudioProvider,
         )
+
         p = LMStudioProvider()
         assert p._base_url == "http://myhost:5555/v1"
 
@@ -541,7 +519,6 @@ class TestLMStudioProvider:
 
 
 class TestAzureOpenAIProvider:
-
     @patch("openai.AzureOpenAI")
     @patch.dict(
         "os.environ",
@@ -554,6 +531,7 @@ class TestAzureOpenAIProvider:
         from akande.providers.azure_openai_provider import (
             AzureOpenAIProvider,
         )
+
         p = AzureOpenAIProvider()
         assert p.provider_name == "azure_openai"
 
@@ -570,6 +548,7 @@ class TestAzureOpenAIProvider:
         from akande.providers.azure_openai_provider import (
             AzureOpenAIProvider,
         )
+
         p = AzureOpenAIProvider()
         assert p._api_key == "test-key"
 
@@ -585,15 +564,12 @@ class TestAzureOpenAIProvider:
         from akande.providers.azure_openai_provider import (
             AzureOpenAIProvider,
         )
+
         mock_client = MagicMock()
         mock_cls.return_value = mock_client
-        mock_client.chat.completions.create.return_value = (
-            MagicMock()
-        )
+        mock_client.chat.completions.create.return_value = MagicMock()
         p = AzureOpenAIProvider()
-        result = p.generate_response_sync(
-            "hi", "sys", "gpt-35-turbo"
-        )
+        result = p.generate_response_sync("hi", "sys", "gpt-35-turbo")
         assert result is not None
 
     @patch.dict(
@@ -602,14 +578,14 @@ class TestAzureOpenAIProvider:
         clear=False,
     )
     def test_missing_api_key_raises(self):
+        import os
+
         from akande.providers.azure_openai_provider import (
             AzureOpenAIProvider,
         )
-        import os
+
         os.environ.pop("AZURE_OPENAI_API_KEY", None)
-        with pytest.raises(
-            ValueError, match="AZURE_OPENAI_API_KEY"
-        ):
+        with pytest.raises(ValueError, match="AZURE_OPENAI_API_KEY"):
             AzureOpenAIProvider()
 
     @patch.dict(
@@ -618,14 +594,14 @@ class TestAzureOpenAIProvider:
         clear=False,
     )
     def test_missing_endpoint_raises(self):
+        import os
+
         from akande.providers.azure_openai_provider import (
             AzureOpenAIProvider,
         )
-        import os
+
         os.environ.pop("AZURE_OPENAI_ENDPOINT", None)
-        with pytest.raises(
-            ValueError, match="AZURE_OPENAI_ENDPOINT"
-        ):
+        with pytest.raises(ValueError, match="AZURE_OPENAI_ENDPOINT"):
             AzureOpenAIProvider()
 
 
@@ -635,7 +611,6 @@ class TestAzureOpenAIProvider:
 
 
 class TestAnthropicProvider:
-
     @patch("anthropic.Anthropic")
     @patch.dict(
         "os.environ",
@@ -645,6 +620,7 @@ class TestAnthropicProvider:
         from akande.providers.anthropic_provider import (
             AnthropicProvider,
         )
+
         p = AnthropicProvider()
         assert p.provider_name == "anthropic"
 
@@ -653,12 +629,11 @@ class TestAnthropicProvider:
         "os.environ",
         {"ANTHROPIC_API_KEY": "sk-ant-test123"},
     )
-    def test_sync_call_returns_provider_response(
-        self, mock_cls
-    ):
+    def test_sync_call_returns_provider_response(self, mock_cls):
         from akande.providers.anthropic_provider import (
             AnthropicProvider,
         )
+
         mock_client = MagicMock()
         mock_cls.return_value = mock_client
 
@@ -666,17 +641,13 @@ class TestAnthropicProvider:
         mock_block.text = "hello response"
         mock_response = MagicMock()
         mock_response.content = [mock_block]
-        mock_client.messages.create.return_value = (
-            mock_response
-        )
+        mock_client.messages.create.return_value = mock_response
 
         p = AnthropicProvider()
         result = p.generate_response_sync(
             "hi", "sys", "claude-3-haiku-20240307"
         )
-        assert result.choices[0].message.content == (
-            "hello response"
-        )
+        assert result.choices[0].message.content == ("hello response")
 
     @patch("anthropic.Anthropic")
     @patch.dict(
@@ -687,6 +658,7 @@ class TestAnthropicProvider:
         from akande.providers.anthropic_provider import (
             AnthropicProvider,
         )
+
         mock_client = MagicMock()
         mock_cls.return_value = mock_client
 
@@ -694,19 +666,13 @@ class TestAnthropicProvider:
         mock_block.text = "async result"
         mock_response = MagicMock()
         mock_response.content = [mock_block]
-        mock_client.messages.create.return_value = (
-            mock_response
-        )
+        mock_client.messages.create.return_value = mock_response
 
         p = AnthropicProvider()
         result = asyncio.run(
-            p.generate_response(
-                "hi", "sys", "claude-3-haiku-20240307"
-            )
+            p.generate_response("hi", "sys", "claude-3-haiku-20240307")
         )
-        assert result.choices[0].message.content == (
-            "async result"
-        )
+        assert result.choices[0].message.content == ("async result")
 
     @patch("anthropic.Anthropic")
     @patch.dict(
@@ -717,6 +683,7 @@ class TestAnthropicProvider:
         from akande.providers.anthropic_provider import (
             AnthropicProvider,
         )
+
         mock_client = MagicMock()
         mock_cls.return_value = mock_client
 
@@ -724,13 +691,12 @@ class TestAnthropicProvider:
         mock_block.text = ""
         mock_response = MagicMock()
         mock_response.content = [mock_block]
-        mock_client.messages.create.return_value = (
-            mock_response
-        )
+        mock_client.messages.create.return_value = mock_response
 
         p = AnthropicProvider()
         p.generate_response_sync(
-            "user msg", "system msg",
+            "user msg",
+            "system msg",
             "claude-3-haiku-20240307",
         )
         args = mock_client.messages.create.call_args
@@ -740,12 +706,9 @@ class TestAnthropicProvider:
         from akande.providers.anthropic_provider import (
             AnthropicProvider,
         )
-        with patch.dict(
-            "os.environ", {"ANTHROPIC_API_KEY": ""}
-        ):
-            with pytest.raises(
-                ValueError, match="ANTHROPIC_API_KEY"
-            ):
+
+        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": ""}):
+            with pytest.raises(ValueError, match="ANTHROPIC_API_KEY"):
                 AnthropicProvider()
 
     @patch("anthropic.Anthropic")
@@ -757,10 +720,11 @@ class TestAnthropicProvider:
         from akande.providers.anthropic_provider import (
             AnthropicProvider,
         )
+
         mock_client = MagicMock()
         mock_cls.return_value = mock_client
-        mock_client.messages.create.side_effect = (
-            RuntimeError("api down")
+        mock_client.messages.create.side_effect = RuntimeError(
+            "api down"
         )
         p = AnthropicProvider()
         with pytest.raises(RuntimeError, match="api down"):
@@ -775,7 +739,6 @@ class TestAnthropicProvider:
 
 
 class TestGoogleProvider:
-
     @patch("google.generativeai.configure")
     @patch("google.generativeai.GenerativeModel")
     @patch.dict(
@@ -786,6 +749,7 @@ class TestGoogleProvider:
         from akande.providers.google_provider import (
             GoogleProvider,
         )
+
         p = GoogleProvider()
         assert p.provider_name == "google"
 
@@ -799,33 +763,25 @@ class TestGoogleProvider:
         from akande.providers.google_provider import (
             GoogleProvider,
         )
+
         mock_model = MagicMock()
         mock_model_cls.return_value = mock_model
         mock_response = MagicMock()
         mock_response.text = "gemini says hi"
-        mock_model.generate_content.return_value = (
-            mock_response
-        )
+        mock_model.generate_content.return_value = mock_response
 
         p = GoogleProvider()
-        result = p.generate_response_sync(
-            "hi", "sys", "gemini-pro"
-        )
-        assert result.choices[0].message.content == (
-            "gemini says hi"
-        )
+        result = p.generate_response_sync("hi", "sys", "gemini-pro")
+        assert result.choices[0].message.content == ("gemini says hi")
 
     def test_missing_api_key_raises(self):
         from akande.providers.google_provider import (
             GoogleProvider,
         )
+
         with patch("google.generativeai.configure"):
-            with patch.dict(
-                "os.environ", {"GOOGLE_API_KEY": ""}
-            ):
-                with pytest.raises(
-                    ValueError, match="GOOGLE_API_KEY"
-                ):
+            with patch.dict("os.environ", {"GOOGLE_API_KEY": ""}):
+                with pytest.raises(ValueError, match="GOOGLE_API_KEY"):
                     GoogleProvider()
 
 
@@ -835,7 +791,6 @@ class TestGoogleProvider:
 
 
 class TestMistralProvider:
-
     @patch("mistralai.Mistral")
     @patch.dict(
         "os.environ",
@@ -845,6 +800,7 @@ class TestMistralProvider:
         from akande.providers.mistral_provider import (
             MistralProvider,
         )
+
         p = MistralProvider()
         assert p.provider_name == "mistral"
 
@@ -857,6 +813,7 @@ class TestMistralProvider:
         from akande.providers.mistral_provider import (
             MistralProvider,
         )
+
         mock_client = MagicMock()
         mock_cls.return_value = mock_client
 
@@ -870,20 +827,15 @@ class TestMistralProvider:
         result = p.generate_response_sync(
             "hi", "sys", "mistral-small-latest"
         )
-        assert result.choices[0].message.content == (
-            "mistral response"
-        )
+        assert result.choices[0].message.content == ("mistral response")
 
     def test_missing_api_key_raises(self):
         from akande.providers.mistral_provider import (
             MistralProvider,
         )
-        with patch.dict(
-            "os.environ", {"MISTRAL_API_KEY": ""}
-        ):
-            with pytest.raises(
-                ValueError, match="MISTRAL_API_KEY"
-            ):
+
+        with patch.dict("os.environ", {"MISTRAL_API_KEY": ""}):
+            with pytest.raises(ValueError, match="MISTRAL_API_KEY"):
                 MistralProvider()
 
 
@@ -893,7 +845,6 @@ class TestMistralProvider:
 
 
 class TestCohereProvider:
-
     @patch("cohere.ClientV2")
     @patch.dict(
         "os.environ",
@@ -903,6 +854,7 @@ class TestCohereProvider:
         from akande.providers.cohere_provider import (
             CohereProvider,
         )
+
         p = CohereProvider()
         assert p.provider_name == "cohere"
 
@@ -915,6 +867,7 @@ class TestCohereProvider:
         from akande.providers.cohere_provider import (
             CohereProvider,
         )
+
         mock_client = MagicMock()
         mock_cls.return_value = mock_client
 
@@ -927,23 +880,16 @@ class TestCohereProvider:
         mock_client.chat.return_value = mock_response
 
         p = CohereProvider()
-        result = p.generate_response_sync(
-            "hi", "sys", "command-r"
-        )
-        assert result.choices[0].message.content == (
-            "cohere response"
-        )
+        result = p.generate_response_sync("hi", "sys", "command-r")
+        assert result.choices[0].message.content == ("cohere response")
 
     def test_missing_api_key_raises(self):
         from akande.providers.cohere_provider import (
             CohereProvider,
         )
-        with patch.dict(
-            "os.environ", {"COHERE_API_KEY": ""}
-        ):
-            with pytest.raises(
-                ValueError, match="COHERE_API_KEY"
-            ):
+
+        with patch.dict("os.environ", {"COHERE_API_KEY": ""}):
+            with pytest.raises(ValueError, match="COHERE_API_KEY"):
                 CohereProvider()
 
 
@@ -953,7 +899,6 @@ class TestCohereProvider:
 
 
 class TestHuggingFaceProvider:
-
     @patch("huggingface_hub.InferenceClient")
     @patch.dict(
         "os.environ",
@@ -963,6 +908,7 @@ class TestHuggingFaceProvider:
         from akande.providers.huggingface_provider import (
             HuggingFaceProvider,
         )
+
         p = HuggingFaceProvider()
         assert p.provider_name == "huggingface"
 
@@ -975,6 +921,7 @@ class TestHuggingFaceProvider:
         from akande.providers.huggingface_provider import (
             HuggingFaceProvider,
         )
+
         mock_client = MagicMock()
         mock_cls.return_value = mock_client
 
@@ -982,29 +929,23 @@ class TestHuggingFaceProvider:
         mock_choice.message.content = "hf response"
         mock_response = MagicMock()
         mock_response.choices = [mock_choice]
-        mock_client.chat_completion.return_value = (
-            mock_response
-        )
+        mock_client.chat_completion.return_value = mock_response
 
         p = HuggingFaceProvider()
         result = p.generate_response_sync(
-            "hi", "sys",
+            "hi",
+            "sys",
             "mistralai/Mistral-7B-Instruct-v0.2",
         )
-        assert result.choices[0].message.content == (
-            "hf response"
-        )
+        assert result.choices[0].message.content == ("hf response")
 
     def test_missing_api_key_raises(self):
         from akande.providers.huggingface_provider import (
             HuggingFaceProvider,
         )
-        with patch.dict(
-            "os.environ", {"HUGGINGFACE_API_KEY": ""}
-        ):
-            with pytest.raises(
-                ValueError, match="HUGGINGFACE_API_KEY"
-            ):
+
+        with patch.dict("os.environ", {"HUGGINGFACE_API_KEY": ""}):
+            with pytest.raises(ValueError, match="HUGGINGFACE_API_KEY"):
                 HuggingFaceProvider()
 
 
@@ -1049,12 +990,14 @@ class TestImportErrors:
 
     def test_anthropic_import_error(self):
         import sys
+
         saved = sys.modules.get("anthropic")
         sys.modules["anthropic"] = None
         try:
             from akande.providers.anthropic_provider import (
                 AnthropicProvider,
             )
+
             with pytest.raises(ImportError, match="anthropic"):
                 AnthropicProvider()
         finally:
@@ -1065,6 +1008,7 @@ class TestImportErrors:
 
     def test_google_import_error(self):
         import sys
+
         saved = sys.modules.get("google.generativeai")
         saved_google = sys.modules.get("google")
         sys.modules["google.generativeai"] = None
@@ -1073,6 +1017,7 @@ class TestImportErrors:
             from akande.providers.google_provider import (
                 GoogleProvider,
             )
+
             with pytest.raises(ImportError):
                 GoogleProvider()
         finally:
@@ -1087,12 +1032,14 @@ class TestImportErrors:
 
     def test_mistral_import_error(self):
         import sys
+
         saved = sys.modules.get("mistralai")
         sys.modules["mistralai"] = None
         try:
             from akande.providers.mistral_provider import (
                 MistralProvider,
             )
+
             with pytest.raises(ImportError, match="mistralai"):
                 MistralProvider()
         finally:
@@ -1103,12 +1050,14 @@ class TestImportErrors:
 
     def test_cohere_import_error(self):
         import sys
+
         saved = sys.modules.get("cohere")
         sys.modules["cohere"] = None
         try:
             from akande.providers.cohere_provider import (
                 CohereProvider,
             )
+
             with pytest.raises(ImportError, match="cohere"):
                 CohereProvider()
         finally:
@@ -1119,15 +1068,15 @@ class TestImportErrors:
 
     def test_huggingface_import_error(self):
         import sys
+
         saved = sys.modules.get("huggingface_hub")
         sys.modules["huggingface_hub"] = None
         try:
             from akande.providers.huggingface_provider import (
                 HuggingFaceProvider,
             )
-            with pytest.raises(
-                ImportError, match="huggingface_hub"
-            ):
+
+            with pytest.raises(ImportError, match="huggingface_hub"):
                 HuggingFaceProvider()
         finally:
             if saved is not None:

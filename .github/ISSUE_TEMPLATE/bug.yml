@@ -1,0 +1,97 @@
+name: 🐞 Bug report
+description: Report a defect in Àkàndé
+title: "[bug] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report.
+
+        **Security vulnerabilities should not be reported here.** Follow
+        the disclosure process in [SECURITY.md](../SECURITY.md) instead.
+  - type: input
+    id: version
+    attributes:
+      label: Àkàndé version
+      description: Output of `python -c "import akande; print(akande.__version__)"` or the tag you installed.
+      placeholder: "0.0.6"
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: LLM provider in use
+      multiple: false
+      options:
+        - openai
+        - anthropic
+        - google
+        - ollama
+        - lmstudio
+        - groq
+        - azure_openai
+        - mistral
+        - cohere
+        - huggingface
+        - other / multiple
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      description: Which UI was affected?
+      options:
+        - CLI
+        - TUI
+        - Web UI
+        - HTTP API
+        - Server / Docker
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: A minimal sequence that reliably triggers the bug.
+      placeholder: |
+        1. Run `python -m akande`
+        2. Choose option 2
+        3. Type "..."
+        4. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: Include the full error message, log output, or screenshot.
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: Run `python --version && uname -a && pip freeze | grep -E "akande|openai|anthropic|cherrypy|textual"`.
+      render: shell
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I searched existing issues and confirmed this is not a duplicate.
+          required: true
+        - label: I am running the latest released version (or main).
+          required: true
+        - label: This is not a security vulnerability.
+          required: true

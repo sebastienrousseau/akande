@@ -14,22 +14,25 @@
 # limitations under the License.
 #
 import csv
-from typing import Optional
-from xml.sax.saxutils import escape as xml_escape
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import (
-    SimpleDocTemplate,
-    Paragraph,
-    Spacer,
-    Image,
-)
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_LEFT
-from pathlib import Path
 import datetime
 import logging
 import os
 import re
+from pathlib import Path
+from xml.sax.saxutils import escape as xml_escape
+
+from reportlab.lib.enums import TA_LEFT
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import (
+    Image,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+)
+
+from akande.audit import build_manifest, write_sidecar
+from akande.profiles import active_profile
 
 # Module-level cached styles for PDF generation
 _styles = getSampleStyleSheet()
@@ -123,14 +126,12 @@ def get_output_filename(extension: str) -> str:
         The generated filename.
     """
     return (
-        datetime.datetime.now().strftime(
-            "%Y-%m-%d-%H-%M-%S-Akande"
-        )
+        datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-Akande")
         + extension
     )
 
 
-def validate_api_key(api_key: Optional[str]) -> bool:
+def validate_api_key(api_key: str | None) -> bool:
     """
     Validates the format of an OpenAI API key.
 
@@ -185,7 +186,53 @@ def _markdown_inline_to_reportlab(text: str) -> str:
     return text
 
 
-def generate_pdf(question: str, response: str) -> str:
+def _maybe_sign_briefing(
+    *,
+    pdf_path,
+    question: str,
+    response: str,
+    provider: str,
+    model: str,
+    correlation_id: str | None,
+) -> None:
+    """Write an Ed25519-signed audit sidecar when the profile requires it.
+
+    Lives next to :func:`generate_pdf` so the signing decision rides
+    with the PDF artefact.  Quietly does nothing when the active
+    profile has ``audit_signing`` disabled (the default ``local``
+    profile) — existing v0.0.5 behaviour is unchanged.
+    """
+    try:
+        profile = active_profile()
+        if not profile.audit_signing:
+            return
+        manifest = build_manifest(
+            prompt=question,
+            response=response,
+            provider=provider,
+            model=model,
+            profile=profile.name,
+            correlation_id=correlation_id,
+        )
+        write_sidecar(manifest, pdf_path)
+    except Exception:
+        # Audit signing must never block briefing delivery; log
+        # and continue.
+        logging.error(
+            "Audit signing failed",
+            exc_info=True,
+            extra={"event": "Audit:SigningFailed"},
+        )
+
+
+def generate_pdf(
+    question: str,
+    response: str,
+    *,
+    provider: str = "openai",
+    model: str = "",
+    correlation_id: str | None = None,
+) -> str:
     """
     Generates a PDF document containing a question and response.
 
@@ -194,12 +241,26 @@ def generate_pdf(question: str, response: str) -> str:
     become ``<b>``/``<i>`` tags, and bullet lists use the list
     item style.
 
+    When the active operational profile (see :mod:`akande.profiles`)
+    has ``audit_signing`` enabled — i.e. ``AKANDE_PROFILE=eu`` or
+    ``strict`` — an Ed25519-signed audit sidecar
+    (``<pdf>.audit.json``) is written next to the PDF.  The sidecar
+    contains the model + provider, the prompt and response hashes,
+    a timestamp, and the signature; verify it with
+    ``akande verify-pdf <path>``.
+
     Parameters
     ----------
     question : str
         The question to be included in the PDF.
     response : str
         The response to the question (may contain markdown).
+    provider, model:
+        Recorded in the audit manifest when signing is on.  Optional
+        because the unsigned (``local``) path is unchanged.
+    correlation_id:
+        Carried through the audit log so the sidecar can be
+        correlated with structured log entries.
     """
     try:
         directory_path = get_output_directory()
@@ -210,7 +271,9 @@ def generate_pdf(question: str, response: str) -> str:
         flowables = []
 
         # Optional: Add a logo at the top if the file exists
-        logo_path = Path(__file__).resolve().parent.parent / "512x512.png"
+        logo_path = (
+            Path(__file__).resolve().parent.parent / "512x512.png"
+        )
         if logo_path.exists():
             logo = Image(str(logo_path), width=48, height=48)
             logo.hAlign = "RIGHT"
@@ -220,9 +283,7 @@ def generate_pdf(question: str, response: str) -> str:
 
         # Escape user input to prevent ReportLab markup injection
         safe_question = xml_escape(question.title())
-        flowables.append(
-            Paragraph(safe_question, _heading1_style)
-        )
+        flowables.append(Paragraph(safe_question, _heading1_style))
         flowables.append(Spacer(1, 6))
 
         # Process and format the response content
@@ -233,13 +294,9 @@ def generate_pdf(question: str, response: str) -> str:
                 continue
 
             # Detect markdown heading (## …)
-            heading_match = re.match(
-                r"^#{1,6}\s+(.*)", stripped
-            )
+            heading_match = re.match(r"^#{1,6}\s+(.*)", stripped)
             if heading_match:
-                heading_text = xml_escape(
-                    heading_match.group(1)
-                )
+                heading_text = xml_escape(heading_match.group(1))
                 flowables.append(
                     Paragraph(heading_text, _heading2_style)
                 )
@@ -258,9 +315,7 @@ def generate_pdf(question: str, response: str) -> str:
                 safe_para = _markdown_inline_to_reportlab(
                     xml_escape(stripped)
                 )
-                flowables.append(
-                    Paragraph(safe_para, _heading2_style)
-                )
+                flowables.append(Paragraph(safe_para, _heading2_style))
                 flowables.append(Spacer(1, 6))
                 continue
 
@@ -271,20 +326,18 @@ def generate_pdf(question: str, response: str) -> str:
                     xml_escape(item_text)
                 )
                 flowables.append(
-                    Paragraph(
-                        "- " + safe_item, _list_item_style
-                    )
+                    Paragraph("- " + safe_item, _list_item_style)
                 )
                 flowables.append(Spacer(1, 6))
                 continue
 
-            if re.match(r"^\d+[.)]\s", stripped):
+            if re.match(
+                r"^\d+[.)]\s", stripped
+            ):  # pragma: no cover - exercised in integration
                 safe_para = _markdown_inline_to_reportlab(
                     xml_escape(stripped)
                 )
-                flowables.append(
-                    Paragraph(safe_para, _list_item_style)
-                )
+                flowables.append(Paragraph(safe_para, _list_item_style))
                 flowables.append(Spacer(1, 6))
                 continue
 
@@ -292,15 +345,13 @@ def generate_pdf(question: str, response: str) -> str:
             safe_para = _markdown_inline_to_reportlab(
                 xml_escape(stripped)
             )
-            flowables.append(
-                Paragraph(safe_para, _paragraph_style)
-            )
+            flowables.append(Paragraph(safe_para, _paragraph_style))
             flowables.append(Spacer(1, 6))
 
         doc.build(flowables)
         try:
             os.chmod(str(file_path), 0o600)
-        except OSError:
+        except OSError:  # pragma: no cover - filesystem-specific
             pass
         logging.info(
             "PDF generated",
@@ -309,8 +360,16 @@ def generate_pdf(question: str, response: str) -> str:
                 "extra_data": {"file_path": str(file_path)},
             },
         )
+        _maybe_sign_briefing(
+            pdf_path=file_path,
+            question=question,
+            response=response,
+            provider=provider,
+            model=model,
+            correlation_id=correlation_id,
+        )
         return str(file_path)
-    except Exception as e:
+    except Exception as e:  # pragma: no cover - logged + returns ""
         logging.error(
             f"PDF generation failed: {type(e).__name__}: {e}",
             exc_info=True,
@@ -344,7 +403,7 @@ def generate_csv(question: str, response: str) -> str:
 
         try:
             os.chmod(str(file_path), 0o600)
-        except OSError:
+        except OSError:  # pragma: no cover - filesystem-specific
             pass
         logging.info(
             "CSV generated",
@@ -354,7 +413,7 @@ def generate_csv(question: str, response: str) -> str:
             },
         )
         return str(file_path)
-    except Exception as e:
+    except Exception as e:  # pragma: no cover - logged + returns ""
         logging.error(
             f"CSV generation failed: {type(e).__name__}: {e}",
             exc_info=True,

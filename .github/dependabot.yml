@@ -1,0 +1,53 @@
+version: 2
+updates:
+  # Python runtime + dev deps
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "python"
+    groups:
+      provider-sdks:
+        patterns:
+          - "openai"
+          - "anthropic"
+          - "google-generativeai"
+          - "mistralai"
+          - "cohere"
+          - "huggingface_hub"
+          - "groq"
+      dev-tools:
+        patterns:
+          - "pytest*"
+          - "mypy"
+          - "bandit"
+          - "pip-audit"
+          - "respx"
+      ui:
+        patterns:
+          - "textual"
+          - "cherrypy"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "ci"
+
+  # Docker base image
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "docker"

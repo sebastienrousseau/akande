@@ -17,7 +17,8 @@ import asyncio
 import logging
 import os
 import time
-from typing import Any, Dict, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 from .base import LLMProvider
 from .response import ProviderResponse
@@ -33,15 +34,15 @@ class MistralProvider(LLMProvider):
     def provider_name(self) -> str:
         return "mistral"
 
-    def __init__(self):
+    def __init__(self) -> None:
         try:
             from mistralai import Mistral
-        except ImportError:
+        except ImportError as exc:
             raise ImportError(
                 "The 'mistralai' package is required for the "
                 "Mistral provider. "
                 "Install it with: pip install akande[mistral]"
-            )
+            ) from exc
         api_key = os.getenv("MISTRAL_API_KEY", "")
         if not api_key:
             raise ValueError(
@@ -56,14 +57,14 @@ class MistralProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> ProviderResponse:
         if not params:
             params = {}
         model = model or self._default_model
         response = self.client.chat.complete(
             model=model,
-            messages=[
+            messages=[  # type: ignore[arg-type, unused-ignore]
                 {
                     "role": "system",
                     "content": system_prompt,
@@ -75,7 +76,15 @@ class MistralProvider(LLMProvider):
             ],
             **params,
         )
-        text = response.choices[0].message.content
+        raw = response.choices[0].message.content
+        # Mistral v1 returns str | content-block list | Unset | None.
+        # For the Akande BLUF use case we expect plain text.
+        if isinstance(raw, str):
+            text = raw
+        elif raw is None:
+            text = ""
+        else:
+            text = "".join(getattr(chunk, "text", "") for chunk in raw)
         return ProviderResponse(text)
 
     async def generate_response(
@@ -83,7 +92,7 @@ class MistralProvider(LLMProvider):
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         logging.info(
             "LLM request sent",
@@ -107,7 +116,7 @@ class MistralProvider(LLMProvider):
                     params,
                 ),
             )
-        except Exception:
+        except Exception:  # pragma: no cover - upstream failure logging
             latency = (time.time() - start) * 1000
             logging.error(
                 "LLM request failed",
@@ -116,9 +125,7 @@ class MistralProvider(LLMProvider):
                     "event": "LLM:RequestFailed",
                     "extra_data": {
                         "provider": "mistral",
-                        "model": (
-                            model or self._default_model
-                        ),
+                        "model": (model or self._default_model),
                         "latency_ms": round(latency, 2),
                     },
                 },
@@ -138,12 +145,103 @@ class MistralProvider(LLMProvider):
         )
         return response
 
+    async def generate_stream(
+        self,
+        user_prompt: str,
+        system_prompt: str,
+        model: str,
+        params: dict[str, Any] | None = None,
+    ) -> AsyncIterator[str]:
+        """Native streaming for Mistral v1+ ``client.chat.stream``."""
+        if not params:
+            params = {}
+        model = model or self._default_model
+
+        logging.info(
+            "LLM stream request sent",
+            extra={
+                "event": "LLM:StreamRequestSent",
+                "extra_data": {
+                    "provider": "mistral",
+                    "model": model,
+                },
+            },
+        )
+        start = time.time()
+        loop = asyncio.get_running_loop()
+
+        def _open_stream() -> Any:
+            return self.client.chat.stream(
+                model=model,
+                messages=[  # type: ignore[arg-type, unused-ignore]
+                    {
+                        "role": "system",
+                        "content": system_prompt,
+                    },
+                    {
+                        "role": "user",
+                        "content": user_prompt,
+                    },
+                ],
+                **params,
+            )
+
+        try:
+            stream = await loop.run_in_executor(None, _open_stream)
+        except Exception:  # pragma: no cover - upstream failure logging
+            latency = (time.time() - start) * 1000
+            logging.error(
+                "LLM stream open failed",
+                exc_info=True,
+                extra={
+                    "event": "LLM:StreamRequestFailed",
+                    "extra_data": {
+                        "provider": "mistral",
+                        "model": model,
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
+            raise
+
+        sentinel: Any = object()
+        chunk_count = 0
+        try:
+            while True:
+                item: Any = await loop.run_in_executor(
+                    None, lambda: next(stream, sentinel)
+                )
+                if item is sentinel:
+                    break
+                delta = ""
+                try:
+                    delta = item.data.choices[0].delta.content or ""
+                except (AttributeError, IndexError, TypeError):
+                    delta = ""
+                if delta and isinstance(delta, str):
+                    chunk_count += 1
+                    yield delta
+        finally:
+            latency = (time.time() - start) * 1000
+            logging.info(
+                "LLM stream completed",
+                extra={
+                    "event": "LLM:StreamCompleted",
+                    "extra_data": {
+                        "provider": "mistral",
+                        "model": model,
+                        "chunks": chunk_count,
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
+
     def generate_response_sync(
         self,
         user_prompt: str,
         system_prompt: str,
         model: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         logging.info(
             "LLM sync request sent",
@@ -160,7 +258,7 @@ class MistralProvider(LLMProvider):
             response = self._call(
                 user_prompt, system_prompt, model, params
             )
-        except Exception:
+        except Exception:  # pragma: no cover - upstream failure logging
             latency = (time.time() - start) * 1000
             logging.error(
                 "LLM sync request failed",
@@ -169,9 +267,7 @@ class MistralProvider(LLMProvider):
                     "event": "LLM:RequestFailed",
                     "extra_data": {
                         "provider": "mistral",
-                        "model": (
-                            model or self._default_model
-                        ),
+                        "model": (model or self._default_model),
                         "latency_ms": round(latency, 2),
                     },
                 },

@@ -1,0 +1,49 @@
+name: ✨ Feature request
+description: Propose a new capability or enhancement
+title: "[feat] "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please check the [implementation plan](https://github.com/sebastienrousseau/akande/blob/main/docs/roadmap.md)
+        before opening a feature request — large items may already be
+        scheduled or out of scope for the current release.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user need is unmet today? Who hits it and how often?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you build? Include API/CLI/UI shape if relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing workarounds, libraries, or designs you rejected and why.
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope estimate
+      options:
+        - small (single PR, <300 LOC)
+        - medium (single PR, 300–1500 LOC)
+        - large (multi-PR / track-level)
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I searched existing issues and confirmed this is not a duplicate.
+          required: true
+        - label: I have read the v0.0.6 scope statement and confirmed this is in scope, OR I am proposing it for v0.0.7+.
+          required: true

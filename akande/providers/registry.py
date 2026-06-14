@@ -15,14 +15,13 @@
 #
 import importlib
 import logging
-from typing import Dict, List, Optional, Type
 
 from .base import LLMProvider
 
 DEFAULT_PROVIDER = "openai"
 
 # Lazy import mapping: provider name -> (module_path, class_name)
-_PROVIDER_MAP: Dict[str, tuple] = {
+_PROVIDER_MAP: dict[str, tuple] = {
     "openai": (
         ".openai_provider",
         "OpenAIProvider",
@@ -76,20 +75,18 @@ class ProviderRegistry:
 
     def __init__(
         self,
-        lazy_map: Optional[Dict[str, tuple]] = None,
+        lazy_map: dict[str, tuple] | None = None,
     ):
-        self._classes: Dict[
-            str, Type[LLMProvider]
-        ] = {}
-        self._instances: Dict[str, LLMProvider] = {}
-        self._lazy_map: Dict[str, tuple] = (
+        self._classes: dict[str, type[LLMProvider]] = {}
+        self._instances: dict[str, LLMProvider] = {}
+        self._lazy_map: dict[str, tuple] = (
             dict(lazy_map) if lazy_map else {}
         )
 
     def register(
         self,
         name: str,
-        cls: Type[LLMProvider],
+        cls: type[LLMProvider],
     ) -> None:
         """Register a provider class under the given name."""
         self._classes[name] = cls
@@ -104,15 +101,13 @@ class ProviderRegistry:
         self._lazy_map[name] = (module_path, class_name)
 
     @property
-    def available(self) -> List[str]:
+    def available(self) -> list[str]:
         """Return list of registered provider names."""
         names = set(self._classes.keys())
         names.update(self._lazy_map.keys())
         return sorted(names)
 
-    def _resolve_class(
-        self, name: str
-    ) -> Type[LLMProvider]:
+    def _resolve_class(self, name: str) -> type[LLMProvider]:
         """Resolve a provider class, importing lazily."""
         if name in self._classes:
             return self._classes[name]
@@ -180,6 +175,14 @@ def get_provider(name: str = "") -> LLMProvider:
         from akande.config import LLM_PROVIDER
 
         name = LLM_PROVIDER or DEFAULT_PROVIDER
+
+    # ``AKANDE_MODE=offline`` refuses any non-local provider.  We
+    # check at the registry boundary so the rest of the codebase
+    # never has to ask "is this allowed?".  Imported lazily to keep
+    # the registry import-time-light.
+    from akande.mode import enforce_for_provider
+
+    enforce_for_provider(name)
 
     logging.info(
         "LLM provider resolved",

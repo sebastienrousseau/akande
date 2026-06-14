@@ -20,6 +20,7 @@ import sys
 import threading
 import traceback
 from datetime import datetime, timezone
+from typing import Any
 
 
 class JSONFormatter(logging.Formatter):
@@ -30,7 +31,7 @@ class JSONFormatter(logging.Formatter):
         self.service = service
 
     def format(self, record: logging.LogRecord) -> str:
-        log_entry = {
+        log_entry: dict[str, Any] = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
@@ -122,9 +123,7 @@ class MetricsCollector:
     def record(self, stage: str, latency_ms: float) -> None:
         """Record a latency sample for *stage*."""
         with self._lock:
-            self._data.setdefault(stage, []).append(
-                latency_ms
-            )
+            self._data.setdefault(stage, []).append(latency_ms)
 
     def summary(self) -> dict[str, dict[str, float]]:
         """Return per-stage statistics.

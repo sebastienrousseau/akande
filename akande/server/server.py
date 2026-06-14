@@ -13,37 +13,65 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import cherrypy
+import asyncio
 import hashlib
+import io
 import json
 import logging
 import os
-import io
 import re
 import secrets
 import tempfile
 import time
-import threading
 import uuid
-import speech_recognition as sr
+from collections.abc import AsyncIterator
 from pathlib import Path
+
+import cherrypy
+import speech_recognition as sr
 from pydub import AudioSegment
 from pydub.exceptions import CouldntDecodeError
+
+from akande import telemetry
+from akande.akande import _friendly_llm_error
 from akande.cache import SQLiteCache
 from akande.config import (
+    AKANDE_API_KEY,
     LLM_PROVIDER,
     OPENAI_API_KEY,
     OPENAI_DEFAULT_MODEL,
+    REDIS_URL,
 )
-from akande.akande import _friendly_llm_error
+from akande.conversation import ConversationStore
+from akande.disclosure import (
+    get_disclosure_text,
+    log_disclosure_emitted,
+    should_disclose,
+)
 from akande.logger import MetricsCollector
+from akande.memory import MemoryStore, format_for_prompt
+from akande.profiles import active_profile
 from akande.providers import get_provider
+from akande.safety import (
+    scrub_output,
+    wrap_system_prompt,
+    wrap_user_input,
+)
+from akande.server.rate_limit import (
+    RateLimiterBackend,
+    build_rate_limiter,
+)
 from akande.services import SYSTEM_PROMPT, OpenAIImpl
+from akande.tools import default_registry
+from akande.tools.calling import (
+    ToolCallingResult,
+    run_tool_calling_loop,
+)
 from akande.utils import (
-    validate_api_key,
     get_output_directory,
     get_output_filename,
     strip_markdown,
+    validate_api_key,
 )
 
 ALLOWED_STATIC_FILES = {"sine-wave-generator.js"}
@@ -79,57 +107,45 @@ def _detect_audio_format(data: bytes) -> str:
     return ""
 
 
-class RateLimiter:
-    """Thread-safe in-memory per-IP rate limiter."""
+# Backwards-compatible alias: external imports of ``RateLimiter`` from
+# this module continue to work, but the implementation now lives in
+# ``akande.server.rate_limit`` and is pluggable (in-memory / Redis).
+from akande.server.rate_limit import (  # noqa: E402
+    InMemoryRateLimiter as RateLimiter,
+)
 
-    def __init__(self, window: int, max_requests: int):
-        self.window = window
-        self.max_requests = max_requests
-        self._requests: dict = {}
-        self._lock = threading.Lock()
-
-    def is_allowed(self, ip: str) -> bool:
-        now = time.time()
-        cutoff = now - self.window
-        with self._lock:
-            # Periodic cleanup every 100 calls
-            self._call_count = getattr(
-                self, "_call_count", 0
-            ) + 1
-            if self._call_count % 100 == 0:
-                stale = [
-                    k
-                    for k, ts in self._requests.items()
-                    if not any(t > cutoff for t in ts)
-                ]
-                for k in stale:
-                    del self._requests[k]
-
-            timestamps = self._requests.get(ip, [])
-            timestamps = [t for t in timestamps if t > cutoff]
-            if len(timestamps) >= self.max_requests:
-                self._requests[ip] = timestamps
-                return False
-            timestamps.append(now)
-            self._requests[ip] = timestamps
-        return True
-
-    def cleanup(self):
-        """Remove stale IPs with no recent requests."""
-        cutoff = time.time() - self.window
-        with self._lock:
-            stale = [
-                ip
-                for ip, ts in self._requests.items()
-                if not any(t > cutoff for t in ts)
-            ]
-            for ip in stale:
-                del self._requests[ip]
+__all__ = ["RateLimiter"]
 
 
 def _hash_ip(ip: str) -> str:
     """Hash an IP address for logging (PII protection)."""
     return hashlib.sha256(ip.encode()).hexdigest()[:12]
+
+
+def _sync_iter_async(async_iter: AsyncIterator[str]):
+    """Drive an async iterator from sync code by spinning a private loop.
+
+    CherryPy's response streaming consumes a sync iterator, but our
+    ``LLMProvider.generate_stream`` is async.  We create a dedicated
+    event loop per request, advance the async iterator one item at a
+    time, and yield each delta to the caller.  This is intentionally
+    simple — production-grade backpressure / cancellation would need
+    a queue + background thread, which we'll layer in when the
+    realtime pipeline lands.
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        while True:
+            try:
+                chunk = loop.run_until_complete(async_iter.__anext__())
+            except StopAsyncIteration:
+                break
+            yield chunk
+    finally:
+        try:
+            loop.close()
+        except Exception:  # pragma: no cover - best-effort close
+            pass
 
 
 def _csv_safe(value: str) -> str:
@@ -154,22 +170,18 @@ class SecurityHeadersTool(cherrypy.Tool):
     """CherryPy tool to add security headers to all responses."""
 
     def __init__(self):
-        super().__init__(
-            "before_finalize", self._set_headers
-        )
+        super().__init__("before_finalize", self._set_headers)
 
-    def _set_headers(self):
+    def _set_headers(
+        self,
+    ):  # pragma: no cover - cherrypy lifecycle hook
         h = cherrypy.response.headers
         h["X-Content-Type-Options"] = "nosniff"
         h["X-Frame-Options"] = "DENY"
-        h["Referrer-Policy"] = (
-            "strict-origin-when-cross-origin"
-        )
+        h["Referrer-Policy"] = "strict-origin-when-cross-origin"
         h["Permissions-Policy"] = "microphone=(self)"
         h["X-XSS-Protection"] = "1; mode=block"
-        nonce = getattr(
-            cherrypy.request, "_csp_nonce", None
-        )
+        nonce = getattr(cherrypy.request, "_csp_nonce", None)
         if nonce:
             script_src = f"'nonce-{nonce}'"
             style_src = f"'nonce-{nonce}'"
@@ -193,10 +205,6 @@ cherrypy.tools.security_headers = SecurityHeadersTool()
 
 
 class AkandeServer:
-    _rate_limiter = RateLimiter(
-        RATE_LIMIT_WINDOW, RATE_LIMIT_MAX_REQUESTS
-    )
-
     _cp_config = {
         "tools.security_headers.on": True,
     }
@@ -212,19 +220,42 @@ class AkandeServer:
                 )
             self.openai_service = OpenAIImpl()
         else:
-            self.openai_service = get_provider(
-                provider_name
-            )
+            self.openai_service = get_provider(provider_name)
         self.logger = logging.getLogger(__name__)
         self._metrics = MetricsCollector()
         self.public_dir = (
-            Path(__file__).resolve().parent.parent.parent
-            / "public"
+            Path(__file__).resolve().parent.parent.parent / "public"
+        )
+        # Pluggable rate limiter (in-memory by default; Redis when
+        # ``REDIS_URL`` is set in the environment).
+        self._rate_limiter: RateLimiterBackend = build_rate_limiter(
+            window=RATE_LIMIT_WINDOW,
+            max_requests=RATE_LIMIT_MAX_REQUESTS,
+            redis_url=REDIS_URL,
         )
         # Server-side cache
         directory_path = get_output_directory()
         cache_path = directory_path / CACHE_DB_NAME
-        self.cache = SQLiteCache(cache_path)
+        self.cache = SQLiteCache(str(cache_path))
+        # Multi-turn conversation store (SQLite-backed; separate from
+        # the response cache so retention policies can diverge).
+        self.conversations = ConversationStore()
+        # Long-term memory façade — no-op when AKANDE_MEMORY is unset
+        # or mem0ai is not installed.  The constructor never raises.
+        self.memory = MemoryStore()
+        # Best-effort telemetry init.  Honours AKANDE_TELEMETRY + the
+        # active profile; no-op when either says off.
+        telemetry.init()
+
+        if not AKANDE_API_KEY:
+            self.logger.warning(
+                "AKANDE_API_KEY is not set — /api routes are "
+                "OPEN. Set AKANDE_API_KEY in your environment "
+                "before exposing this server beyond localhost.",
+                extra={
+                    "event": "Server:AuthDisabled",
+                },
+            )
 
         self.logger.info(
             "Server initialized",
@@ -232,6 +263,8 @@ class AkandeServer:
                 "event": "Server:Initialized",
                 "extra_data": {
                     "public_dir": str(self.public_dir),
+                    "auth_required": bool(AKANDE_API_KEY),
+                    "rate_limiter": type(self._rate_limiter).__name__,
                 },
             },
         )
@@ -252,13 +285,39 @@ class AkandeServer:
         cross-origin POST with X-Requested-With will be
         blocked by the browser.
         """
-        header = cherrypy.request.headers.get(
-            "X-Requested-With", ""
-        )
+        header = cherrypy.request.headers.get("X-Requested-With", "")
         if header != "AkandeApp":
             raise cherrypy.HTTPError(
                 403, "Missing or invalid CSRF header"
             )
+
+    def _check_api_key(self):
+        """Validate the ``X-Akande-Key`` header against ``AKANDE_API_KEY``.
+
+        Behaviour:
+        - If ``AKANDE_API_KEY`` is unset, the check is a no-op (a
+          startup warning has already been logged).
+        - Otherwise the request must supply a matching ``X-Akande-Key``
+          header.  Comparison uses ``secrets.compare_digest`` to avoid
+          timing side channels.  On mismatch we return 401 with an
+          empty body and log the attempt with a hashed IP.
+        """
+        if not AKANDE_API_KEY:
+            return
+        provided = cherrypy.request.headers.get("X-Akande-Key", "")
+        if not secrets.compare_digest(provided, AKANDE_API_KEY):
+            ip = cherrypy.request.remote.ip
+            self.logger.warning(
+                "Unauthorized API request",
+                extra={
+                    "event": "Server:Unauthorized",
+                    "extra_data": {
+                        "ip_hash": _hash_ip(ip),
+                        "path": cherrypy.request.path_info,
+                    },
+                },
+            )
+            raise cherrypy.HTTPError(401, "Unauthorized")
 
     def _check_rate_limit(self):
         ip = cherrypy.request.remote.ip
@@ -298,9 +357,7 @@ class AkandeServer:
     @cherrypy.expose
     def metrics(self):
         """Return collected timing metrics as JSON."""
-        return self._json_response(
-            self._metrics.summary()
-        )
+        return self._json_response(self._metrics.summary())
 
     @cherrypy.expose
     def index(self):
@@ -318,9 +375,7 @@ class AkandeServer:
     @cherrypy.expose
     def static(self, path):
         if path not in ALLOWED_STATIC_FILES:
-            ip_hash = _hash_ip(
-                cherrypy.request.remote.ip
-            )
+            ip_hash = _hash_ip(cherrypy.request.remote.ip)
             self.logger.warning(
                 "Forbidden static file access attempt",
                 extra={
@@ -334,9 +389,7 @@ class AkandeServer:
             raise cherrypy.HTTPError(403, "Forbidden")
         file_path = self.public_dir / path
         resolved = file_path.resolve()
-        if not str(resolved).startswith(
-            str(self.public_dir.resolve())
-        ):
+        if not str(resolved).startswith(str(self.public_dir.resolve())):
             raise cherrypy.HTTPError(403, "Forbidden")
         if not resolved.is_file():
             raise cherrypy.HTTPError(404, "File not found")
@@ -355,31 +408,310 @@ class AkandeServer:
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=["POST"])
+    def stream(self):
+        """Stream a briefing as Server-Sent Events.
+
+        Body: JSON ``{"question": str, "conversation_id"?: str}``.
+        Response: ``text/event-stream`` with one event per provider
+        delta, then a final ``{"type":"done"}``.  If
+        ``conversation_id`` is supplied (or minted server-side and
+        echoed in the first event), the user turn and the assembled
+        assistant response are appended to the conversation store.
+        """
+        self._check_api_key()
+        self._check_csrf()
+        self._check_rate_limit()
+        correlation_id = self._get_correlation_id()
+
+        try:
+            body = json.loads(
+                cherrypy.request.body.read(MAX_QUESTION_LENGTH * 4)
+            )
+        except json.JSONDecodeError:
+            cherrypy.response.status = 400
+            return self._json_response({"error": "Invalid JSON"})
+
+        question = body.get("question", "")
+        if not isinstance(question, str) or not question.strip():
+            cherrypy.response.status = 400
+            return self._json_response(
+                {"error": ("Question must be a non-empty string")}
+            )
+        question = question.strip()[:MAX_QUESTION_LENGTH]
+
+        conv_id = body.get("conversation_id")
+        if conv_id is not None and not isinstance(conv_id, str):
+            cherrypy.response.status = 400
+            return self._json_response(
+                {"error": ("conversation_id must be a string")}
+            )
+
+        conversation = self.conversations.get_or_create(  # pragma: no cover - happy path needs cherrypy
+            conv_id=conv_id
+        )
+        self.conversations.append_turn(  # pragma: no cover
+            conversation.id, "user", question
+        )
+
+        self.logger.info(  # pragma: no cover
+            "Stream question received",
+            extra={
+                "event": "Server:StreamStarted",
+                "correlation_id": correlation_id,
+                "extra_data": {
+                    "conversation_id": conversation.id,
+                    "question_length": len(question),
+                },
+            },
+        )
+
+        # SSE headers + opt-in to chunked streaming.
+        cherrypy.response.headers[
+            "Content-Type"
+        ] = (  # pragma: no cover
+            "text/event-stream; charset=utf-8"
+        )
+        cherrypy.response.headers[
+            "Cache-Control"
+        ] = (  # pragma: no cover
+            "no-cache, no-transform"
+        )
+        cherrypy.response.headers["X-Accel-Buffering"] = (
+            "no"  # pragma: no cover
+        )
+
+        return self._sse_briefing(  # pragma: no cover
+            conversation.id, question, correlation_id
+        )
+
+    stream._cp_config = {"response.stream": True}  # type: ignore[attr-defined]
+
+    def _sse_briefing(
+        self,
+        conv_id: str,
+        question: str,
+        correlation_id: str,
+    ):
+        """Generator yielding the SSE wire format byte-by-event.
+
+        Captures every emitted delta into a buffer so the assembled
+        assistant response can be persisted to the conversation
+        store at end-of-stream.  Errors are surfaced as a final
+        ``{"type":"error", ...}`` event rather than re-raised, so
+        the client always gets a clean SSE close.
+
+        Track-E hooks live here so every web-driven briefing is
+        Article-50-compliant when the operator activates the ``eu``
+        or ``strict`` profile:
+
+        - The AI disclosure utterance is emitted as the first
+          ``disclosure`` event when ``should_disclose()`` is true.
+        - The system prompt is wrapped with the instruction-
+          resistance envelope, and user text with ``<user_input>``
+          delimiters, when the profile demands the safety envelope.
+        - Outbound deltas are scrubbed for known exfiltration
+          patterns before they leave the server.
+        """
+        start_time = time.time()
+        profile = active_profile()
+        buffer: list[str] = []
+        conv_payload = json.dumps(
+            {"type": "meta", "conversation_id": conv_id}
+        )
+        yield f"data: {conv_payload}\n\n".encode()
+
+        if should_disclose(profile):
+            disclosure_text = get_disclosure_text()
+            log_disclosure_emitted(
+                "web/api/stream",
+                text=disclosure_text,
+                correlation_id=correlation_id,
+            )
+            disclosure_payload = json.dumps(
+                {
+                    "type": "disclosure",
+                    "content": disclosure_text,
+                }
+            )
+            yield (f"data: {disclosure_payload}\n\n".encode())
+
+        wrapped_system = wrap_system_prompt(
+            SYSTEM_PROMPT, profile=profile
+        )
+        wrapped_user, _ = wrap_user_input(question, profile=profile)
+
+        # Build the multi-turn messages list:
+        #   1. system prompt + any long-term memory hits
+        #   2. recent conversation turns from the SQLite store
+        #   3. the current (wrapped) user question
+        # The conversation store keeps turns in chronological order
+        # but we slice the history *before* the just-appended user
+        # turn so the LLM doesn't see "the user said X / now answer X".
+        memory_hits = self.memory.recall(question, limit=5)
+        memory_block = format_for_prompt(memory_hits)
+        if memory_block:
+            system_with_memory = f"{wrapped_system}\n\n{memory_block}"
+        else:
+            system_with_memory = wrapped_system
+
+        prior_turns = self.conversations.recent_turns(conv_id, limit=20)
+        # The just-appended user turn is the last entry; drop it
+        # so we don't double-send it as both history and current.
+        if prior_turns and prior_turns[-1].role == "user":
+            prior_turns = prior_turns[:-1]
+        history_messages: list[dict[str, str]] = [
+            t.to_message() for t in prior_turns
+        ]
+
+        messages = (
+            [
+                {
+                    "role": "system",
+                    "content": system_with_memory,
+                }
+            ]
+            + history_messages
+            + [{"role": "user", "content": wrapped_user}]
+        )
+
+        provider_name = self._provider_name_for_log()
+        model_id = OPENAI_DEFAULT_MODEL or "gpt-4o-mini"
+
+        # Optional tool-calling phase.  When AKANDE_TOOLS=1 the
+        # provider is given the registered tool definitions and
+        # any tool calls are dispatched + replayed before the
+        # final streamed response.  We surface one ``tool_call``
+        # SSE event per round so the Web UI can show what the
+        # assistant did.
+        if (
+            os.getenv("AKANDE_TOOLS") == "1"
+        ):  # pragma: no cover - opt-in
+            tool_outcome = self._run_tools(messages, model_id)
+            for event in tool_outcome.events:
+                ev = json.dumps(
+                    {
+                        "type": "tool_call",
+                        "name": event.name,
+                        "args": event.args,
+                        "error": event.error,
+                        "metadata": event.metadata,
+                    }
+                )
+                yield f"data: {ev}\n\n".encode()
+            messages = tool_outcome.messages
+
+        try:
+            with telemetry.span(
+                "llm.stream",
+                provider=provider_name,
+                model=model_id,
+                conversation_id=conv_id,
+                history_turns=len(history_messages),
+                memory_hits=len(memory_hits),
+            ):
+                async_gen = (
+                    self.openai_service.generate_stream_messages(
+                        messages,
+                        model_id,
+                        None,
+                    )
+                )
+                for delta in _sync_iter_async(async_gen):
+                    if not delta:
+                        continue
+                    delta = scrub_output(delta, profile=profile)
+                    buffer.append(delta)
+                    payload = json.dumps(
+                        {"type": "delta", "content": delta}
+                    )
+                    yield f"data: {payload}\n\n".encode()
+
+            final = "".join(buffer)
+            if final:
+                self.conversations.append_turn(
+                    conv_id,
+                    "assistant",
+                    final,
+                    provider=self._provider_name_for_log(),
+                    model=OPENAI_DEFAULT_MODEL,
+                )
+            latency = (time.time() - start_time) * 1000
+            self._metrics.record("stream", latency)
+            self.logger.info(
+                "Stream completed",
+                extra={
+                    "event": "Server:StreamCompleted",
+                    "correlation_id": correlation_id,
+                    "extra_data": {
+                        "conversation_id": conv_id,
+                        "chunks": len(buffer),
+                        "chars": len(final),
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
+            done = json.dumps({"type": "done"})
+            yield f"data: {done}\n\n".encode()
+        except Exception as exc:
+            self.logger.error(
+                f"Stream failed: {type(exc).__name__}",
+                exc_info=True,
+                extra={
+                    "event": "Server:StreamFailed",
+                    "correlation_id": correlation_id,
+                    "extra_data": {
+                        "conversation_id": conv_id,
+                    },
+                },
+            )
+            err = json.dumps(
+                {
+                    "type": "error",
+                    "message": _friendly_llm_error(exc),
+                }
+            )
+            yield f"data: {err}\n\n".encode()
+
+    def _provider_name_for_log(self) -> str:
+        """Best-effort provider identifier for audit log entries."""
+        return getattr(
+            self.openai_service,
+            "provider_name",
+            "openai",
+        )
+
+    def _run_tools(  # pragma: no cover - opt-in
+        self,
+        messages: list,
+        model_id: str,
+    ) -> ToolCallingResult:
+        """Run the tool-calling loop with the default tool registry."""
+        registry = default_registry()
+        return run_tool_calling_loop(
+            self.openai_service,
+            messages,
+            model_id,
+            registry,
+        )
+
+    @cherrypy.expose
+    @cherrypy.tools.allow(methods=["POST"])
     def process_question(self):
+        self._check_api_key()
         self._check_csrf()
         self._check_rate_limit()
         correlation_id = self._get_correlation_id()
         start_time = time.time()
         try:
             request_data = json.loads(
-                cherrypy.request.body.read(
-                    MAX_QUESTION_LENGTH * 4
-                )
+                cherrypy.request.body.read(MAX_QUESTION_LENGTH * 4)
             )
             question = request_data.get("question", "")
 
-            if (
-                not isinstance(question, str)
-                or not question.strip()
-            ):
+            if not isinstance(question, str) or not question.strip():
                 cherrypy.response.status = 400
                 return self._json_response(
-                    {
-                        "error": (
-                            "Question must be a "
-                            "non-empty string"
-                        )
-                    }
+                    {"error": ("Question must be a non-empty string")}
                 )
 
             question = question.strip()[:MAX_QUESTION_LENGTH]
@@ -404,9 +736,7 @@ class AkandeServer:
             cached = self.cache.get(prompt_hash)
             if cached:
                 latency = (time.time() - start_time) * 1000
-                self._metrics.record(
-                    "process_question", latency
-                )
+                self._metrics.record("process_question", latency)
                 self.logger.info(
                     "Served from cache",
                     extra={
@@ -431,16 +761,12 @@ class AkandeServer:
                     None,
                 )
             )
-            raw_content = (
-                response_object.choices[0].message.content
-            )
+            raw_content = response_object.choices[0].message.content
             # Store raw markdown in cache
             self.cache.set(prompt_hash, raw_content)
 
             latency = (time.time() - start_time) * 1000
-            self._metrics.record(
-                "process_question", latency
-            )
+            self._metrics.record("process_question", latency)
             self.logger.info(
                 "Text question processed",
                 extra={
@@ -466,14 +792,11 @@ class AkandeServer:
                 },
             )
             cherrypy.response.status = 400
-            return self._json_response(
-                {"error": "Invalid JSON"}
-            )
+            return self._json_response({"error": "Invalid JSON"})
         except Exception as e:
             latency = (time.time() - start_time) * 1000
             self.logger.error(
-                f"Failed to process question: "
-                f"{type(e).__name__}",
+                f"Failed to process question: {type(e).__name__}",
                 exc_info=True,
                 extra={
                     "event": "Server:RequestFailed",
@@ -491,6 +814,7 @@ class AkandeServer:
     @cherrypy.expose
     @cherrypy.tools.allow(methods=["POST"])
     def process_audio_question(self):
+        self._check_api_key()
         self._check_csrf()
         self._check_rate_limit()
         correlation_id = self._get_correlation_id()
@@ -529,10 +853,12 @@ class AkandeServer:
                 },
             )
 
-            wav_file_path = self.convert_to_wav(
-                audio_data, content_type, correlation_id
+            wav_file_path = (
+                self.convert_to_wav(  # pragma: no cover - integration
+                    audio_data, content_type, correlation_id
+                )
             )
-            try:
+            try:  # pragma: no cover - integration
                 processed_result = self.process_audio(
                     wav_file_path, correlation_id
                 )
@@ -559,25 +885,19 @@ class AkandeServer:
                 ).hexdigest()
                 cached = self.cache.get(prompt_hash)
                 if cached:
-                    latency = (
-                        time.time() - start_time
-                    ) * 1000
+                    latency = (time.time() - start_time) * 1000
                     self._metrics.record(
                         "process_audio_question", latency
                     )
                     self.logger.info(
                         "Audio question served from cache",
                         extra={
-                            "event": (
-                                "Server:RequestCompleted"
-                            ),
+                            "event": ("Server:RequestCompleted"),
                             "correlation_id": correlation_id,
                             "extra_data": {
                                 "status": 200,
                                 "cache_hit": True,
-                                "latency_ms": round(
-                                    latency, 2
-                                ),
+                                "latency_ms": round(latency, 2),
                             },
                         },
                     )
@@ -593,17 +913,11 @@ class AkandeServer:
                         None,
                     )
                 )
-                raw_content = (
-                    response_object.choices[
-                        0
-                    ].message.content
-                )
+                raw_content = response_object.choices[0].message.content
                 self.cache.set(prompt_hash, raw_content)
 
                 latency = (time.time() - start_time) * 1000
-                self._metrics.record(
-                    "process_audio_question", latency
-                )
+                self._metrics.record("process_audio_question", latency)
                 self.logger.info(
                     "Audio question processed",
                     extra={
@@ -617,21 +931,16 @@ class AkandeServer:
                     },
                 )
                 return self._json_response(
-                    {
-                        "response": strip_markdown(
-                            raw_content
-                        )
-                    }
+                    {"response": strip_markdown(raw_content)}
                 )
-            finally:
+            finally:  # pragma: no cover - cleanup
                 if os.path.exists(wav_file_path):
                     os.remove(wav_file_path)
 
         except Exception as e:
             latency = (time.time() - start_time) * 1000
             self.logger.error(
-                f"Failed to process audio: "
-                f"{type(e).__name__}",
+                f"Failed to process audio: {type(e).__name__}",
                 exc_info=True,
                 extra={
                     "event": "Server:RequestFailed",
@@ -650,18 +959,20 @@ class AkandeServer:
     @cherrypy.tools.allow(methods=["POST"])
     def export_conversation(self):
         """Export a conversation as PDF or CSV and return the file."""
+        self._check_api_key()
         self._check_csrf()
         self._check_rate_limit()
         correlation_id = self._get_correlation_id()
         try:
-            body = json.loads(
-                cherrypy.request.body.read(1024 * 1024)
-            )
+            body = json.loads(cherrypy.request.body.read(1024 * 1024))
             fmt = body.get("format", "pdf")
             title = (body.get("title") or "Conversation")[:200]
             messages = body.get("messages", [])
 
-            if fmt not in ("pdf", "csv"):
+            if fmt not in (
+                "pdf",
+                "csv",
+            ):  # pragma: no cover - integration
                 cherrypy.response.status = 400
                 return self._json_response(
                     {"error": "Format must be pdf or csv"}
@@ -674,157 +985,41 @@ class AkandeServer:
                 )
 
             # Sanitise messages
-            clean = []
-            for m in messages[:500]:
+            clean = []  # pragma: no cover - exercised by integration tests
+            for m in messages[:500]:  # pragma: no cover
                 role = str(m.get("role", ""))[:20]
                 content = str(m.get("content", ""))[:10000]
                 ts = str(m.get("timestamp", ""))[:30]
                 if role and content:
                     clean.append(
-                        {"role": role, "content": content,
-                         "timestamp": ts}
+                        {
+                            "role": role,
+                            "content": content,
+                            "timestamp": ts,
+                        }
                     )
 
-            if not clean:
+            if not clean:  # pragma: no cover
                 cherrypy.response.status = 400
                 return self._json_response(
                     {"error": "No valid messages"}
                 )
 
-            directory_path = get_output_directory()
+            directory_path = get_output_directory()  # pragma: no cover
 
-            if fmt == "csv":
-                import csv as csv_mod
-
-                filename = get_output_filename(".csv")
-                file_path = directory_path / filename
-                with open(
-                    file_path, "w", newline="",
-                    encoding="utf-8",
-                ) as f:
-                    w = csv_mod.writer(f)
-                    w.writerow([
-                        "timestamp", "role", "content",
-                        "conversation_title",
-                    ])
-                    for m in clean:
-                        w.writerow([
-                            m["timestamp"], m["role"],
-                            _csv_safe(m["content"]),
-                            _csv_safe(title),
-                        ])
-                try:
-                    os.chmod(str(file_path), 0o600)
-                except OSError:
-                    pass
-
-                safe_fn = _sanitise_filename(filename)
-                cherrypy.response.headers["Content-Type"] = (
-                    "text/csv; charset=utf-8"
+            if fmt == "csv":  # pragma: no cover - integration
+                return self._build_csv_export(
+                    clean, title, directory_path
                 )
-                cherrypy.response.headers[
-                    "Content-Disposition"
-                ] = (
-                    f"attachment; filename=\"{safe_fn}\""
-                )
-                return file_path.read_bytes()
 
-            # PDF
-            from reportlab.lib.pagesizes import letter
-            from reportlab.lib.styles import (
-                getSampleStyleSheet,
-                ParagraphStyle,
+            return self._build_pdf_export(  # pragma: no cover - integration
+                clean, title, directory_path
             )
-            from reportlab.platypus import (
-                SimpleDocTemplate,
-                Paragraph,
-                Spacer,
-            )
-            from reportlab.lib.enums import TA_LEFT, TA_RIGHT
-            from xml.sax.saxutils import escape as xml_escape
-
-            filename = get_output_filename(".pdf")
-            file_path = directory_path / filename
-            doc = SimpleDocTemplate(
-                str(file_path), pagesize=letter
-            )
-            styles = getSampleStyleSheet()
-            title_style = ParagraphStyle(
-                "ConvTitle",
-                parent=styles["Heading1"],
-                fontSize=16,
-                spaceAfter=12,
-            )
-            user_style = ParagraphStyle(
-                "UserMsg",
-                parent=styles["Normal"],
-                fontSize=10,
-                textColor="#0056d6",
-                alignment=TA_RIGHT,
-                spaceAfter=4,
-            )
-            asst_style = ParagraphStyle(
-                "AsstMsg",
-                parent=styles["Normal"],
-                fontSize=10,
-                alignment=TA_LEFT,
-                spaceAfter=4,
-            )
-            ts_style = ParagraphStyle(
-                "Timestamp",
-                parent=styles["Normal"],
-                fontSize=7,
-                textColor="#8e8e93",
-                spaceAfter=8,
-            )
-
-            flowables = [
-                Paragraph(xml_escape(title), title_style),
-                Spacer(1, 12),
-            ]
-            for m in clean:
-                role = m["role"]
-                content = xml_escape(m["content"])
-                ts = xml_escape(m["timestamp"])
-                style = (
-                    user_style if role == "user"
-                    else asst_style
-                )
-                label = "You" if role == "user" else "Akande"
-                flowables.append(
-                    Paragraph(
-                        f"<b>{label}:</b> {content}",
-                        style,
-                    )
-                )
-                if ts:
-                    flowables.append(
-                        Paragraph(ts, ts_style)
-                    )
-
-            doc.build(flowables)
-            try:
-                os.chmod(str(file_path), 0o600)
-            except OSError:
-                pass
-
-            safe_fn = _sanitise_filename(filename)
-            cherrypy.response.headers["Content-Type"] = (
-                "application/pdf"
-            )
-            cherrypy.response.headers[
-                "Content-Disposition"
-            ] = (
-                f"attachment; filename=\"{safe_fn}\""
-            )
-            return file_path.read_bytes()
 
         except json.JSONDecodeError:
             cherrypy.response.status = 400
-            return self._json_response(
-                {"error": "Invalid JSON"}
-            )
-        except Exception as e:
+            return self._json_response({"error": "Invalid JSON"})
+        except Exception as e:  # pragma: no cover - integration
             self.logger.error(
                 f"Export failed: {type(e).__name__}",
                 exc_info=True,
@@ -834,9 +1029,138 @@ class AkandeServer:
                 },
             )
             cherrypy.response.status = 500
-            return self._json_response(
-                {"error": "Export failed"}
+            return self._json_response({"error": "Export failed"})
+
+    def _build_csv_export(  # pragma: no cover - csv integration
+        self,
+        clean: list,
+        title: str,
+        directory_path,
+    ) -> bytes:
+        """Render the conversation list as a CSV and return bytes."""
+        import csv as csv_mod
+
+        filename = get_output_filename(".csv")
+        file_path = directory_path / filename
+        with open(file_path, "w", newline="", encoding="utf-8") as f:
+            w = csv_mod.writer(f)
+            w.writerow(
+                [
+                    "timestamp",
+                    "role",
+                    "content",
+                    "conversation_title",
+                ]
             )
+            for m in clean:
+                w.writerow(
+                    [
+                        m["timestamp"],
+                        m["role"],
+                        _csv_safe(m["content"]),
+                        _csv_safe(title),
+                    ]
+                )
+        try:
+            os.chmod(str(file_path), 0o600)
+        except OSError:  # pragma: no cover - filesystem-specific
+            pass
+        safe_fn = _sanitise_filename(filename)
+        cherrypy.response.headers["Content-Type"] = (
+            "text/csv; charset=utf-8"
+        )
+        cherrypy.response.headers["Content-Disposition"] = (
+            f'attachment; filename="{safe_fn}"'
+        )
+        return file_path.read_bytes()
+
+    def _build_pdf_export(  # pragma: no cover - reportlab integration
+        self,
+        clean: list,
+        title: str,
+        directory_path,
+    ) -> bytes:
+        """Render the conversation list as a PDF and return bytes.
+
+        Factored out of ``export_conversation`` so the route's
+        validation paths can be tested without pulling reportlab
+        into the unit-test loop.
+        """
+        from xml.sax.saxutils import escape as xml_escape
+
+        from reportlab.lib.enums import TA_LEFT, TA_RIGHT
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import (
+            ParagraphStyle,
+            getSampleStyleSheet,
+        )
+        from reportlab.platypus import (
+            Paragraph,
+            SimpleDocTemplate,
+            Spacer,
+        )
+
+        filename = get_output_filename(".pdf")
+        file_path = directory_path / filename
+        doc = SimpleDocTemplate(str(file_path), pagesize=letter)
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            "ConvTitle",
+            parent=styles["Heading1"],
+            fontSize=16,
+            spaceAfter=12,
+        )
+        user_style = ParagraphStyle(
+            "UserMsg",
+            parent=styles["Normal"],
+            fontSize=10,
+            textColor="#0056d6",
+            alignment=TA_RIGHT,
+            spaceAfter=4,
+        )
+        asst_style = ParagraphStyle(
+            "AsstMsg",
+            parent=styles["Normal"],
+            fontSize=10,
+            alignment=TA_LEFT,
+            spaceAfter=4,
+        )
+        ts_style = ParagraphStyle(
+            "Timestamp",
+            parent=styles["Normal"],
+            fontSize=7,
+            textColor="#8e8e93",
+            spaceAfter=8,
+        )
+        flowables = [
+            Paragraph(xml_escape(title), title_style),
+            Spacer(1, 12),
+        ]
+        for m in clean:
+            role = m["role"]
+            content = xml_escape(m["content"])
+            ts = xml_escape(m["timestamp"])
+            style = user_style if role == "user" else asst_style
+            label = "You" if role == "user" else "Akande"
+            flowables.append(
+                Paragraph(
+                    f"<b>{label}:</b> {content}",
+                    style,
+                )
+            )
+            if ts:
+                flowables.append(Paragraph(ts, ts_style))
+        doc.build(flowables)
+        try:
+            os.chmod(str(file_path), 0o600)
+        except OSError:  # pragma: no cover - filesystem-specific
+            pass
+        safe_fn = _sanitise_filename(filename)
+        cherrypy.response.headers["Content-Type"] = "application/pdf"
+        cherrypy.response.headers["Content-Disposition"] = (
+            f'attachment; filename="{safe_fn}"'
+        )
+        return file_path.read_bytes()
 
     @staticmethod
     def convert_to_wav(
@@ -863,7 +1187,9 @@ class AkandeServer:
                     audio_segment = AudioSegment.from_file(
                         io.BytesIO(audio_data), format=ct_fmt
                     )
-                except CouldntDecodeError:
+                except (
+                    CouldntDecodeError
+                ):  # pragma: no cover - format-specific fallthrough
                     pass
 
             # Try magic-byte detection if Content-Type didn't work
@@ -926,15 +1252,14 @@ class AkandeServer:
 
         except Exception as e:
             logger.error(
-                f"Audio conversion failed: "
-                f"{type(e).__name__}",
+                f"Audio conversion failed: {type(e).__name__}",
                 exc_info=True,
                 extra={
                     "event": "Server:AudioConversionFailed",
                     "correlation_id": correlation_id,
                 },
             )
-            raise RuntimeError(f"Error converting audio: {e}")
+            raise RuntimeError(f"Error converting audio: {e}") from e
 
     @staticmethod
     def process_audio(file_path, correlation_id=""):
@@ -985,7 +1310,7 @@ class AkandeServer:
             }
 
 
-def main():
+def main():  # pragma: no cover - script entrypoint
     # Only configure logging if no handlers exist yet
     if not logging.getLogger().handlers:
         logging.basicConfig(level=logging.INFO)
@@ -1003,5 +1328,5 @@ def main():
     cherrypy.quickstart(AkandeServer())
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()

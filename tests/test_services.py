@@ -4,9 +4,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from akande.services import (
-    OpenAIService,
-    OpenAIImpl,
     SYSTEM_PROMPT,
+    OpenAIImpl,
+    OpenAIService,
 )
 
 
@@ -53,9 +53,7 @@ class TestOpenAIImpl:
         mock_response.choices = [
             MagicMock(message=MagicMock(content="Test response"))
         ]
-        mock_client.chat.completions.create.return_value = (
-            mock_response
-        )
+        mock_client.chat.completions.create.return_value = mock_response
 
         service = OpenAIImpl()
         result = asyncio.run(
@@ -75,16 +73,12 @@ class TestOpenAIImpl:
         "sk-test-1234567890abcdef",
     )
     @patch("akande.services.openai.OpenAI")
-    def test_generate_response_uses_system_role(
-        self, mock_openai_cls
-    ):
+    def test_generate_response_uses_system_role(self, mock_openai_cls):
         mock_client = MagicMock()
         mock_openai_cls.return_value = mock_client
 
         mock_response = MagicMock()
-        mock_client.chat.completions.create.return_value = (
-            mock_response
-        )
+        mock_client.chat.completions.create.return_value = mock_response
 
         service = OpenAIImpl()
         asyncio.run(
@@ -113,8 +107,8 @@ class TestOpenAIImpl:
     ):
         mock_client = MagicMock()
         mock_openai_cls.return_value = mock_client
-        mock_client.chat.completions.create.side_effect = (
-            Exception("API error")
+        mock_client.chat.completions.create.side_effect = Exception(
+            "API error"
         )
 
         service = OpenAIImpl()
@@ -141,9 +135,7 @@ class TestOpenAIImpl:
         mock_response.choices = [
             MagicMock(message=MagicMock(content="Sync response"))
         ]
-        mock_client.chat.completions.create.return_value = (
-            mock_response
-        )
+        mock_client.chat.completions.create.return_value = mock_response
 
         service = OpenAIImpl()
         result = service.generate_response_sync(
@@ -157,16 +149,12 @@ class TestOpenAIImpl:
         "sk-test-1234567890abcdef",
     )
     @patch("akande.services.openai.OpenAI")
-    def test_sync_uses_system_and_user_roles(
-        self, mock_openai_cls
-    ):
+    def test_sync_uses_system_and_user_roles(self, mock_openai_cls):
         mock_client = MagicMock()
         mock_openai_cls.return_value = mock_client
 
         mock_response = MagicMock()
-        mock_client.chat.completions.create.return_value = (
-            mock_response
-        )
+        mock_client.chat.completions.create.return_value = mock_response
 
         service = OpenAIImpl()
         service.generate_response_sync(
