@@ -3,7 +3,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: builder — build wheels for akande and its runtime dependencies
 # -----------------------------------------------------------------------------
-FROM python:3.12-slim-bookworm AS builder
+FROM python:3.14-slim-bookworm AS builder
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -34,7 +34,7 @@ RUN python -m pip install --upgrade "pip>=26.1.2" setuptools wheel build \
 # -----------------------------------------------------------------------------
 # Stage 2: runtime — minimal image with only what's needed at run time
 # -----------------------------------------------------------------------------
-FROM python:3.12-slim-bookworm AS runtime
+FROM python:3.14-slim-bookworm AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
