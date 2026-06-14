@@ -31,7 +31,7 @@ dependencies = [
     "cherrypy>=18.8.0",
     "pydub>=0.25.1",
     "textual>=0.80,<1",
-    "cryptography>=42,<46",
+    "cryptography>=46.0.7,<47",
 ]
 
 [project.optional-dependencies]
@@ -100,7 +100,11 @@ dev = [
     "groq>=0.11,<1",
     "pyttsx4>=3.0.0",
     "mcp>=0.9,<2",
-    "mem0ai>=0.1,<1",
+    # mem0ai is intentionally excluded from [dev]: as of 2026-06
+    # the latest release (0.1.118) carries four unfixed CVEs
+    # (CVE-2026-31240/31241/31245, CVE-2026-7597 fixed only in
+    # the 2.0.0b2 beta).  The integration is mock-tested without
+    # the dep, so users opt in explicitly with `[memory]`.
 ]
 
 [project.scripts]
