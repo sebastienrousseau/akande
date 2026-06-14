@@ -34,6 +34,7 @@ def server(tmp_path):
             yield chunk
 
     srv.openai_service.generate_stream = fake_stream
+    srv.openai_service.generate_stream_messages = fake_stream
     srv.openai_service.provider_name = "openai"
     return srv
 
@@ -91,6 +92,7 @@ class TestStreamEndpoint:
             raise RuntimeError("provider exploded")
 
         server.openai_service.generate_stream = boom
+        server.openai_service.generate_stream_messages = boom
         events = _parse_sse_events(
             server._sse_briefing(conv.id, "q", "corr")
         )

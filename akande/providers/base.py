@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 from abc import ABC, abstractmethod
-from typing import Any, AsyncIterator, Dict, Optional
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 
 class LLMProvider(ABC):
@@ -125,6 +125,66 @@ class LLMProvider(ABC):
         text = _extract_text(response)
         if text:
             yield text
+
+    async def generate_stream_messages(
+        self,
+        messages: List[Dict[str, str]],
+        model: str,
+        params: Optional[Dict[str, Any]] = None,
+    ) -> AsyncIterator[str]:
+        """Stream a completion for a full chat-style message list.
+
+        This is the multi-turn primitive: callers pass an OpenAI-
+        shaped ``[{"role": ..., "content": ...}, ...]`` list and
+        receive text deltas exactly as :meth:`generate_stream` does
+        for the single-turn case.
+
+        The default implementation here is a *compatibility shim*
+        that lets every provider work end-to-end without changes —
+        we extract a single ``system`` message, collapse the
+        remaining turns into a text transcript wrapped in
+        ``<previous_conversation>`` tags, and call
+        :meth:`generate_stream` with the result.  Providers with a
+        native messages-list API (the OpenAI-compatible family,
+        Anthropic, Mistral, Google) should override this for
+        proper role-tagged context.
+        """
+        system_prompt = ""
+        history: List[Dict[str, str]] = []
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            if role == "system" and not system_prompt:
+                system_prompt = content
+                continue
+            history.append({"role": role, "content": content})
+
+        # The last user message is what the model is asked to
+        # answer; everything before it is conversation context.
+        if history and history[-1].get("role") == "user":
+            current_user = history[-1]["content"]
+            prior = history[:-1]
+        else:
+            current_user = ""
+            prior = history
+
+        if prior:
+            transcript = "\n".join(
+                f"{m['role']}: {m['content']}" for m in prior
+            )
+            user_prompt = (
+                "<previous_conversation>\n"
+                f"{transcript}\n"
+                "</previous_conversation>\n\n"
+                f"{current_user}"
+            )
+        else:
+            user_prompt = current_user
+
+        async for delta in self.generate_stream(
+            user_prompt, system_prompt, model, params
+        ):
+            yield delta
 
 
 def _extract_text(response: Any) -> str:

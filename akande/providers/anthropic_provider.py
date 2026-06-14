@@ -17,7 +17,7 @@ import asyncio
 import logging
 import os
 import time
-from typing import Any, AsyncIterator, Dict, Optional
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 from .base import LLMProvider
 from .response import ProviderResponse
@@ -229,6 +229,122 @@ class AnthropicProvider(LLMProvider):
                     ),
                 )
             except Exception:  # pragma: no cover - best-effort close
+                pass
+            latency = (time.time() - start) * 1000
+            logging.info(
+                "LLM stream completed",
+                extra={
+                    "event": "LLM:StreamCompleted",
+                    "extra_data": {
+                        "provider": "anthropic",
+                        "model": model,
+                        "chunks": chunk_count,
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
+
+    async def generate_stream_messages(
+        self,
+        messages: List[Dict[str, str]],
+        model: str,
+        params: Optional[Dict[str, Any]] = None,
+    ) -> AsyncIterator[str]:
+        """Native multi-turn streaming for Anthropic.
+
+        The Anthropic SDK separates ``system`` (its own kwarg) from
+        the conversation messages.  We extract the first ``system``
+        message and forward the user/assistant alternation as-is.
+        """
+        if not params:
+            params = {}
+        model = model or self._default_model
+
+        system_text = ""
+        chat_messages: List[Dict[str, str]] = []
+        for msg in messages:
+            if (
+                msg.get("role") == "system"
+                and not system_text
+            ):
+                system_text = msg.get("content", "")
+                continue
+            chat_messages.append(
+                {
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", ""),
+                }
+            )
+
+        logging.info(
+            "LLM stream request sent",
+            extra={
+                "event": "LLM:StreamRequestSent",
+                "extra_data": {
+                    "provider": "anthropic",
+                    "model": model,
+                    "messages": len(chat_messages),
+                },
+            },
+        )
+        start = time.time()
+        loop = asyncio.get_running_loop()
+
+        def _open_stream() -> Any:
+            return self.client.messages.stream(
+                model=model,
+                max_tokens=1024,
+                system=system_text,
+                messages=chat_messages,  # type: ignore[arg-type]
+                **params,
+            )
+
+        try:
+            stream_ctx = await loop.run_in_executor(
+                None, _open_stream
+            )
+            stream = await loop.run_in_executor(
+                None, stream_ctx.__enter__
+            )
+        except Exception:
+            latency = (time.time() - start) * 1000
+            logging.error(
+                "LLM stream open failed",
+                exc_info=True,
+                extra={
+                    "event": "LLM:StreamRequestFailed",
+                    "extra_data": {
+                        "provider": "anthropic",
+                        "model": model,
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
+            raise
+
+        sentinel: Any = object()
+        chunk_count = 0
+        try:
+            text_iter = iter(stream.text_stream)
+            while True:
+                item: Any = await loop.run_in_executor(
+                    None,
+                    lambda: next(text_iter, sentinel),
+                )
+                if item is sentinel:
+                    break
+                if item:
+                    chunk_count += 1
+                    yield item
+        finally:
+            try:
+                await loop.run_in_executor(
+                    None,
+                    lambda: stream_ctx.__exit__(
+                        None, None, None
+                    ),
+                )
+            except Exception:  # pragma: no cover
                 pass
             latency = (time.time() - start) * 1000
             logging.info(

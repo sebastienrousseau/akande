@@ -48,6 +48,7 @@ from akande.disclosure import (
     should_disclose,
 )
 from akande.logger import MetricsCollector
+from akande.memory import MemoryStore, format_for_prompt
 from akande.profiles import active_profile
 from akande.providers import get_provider
 from akande.safety import (
@@ -60,6 +61,7 @@ from akande.server.rate_limit import (
     build_rate_limiter,
 )
 from akande.services import SYSTEM_PROMPT, OpenAIImpl
+from akande import telemetry
 from akande.utils import (
     validate_api_key,
     get_output_directory,
@@ -240,6 +242,12 @@ class AkandeServer:
         # Multi-turn conversation store (SQLite-backed; separate from
         # the response cache so retention policies can diverge).
         self.conversations = ConversationStore()
+        # Long-term memory façade — no-op when AKANDE_MEMORY is unset
+        # or mem0ai is not installed.  The constructor never raises.
+        self.memory = MemoryStore()
+        # Best-effort telemetry init.  Honours AKANDE_TELEMETRY + the
+        # active profile; no-op when either says off.
+        telemetry.init()
 
         if not AKANDE_API_KEY:
             self.logger.warning(
@@ -563,22 +571,73 @@ class AkandeServer:
             question, profile=profile
         )
 
-        try:
-            async_gen = self.openai_service.generate_stream(
-                wrapped_user,
-                wrapped_system,
-                OPENAI_DEFAULT_MODEL or "gpt-4o-mini",
-                None,
+        # Build the multi-turn messages list:
+        #   1. system prompt + any long-term memory hits
+        #   2. recent conversation turns from the SQLite store
+        #   3. the current (wrapped) user question
+        # The conversation store keeps turns in chronological order
+        # but we slice the history *before* the just-appended user
+        # turn so the LLM doesn't see "the user said X / now answer X".
+        memory_hits = self.memory.recall(question, limit=5)
+        memory_block = format_for_prompt(memory_hits)
+        if memory_block:
+            system_with_memory = (
+                f"{wrapped_system}\n\n{memory_block}"
             )
-            for delta in _sync_iter_async(async_gen):
-                if not delta:
-                    continue
-                delta = scrub_output(delta, profile=profile)
-                buffer.append(delta)
-                payload = json.dumps(
-                    {"type": "delta", "content": delta}
+        else:
+            system_with_memory = wrapped_system
+
+        prior_turns = self.conversations.recent_turns(
+            conv_id, limit=20
+        )
+        # The just-appended user turn is the last entry; drop it
+        # so we don't double-send it as both history and current.
+        if prior_turns and prior_turns[-1].role == "user":
+            prior_turns = prior_turns[:-1]
+        history_messages: list[dict[str, str]] = [
+            t.to_message() for t in prior_turns
+        ]
+
+        messages = (
+            [
+                {
+                    "role": "system",
+                    "content": system_with_memory,
+                }
+            ]
+            + history_messages
+            + [{"role": "user", "content": wrapped_user}]
+        )
+
+        provider_name = self._provider_name_for_log()
+        model_id = OPENAI_DEFAULT_MODEL or "gpt-4o-mini"
+        try:
+            with telemetry.span(
+                "llm.stream",
+                provider=provider_name,
+                model=model_id,
+                conversation_id=conv_id,
+                history_turns=len(history_messages),
+                memory_hits=len(memory_hits),
+            ):
+                async_gen = (
+                    self.openai_service.generate_stream_messages(
+                        messages,
+                        model_id,
+                        None,
+                    )
                 )
-                yield f"data: {payload}\n\n".encode("utf-8")
+                for delta in _sync_iter_async(async_gen):
+                    if not delta:
+                        continue
+                    delta = scrub_output(
+                        delta, profile=profile
+                    )
+                    buffer.append(delta)
+                    payload = json.dumps(
+                        {"type": "delta", "content": delta}
+                    )
+                    yield f"data: {payload}\n\n".encode("utf-8")
 
             final = "".join(buffer)
             if final:

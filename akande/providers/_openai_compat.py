@@ -16,7 +16,7 @@
 import asyncio
 import logging
 import time
-from typing import Any, AsyncIterator, Dict, Optional
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 from .base import LLMProvider
 
@@ -205,6 +205,94 @@ class OpenAICompatProvider(LLMProvider):
 
         # Pump the synchronous iterator off the event loop one item
         # at a time so we keep the main loop responsive.
+        sentinel: Any = object()
+        chunk_count = 0
+        try:
+            while True:
+                item: Any = await loop.run_in_executor(
+                    None, lambda: next(stream, sentinel)
+                )
+                if item is sentinel:
+                    break
+                delta = ""
+                try:
+                    delta = item.choices[0].delta.content or ""
+                except (AttributeError, IndexError, TypeError):
+                    delta = ""
+                if delta:
+                    chunk_count += 1
+                    yield delta
+        finally:
+            latency = (time.time() - start) * 1000
+            logging.info(
+                "LLM stream completed",
+                extra={
+                    "event": "LLM:StreamCompleted",
+                    "extra_data": {
+                        "provider": self._provider_name,
+                        "model": model,
+                        "chunks": chunk_count,
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
+
+    async def generate_stream_messages(
+        self,
+        messages: List[Dict[str, str]],
+        model: str,
+        params: Optional[Dict[str, Any]] = None,
+    ) -> AsyncIterator[str]:
+        """Native multi-turn streaming via the OpenAI ``messages=`` arg.
+
+        Passes the message list through unchanged so role-tagged
+        context (``system``/``user``/``assistant``) is preserved on
+        the wire.
+        """
+        if not params:
+            params = {}
+        params = {**params, "stream": True}
+        model = model or self._default_model
+
+        logging.info(
+            "LLM stream request sent",
+            extra={
+                "event": "LLM:StreamRequestSent",
+                "extra_data": {
+                    "provider": self._provider_name,
+                    "model": model,
+                    "messages": len(messages),
+                },
+            },
+        )
+        start = time.time()
+        loop = asyncio.get_running_loop()
+
+        def _open_stream() -> Any:
+            return self.client.chat.completions.create(
+                model=model,
+                messages=messages,  # type: ignore[arg-type]
+                **params,
+            )
+
+        try:
+            stream = await loop.run_in_executor(None, _open_stream)
+        except Exception:
+            latency = (time.time() - start) * 1000
+            logging.error(
+                "LLM stream open failed",
+                exc_info=True,
+                extra={
+                    "event": "LLM:StreamRequestFailed",
+                    "extra_data": {
+                        "provider": self._provider_name,
+                        "model": model,
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
+            raise
+
         sentinel: Any = object()
         chunk_count = 0
         try:
