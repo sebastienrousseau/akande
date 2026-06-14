@@ -64,7 +64,7 @@ class MistralProvider(LLMProvider):
         model = model or self._default_model
         response = self.client.chat.complete(
             model=model,
-            messages=[  # type: ignore[arg-type]
+            messages=[  # type: ignore[arg-type, unused-ignore]
                 {
                     "role": "system",
                     "content": system_prompt,
@@ -173,7 +173,7 @@ class MistralProvider(LLMProvider):
         def _open_stream() -> Any:
             return self.client.chat.stream(
                 model=model,
-                messages=[  # type: ignore[arg-type]
+                messages=[  # type: ignore[arg-type, unused-ignore]
                     {
                         "role": "system",
                         "content": system_prompt,

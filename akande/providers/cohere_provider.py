@@ -64,11 +64,11 @@ class CohereProvider(LLMProvider):
         response = self.client.chat(
             model=model,
             messages=[
-                {  # type: ignore[list-item]
+                {  # type: ignore[list-item, unused-ignore]
                     "role": "system",
                     "content": system_prompt,
                 },
-                {  # type: ignore[list-item]
+                {  # type: ignore[list-item, unused-ignore]
                     "role": "user",
                     "content": user_prompt,
                 },
