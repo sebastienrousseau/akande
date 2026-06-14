@@ -47,7 +47,7 @@ cohere = ["cohere>=5.13,<6"]
 huggingface = ["huggingface_hub>=0.24,<1"]
 offline-tts = ["pyttsx4>=3.0.0"]
 groq = ["groq>=0.11,<1"]
-redis = ["redis>=5.0,<6"]
+redis = ["redis>=5.0,<9"]
 # Optional local TTS backend (Kokoro-82M).  CPU-only, MIT-licensed,
 # ~80 MB ONNX model on first run.  Picked up by `AKANDE_TTS=kokoro`.
 tts-local = ["kokoro-onnx>=0.4,<1"]
