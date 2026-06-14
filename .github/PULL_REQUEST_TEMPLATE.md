@@ -30,7 +30,7 @@
 
 - [ ] `flake8` passes
 - [ ] `mypy akande` passes
-- [ ] `pytest --cov` passes (coverage ≥ 55 % for v0.0.6-dev.2; ratcheting to 75 % by GA)
+- [ ] `pytest --cov` passes (coverage ≥ 60 % for v0.0.6-dev.3; ratcheting to 75 % by GA)
 - [ ] `bandit -r akande -ll -q` clean
 - [ ] `pip-audit --strict` clean
 - [ ] README / docs updated where applicable

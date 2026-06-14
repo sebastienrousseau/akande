@@ -16,6 +16,9 @@
 import csv
 from typing import Optional
 from xml.sax.saxutils import escape as xml_escape
+
+from akande.audit import build_manifest, write_sidecar
+from akande.profiles import active_profile
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import (
     SimpleDocTemplate,
@@ -185,7 +188,53 @@ def _markdown_inline_to_reportlab(text: str) -> str:
     return text
 
 
-def generate_pdf(question: str, response: str) -> str:
+def _maybe_sign_briefing(
+    *,
+    pdf_path,
+    question: str,
+    response: str,
+    provider: str,
+    model: str,
+    correlation_id: Optional[str],
+) -> None:
+    """Write an Ed25519-signed audit sidecar when the profile requires it.
+
+    Lives next to :func:`generate_pdf` so the signing decision rides
+    with the PDF artefact.  Quietly does nothing when the active
+    profile has ``audit_signing`` disabled (the default ``local``
+    profile) — existing v0.0.5 behaviour is unchanged.
+    """
+    try:
+        profile = active_profile()
+        if not profile.audit_signing:
+            return
+        manifest = build_manifest(
+            prompt=question,
+            response=response,
+            provider=provider,
+            model=model,
+            profile=profile.name,
+            correlation_id=correlation_id,
+        )
+        write_sidecar(manifest, pdf_path)
+    except Exception:
+        # Audit signing must never block briefing delivery; log
+        # and continue.
+        logging.error(
+            "Audit signing failed",
+            exc_info=True,
+            extra={"event": "Audit:SigningFailed"},
+        )
+
+
+def generate_pdf(
+    question: str,
+    response: str,
+    *,
+    provider: str = "openai",
+    model: str = "",
+    correlation_id: Optional[str] = None,
+) -> str:
     """
     Generates a PDF document containing a question and response.
 
@@ -194,12 +243,26 @@ def generate_pdf(question: str, response: str) -> str:
     become ``<b>``/``<i>`` tags, and bullet lists use the list
     item style.
 
+    When the active operational profile (see :mod:`akande.profiles`)
+    has ``audit_signing`` enabled — i.e. ``AKANDE_PROFILE=eu`` or
+    ``strict`` — an Ed25519-signed audit sidecar
+    (``<pdf>.audit.json``) is written next to the PDF.  The sidecar
+    contains the model + provider, the prompt and response hashes,
+    a timestamp, and the signature; verify it with
+    ``akande verify-pdf <path>``.
+
     Parameters
     ----------
     question : str
         The question to be included in the PDF.
     response : str
         The response to the question (may contain markdown).
+    provider, model:
+        Recorded in the audit manifest when signing is on.  Optional
+        because the unsigned (``local``) path is unchanged.
+    correlation_id:
+        Carried through the audit log so the sidecar can be
+        correlated with structured log entries.
     """
     try:
         directory_path = get_output_directory()
@@ -308,6 +371,14 @@ def generate_pdf(question: str, response: str) -> str:
                 "event": "Export:PDFGenerated",
                 "extra_data": {"file_path": str(file_path)},
             },
+        )
+        _maybe_sign_briefing(
+            pdf_path=file_path,
+            question=question,
+            response=response,
+            provider=provider,
+            model=model,
+            correlation_id=correlation_id,
         )
         return str(file_path)
     except Exception as e:

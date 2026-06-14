@@ -90,6 +90,15 @@ async def main():
 
 def run():
     """Synchronous entry point for console_scripts."""
+    # Subcommand routing comes first: ``akande data export``,
+    # ``akande verify-audit ...`` etc. are non-interactive and must
+    # not boot the TUI or open a microphone.
+    from .cli import dispatch_subcommand
+
+    exit_code = dispatch_subcommand()
+    if exit_code is not None:
+        sys.exit(exit_code)
+
     directory_path = get_output_directory()
     filename = get_output_filename(".log")
     file_path = directory_path / filename

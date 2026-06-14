@@ -18,12 +18,11 @@ jobs:
       python-version: '3.11'
       run-ruff: true
       run-mypy: true
-      # Floor starts at 55 % in v0.0.6-dev.2.  The dip from 60 % is
-      # entirely TUI test debt picked up during the rebase onto
-      # 42e87b3 (Apple HIG dark theme, history screen, export modal)
-      # which grew akande/tui.py from 209 to 311 lines without
-      # corresponding tests.  A dedicated TUI-tests sub-track will
-      # raise this back through 60 % toward 75 % by GA.
-      coverage-threshold: 55
+      # Ratcheted back up to 60 % in v0.0.6-dev.3 — the Track E
+      # modules (profiles, disclosure, safety, audit, cli/data) ship
+      # with focused tests that lifted coverage from 56.68 % to
+      # 60.23 %.  Next step toward 75 % by GA: a dedicated TUI-tests
+      # sub-track to attack akande/tui.py (currently 14 %).
+      coverage-threshold: 60
       package-manager: 'pip'
     secrets: inherit

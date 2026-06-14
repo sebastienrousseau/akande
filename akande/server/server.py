@@ -42,8 +42,19 @@ from akande.config import (
 )
 from akande.akande import _friendly_llm_error
 from akande.conversation import ConversationStore
+from akande.disclosure import (
+    get_disclosure_text,
+    log_disclosure_emitted,
+    should_disclose,
+)
 from akande.logger import MetricsCollector
+from akande.profiles import active_profile
 from akande.providers import get_provider
+from akande.safety import (
+    scrub_output,
+    wrap_system_prompt,
+    wrap_user_input,
+)
 from akande.server.rate_limit import (
     RateLimiterBackend,
     build_rate_limiter,
@@ -507,24 +518,62 @@ class AkandeServer:
         store at end-of-stream.  Errors are surfaced as a final
         ``{"type":"error", ...}`` event rather than re-raised, so
         the client always gets a clean SSE close.
+
+        Track-E hooks live here so every web-driven briefing is
+        Article-50-compliant when the operator activates the ``eu``
+        or ``strict`` profile:
+
+        - The AI disclosure utterance is emitted as the first
+          ``disclosure`` event when ``should_disclose()`` is true.
+        - The system prompt is wrapped with the instruction-
+          resistance envelope, and user text with ``<user_input>``
+          delimiters, when the profile demands the safety envelope.
+        - Outbound deltas are scrubbed for known exfiltration
+          patterns before they leave the server.
         """
         start_time = time.time()
+        profile = active_profile()
         buffer: list[str] = []
         conv_payload = json.dumps(
             {"type": "meta", "conversation_id": conv_id}
         )
         yield f"data: {conv_payload}\n\n".encode("utf-8")
 
+        if should_disclose(profile):
+            disclosure_text = get_disclosure_text()
+            log_disclosure_emitted(
+                "web/api/stream",
+                text=disclosure_text,
+                correlation_id=correlation_id,
+            )
+            disclosure_payload = json.dumps(
+                {
+                    "type": "disclosure",
+                    "content": disclosure_text,
+                }
+            )
+            yield (
+                f"data: {disclosure_payload}\n\n".encode("utf-8")
+            )
+
+        wrapped_system = wrap_system_prompt(
+            SYSTEM_PROMPT, profile=profile
+        )
+        wrapped_user, _ = wrap_user_input(
+            question, profile=profile
+        )
+
         try:
             async_gen = self.openai_service.generate_stream(
-                question,
-                SYSTEM_PROMPT,
+                wrapped_user,
+                wrapped_system,
                 OPENAI_DEFAULT_MODEL or "gpt-4o-mini",
                 None,
             )
             for delta in _sync_iter_async(async_gen):
                 if not delta:
                     continue
+                delta = scrub_output(delta, profile=profile)
                 buffer.append(delta)
                 payload = json.dumps(
                     {"type": "delta", "content": delta}

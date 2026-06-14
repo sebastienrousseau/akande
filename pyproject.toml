@@ -116,7 +116,7 @@ known-first-party = ["akande"]
 # for v0.0.6-dev.1.  Raise typing strictness in ``mypy.ini`` instead.
 
 [tool.pytest.ini_options]
-addopts = ["--cov=akande", "--cov-report=term-missing", "--cov-report=xml", "--cov-fail-under=55"]
+addopts = ["--cov=akande", "--cov-report=term-missing", "--cov-report=xml", "--cov-fail-under=60"]
 testpaths = ["tests"]
 
 [tool.coverage.run]
