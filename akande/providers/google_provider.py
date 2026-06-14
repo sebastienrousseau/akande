@@ -17,7 +17,7 @@ import asyncio
 import logging
 import os
 import time
-from typing import Any, Dict, Optional
+from typing import Any, AsyncIterator, Dict, Optional
 
 from .base import LLMProvider
 from .response import ProviderResponse
@@ -133,6 +133,86 @@ class GoogleProvider(LLMProvider):
             },
         )
         return response
+
+    async def generate_stream(
+        self,
+        user_prompt: str,
+        system_prompt: str,
+        model: str,
+        params: Optional[Dict[str, Any]] = None,
+    ) -> AsyncIterator[str]:
+        """Native streaming for ``generate_content(stream=True)``."""
+        if not params:
+            params = {}
+        model_name = model or self._default_model
+
+        logging.info(
+            "LLM stream request sent",
+            extra={
+                "event": "LLM:StreamRequestSent",
+                "extra_data": {
+                    "provider": "google",
+                    "model": model_name,
+                },
+            },
+        )
+        start = time.time()
+        loop = asyncio.get_running_loop()
+
+        def _open_stream() -> Any:
+            gen_model = self._genai.GenerativeModel(
+                model_name=model_name,
+                system_instruction=system_prompt,
+            )
+            return gen_model.generate_content(
+                user_prompt, stream=True, **params
+            )
+
+        try:
+            stream = await loop.run_in_executor(None, _open_stream)
+        except Exception:
+            latency = (time.time() - start) * 1000
+            logging.error(
+                "LLM stream open failed",
+                exc_info=True,
+                extra={
+                    "event": "LLM:StreamRequestFailed",
+                    "extra_data": {
+                        "provider": "google",
+                        "model": model_name,
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
+            raise
+
+        sentinel: Any = object()
+        chunk_count = 0
+        try:
+            while True:
+                item: Any = await loop.run_in_executor(
+                    None, lambda: next(stream, sentinel)
+                )
+                if item is sentinel:
+                    break
+                delta = getattr(item, "text", "") or ""
+                if delta:
+                    chunk_count += 1
+                    yield delta
+        finally:
+            latency = (time.time() - start) * 1000
+            logging.info(
+                "LLM stream completed",
+                extra={
+                    "event": "LLM:StreamCompleted",
+                    "extra_data": {
+                        "provider": "google",
+                        "model": model_name,
+                        "chunks": chunk_count,
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
 
     def generate_response_sync(
         self,

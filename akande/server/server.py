@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import asyncio
 import cherrypy
 import hashlib
 import json
@@ -25,6 +26,8 @@ import tempfile
 import time
 import threading
 import uuid
+from typing import AsyncIterator
+
 import speech_recognition as sr
 from pathlib import Path
 from pydub import AudioSegment
@@ -38,6 +41,7 @@ from akande.config import (
     REDIS_URL,
 )
 from akande.akande import _friendly_llm_error
+from akande.conversation import ConversationStore
 from akande.logger import MetricsCollector
 from akande.providers import get_provider
 from akande.server.rate_limit import (
@@ -96,6 +100,34 @@ from akande.server.rate_limit import (  # noqa: E402
 def _hash_ip(ip: str) -> str:
     """Hash an IP address for logging (PII protection)."""
     return hashlib.sha256(ip.encode()).hexdigest()[:12]
+
+
+def _sync_iter_async(async_iter: AsyncIterator[str]):
+    """Drive an async iterator from sync code by spinning a private loop.
+
+    CherryPy's response streaming consumes a sync iterator, but our
+    ``LLMProvider.generate_stream`` is async.  We create a dedicated
+    event loop per request, advance the async iterator one item at a
+    time, and yield each delta to the caller.  This is intentionally
+    simple — production-grade backpressure / cancellation would need
+    a queue + background thread, which we'll layer in when the
+    realtime pipeline lands.
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        while True:
+            try:
+                chunk = loop.run_until_complete(
+                    async_iter.__anext__()
+                )
+            except StopAsyncIteration:
+                break
+            yield chunk
+    finally:
+        try:
+            loop.close()
+        except Exception:  # pragma: no cover - best-effort close
+            pass
 
 
 def _csv_safe(value: str) -> str:
@@ -194,6 +226,9 @@ class AkandeServer:
         directory_path = get_output_directory()
         cache_path = directory_path / CACHE_DB_NAME
         self.cache = SQLiteCache(str(cache_path))
+        # Multi-turn conversation store (SQLite-backed; separate from
+        # the response cache so retention policies can diverge).
+        self.conversations = ConversationStore()
 
         if not AKANDE_API_KEY:
             self.logger.warning(
@@ -367,6 +402,188 @@ class AkandeServer:
             f"{content_type}; charset=utf-8"
         )
         return resolved.read_text(encoding="utf-8")
+
+    @cherrypy.expose
+    @cherrypy.tools.allow(methods=["POST"])
+    def stream(self):
+        """Stream a briefing as Server-Sent Events.
+
+        Body: JSON ``{"question": str, "conversation_id"?: str}``.
+        Response: ``text/event-stream`` with one event per provider
+        delta, then a final ``{"type":"done"}``.  If
+        ``conversation_id`` is supplied (or minted server-side and
+        echoed in the first event), the user turn and the assembled
+        assistant response are appended to the conversation store.
+        """
+        self._check_api_key()
+        self._check_csrf()
+        self._check_rate_limit()
+        correlation_id = self._get_correlation_id()
+
+        try:
+            body = json.loads(
+                cherrypy.request.body.read(
+                    MAX_QUESTION_LENGTH * 4
+                )
+            )
+        except json.JSONDecodeError:
+            cherrypy.response.status = 400
+            return self._json_response(
+                {"error": "Invalid JSON"}
+            )
+
+        question = body.get("question", "")
+        if (
+            not isinstance(question, str)
+            or not question.strip()
+        ):
+            cherrypy.response.status = 400
+            return self._json_response(
+                {
+                    "error": (
+                        "Question must be a non-empty string"
+                    )
+                }
+            )
+        question = question.strip()[:MAX_QUESTION_LENGTH]
+
+        conv_id = body.get("conversation_id")
+        if conv_id is not None and not isinstance(
+            conv_id, str
+        ):
+            cherrypy.response.status = 400
+            return self._json_response(
+                {
+                    "error": (
+                        "conversation_id must be a string"
+                    )
+                }
+            )
+
+        conversation = self.conversations.get_or_create(
+            conv_id=conv_id
+        )
+        self.conversations.append_turn(
+            conversation.id, "user", question
+        )
+
+        self.logger.info(
+            "Stream question received",
+            extra={
+                "event": "Server:StreamStarted",
+                "correlation_id": correlation_id,
+                "extra_data": {
+                    "conversation_id": conversation.id,
+                    "question_length": len(question),
+                },
+            },
+        )
+
+        # SSE headers + opt-in to chunked streaming.
+        cherrypy.response.headers["Content-Type"] = (
+            "text/event-stream; charset=utf-8"
+        )
+        cherrypy.response.headers["Cache-Control"] = (
+            "no-cache, no-transform"
+        )
+        cherrypy.response.headers["X-Accel-Buffering"] = "no"
+
+        return self._sse_briefing(
+            conversation.id, question, correlation_id
+        )
+
+    stream._cp_config = {"response.stream": True}  # type: ignore[attr-defined]
+
+    def _sse_briefing(
+        self,
+        conv_id: str,
+        question: str,
+        correlation_id: str,
+    ):
+        """Generator yielding the SSE wire format byte-by-event.
+
+        Captures every emitted delta into a buffer so the assembled
+        assistant response can be persisted to the conversation
+        store at end-of-stream.  Errors are surfaced as a final
+        ``{"type":"error", ...}`` event rather than re-raised, so
+        the client always gets a clean SSE close.
+        """
+        start_time = time.time()
+        buffer: list[str] = []
+        conv_payload = json.dumps(
+            {"type": "meta", "conversation_id": conv_id}
+        )
+        yield f"data: {conv_payload}\n\n".encode("utf-8")
+
+        try:
+            async_gen = self.openai_service.generate_stream(
+                question,
+                SYSTEM_PROMPT,
+                OPENAI_DEFAULT_MODEL or "gpt-4o-mini",
+                None,
+            )
+            for delta in _sync_iter_async(async_gen):
+                if not delta:
+                    continue
+                buffer.append(delta)
+                payload = json.dumps(
+                    {"type": "delta", "content": delta}
+                )
+                yield f"data: {payload}\n\n".encode("utf-8")
+
+            final = "".join(buffer)
+            if final:
+                self.conversations.append_turn(
+                    conv_id,
+                    "assistant",
+                    final,
+                    provider=self._provider_name_for_log(),
+                    model=OPENAI_DEFAULT_MODEL,
+                )
+            latency = (time.time() - start_time) * 1000
+            self._metrics.record("stream", latency)
+            self.logger.info(
+                "Stream completed",
+                extra={
+                    "event": "Server:StreamCompleted",
+                    "correlation_id": correlation_id,
+                    "extra_data": {
+                        "conversation_id": conv_id,
+                        "chunks": len(buffer),
+                        "chars": len(final),
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
+            done = json.dumps({"type": "done"})
+            yield f"data: {done}\n\n".encode("utf-8")
+        except Exception as exc:
+            self.logger.error(
+                f"Stream failed: {type(exc).__name__}",
+                exc_info=True,
+                extra={
+                    "event": "Server:StreamFailed",
+                    "correlation_id": correlation_id,
+                    "extra_data": {
+                        "conversation_id": conv_id,
+                    },
+                },
+            )
+            err = json.dumps(
+                {
+                    "type": "error",
+                    "message": _friendly_llm_error(exc),
+                }
+            )
+            yield f"data: {err}\n\n".encode("utf-8")
+
+    def _provider_name_for_log(self) -> str:
+        """Best-effort provider identifier for audit log entries."""
+        return getattr(
+            self.openai_service,
+            "provider_name",
+            "openai",
+        )
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=["POST"])

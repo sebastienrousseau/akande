@@ -17,7 +17,7 @@ import asyncio
 import logging
 import os
 import time
-from typing import Any, Dict, Optional
+from typing import Any, AsyncIterator, Dict, Optional
 
 from .base import LLMProvider
 from .response import ProviderResponse
@@ -147,6 +147,99 @@ class MistralProvider(LLMProvider):
             },
         )
         return response
+
+    async def generate_stream(
+        self,
+        user_prompt: str,
+        system_prompt: str,
+        model: str,
+        params: Optional[Dict[str, Any]] = None,
+    ) -> AsyncIterator[str]:
+        """Native streaming for Mistral v1+ ``client.chat.stream``."""
+        if not params:
+            params = {}
+        model = model or self._default_model
+
+        logging.info(
+            "LLM stream request sent",
+            extra={
+                "event": "LLM:StreamRequestSent",
+                "extra_data": {
+                    "provider": "mistral",
+                    "model": model,
+                },
+            },
+        )
+        start = time.time()
+        loop = asyncio.get_running_loop()
+
+        def _open_stream() -> Any:
+            return self.client.chat.stream(
+                model=model,
+                messages=[  # type: ignore[arg-type]
+                    {
+                        "role": "system",
+                        "content": system_prompt,
+                    },
+                    {
+                        "role": "user",
+                        "content": user_prompt,
+                    },
+                ],
+                **params,
+            )
+
+        try:
+            stream = await loop.run_in_executor(None, _open_stream)
+        except Exception:
+            latency = (time.time() - start) * 1000
+            logging.error(
+                "LLM stream open failed",
+                exc_info=True,
+                extra={
+                    "event": "LLM:StreamRequestFailed",
+                    "extra_data": {
+                        "provider": "mistral",
+                        "model": model,
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
+            raise
+
+        sentinel: Any = object()
+        chunk_count = 0
+        try:
+            while True:
+                item: Any = await loop.run_in_executor(
+                    None, lambda: next(stream, sentinel)
+                )
+                if item is sentinel:
+                    break
+                delta = ""
+                try:
+                    delta = (
+                        item.data.choices[0].delta.content or ""
+                    )
+                except (AttributeError, IndexError, TypeError):
+                    delta = ""
+                if delta and isinstance(delta, str):
+                    chunk_count += 1
+                    yield delta
+        finally:
+            latency = (time.time() - start) * 1000
+            logging.info(
+                "LLM stream completed",
+                extra={
+                    "event": "LLM:StreamCompleted",
+                    "extra_data": {
+                        "provider": "mistral",
+                        "model": model,
+                        "chunks": chunk_count,
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
 
     def generate_response_sync(
         self,

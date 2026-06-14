@@ -24,7 +24,10 @@ WORKDIR /build
 COPY pyproject.toml requirements.txt setup.cfg setup.py README.md ./
 COPY akande ./akande
 
-RUN python -m pip install --upgrade pip setuptools wheel build \
+# Pin pip >=26.1.2 to clear PYSEC-2026-196, CVE-2025-8869, CVE-2026-1703,
+# CVE-2026-3219, CVE-2026-6357 (all in the bundled pip; runtime deps
+# are clean per pip-audit on the lockfile).
+RUN python -m pip install --upgrade "pip>=26.1.2" setuptools wheel build \
     && python -m pip wheel --wheel-dir /wheels -r requirements.txt \
     && python -m pip wheel --wheel-dir /wheels .
 

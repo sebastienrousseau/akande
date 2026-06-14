@@ -17,7 +17,7 @@ import asyncio
 import logging
 import os
 import time
-from typing import Any, Dict, Optional
+from typing import Any, AsyncIterator, Dict, Optional
 
 from .base import LLMProvider
 from .response import ProviderResponse
@@ -141,6 +141,108 @@ class AnthropicProvider(LLMProvider):
             },
         )
         return response
+
+    async def generate_stream(
+        self,
+        user_prompt: str,
+        system_prompt: str,
+        model: str,
+        params: Optional[Dict[str, Any]] = None,
+    ) -> AsyncIterator[str]:
+        """Native streaming for Anthropic's ``messages.stream`` API.
+
+        The Anthropic SDK exposes a context-manager stream object;
+        we drive it on a thread-pool executor and forward
+        ``text_stream`` deltas through this async iterator.
+        """
+        if not params:
+            params = {}
+        model = model or self._default_model
+
+        logging.info(
+            "LLM stream request sent",
+            extra={
+                "event": "LLM:StreamRequestSent",
+                "extra_data": {
+                    "provider": "anthropic",
+                    "model": model,
+                },
+            },
+        )
+        start = time.time()
+        loop = asyncio.get_running_loop()
+
+        def _open_stream() -> Any:
+            return self.client.messages.stream(
+                model=model,
+                max_tokens=1024,
+                system=system_prompt,
+                messages=[
+                    {"role": "user", "content": user_prompt},
+                ],
+                **params,
+            )
+
+        try:
+            stream_ctx = await loop.run_in_executor(
+                None, _open_stream
+            )
+            stream = await loop.run_in_executor(
+                None, stream_ctx.__enter__
+            )
+        except Exception:
+            latency = (time.time() - start) * 1000
+            logging.error(
+                "LLM stream open failed",
+                exc_info=True,
+                extra={
+                    "event": "LLM:StreamRequestFailed",
+                    "extra_data": {
+                        "provider": "anthropic",
+                        "model": model,
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
+            raise
+
+        sentinel: Any = object()
+        chunk_count = 0
+        try:
+            text_iter = iter(stream.text_stream)
+            while True:
+                item: Any = await loop.run_in_executor(
+                    None,
+                    lambda: next(text_iter, sentinel),
+                )
+                if item is sentinel:
+                    break
+                if item:
+                    chunk_count += 1
+                    yield item
+        finally:
+            try:
+                await loop.run_in_executor(
+                    None,
+                    lambda: stream_ctx.__exit__(
+                        None, None, None
+                    ),
+                )
+            except Exception:  # pragma: no cover - best-effort close
+                pass
+            latency = (time.time() - start) * 1000
+            logging.info(
+                "LLM stream completed",
+                extra={
+                    "event": "LLM:StreamCompleted",
+                    "extra_data": {
+                        "provider": "anthropic",
+                        "model": model,
+                        "chunks": chunk_count,
+                        "latency_ms": round(latency, 2),
+                    },
+                },
+            )
 
     def generate_response_sync(
         self,
