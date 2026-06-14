@@ -61,6 +61,11 @@ from akande.server.rate_limit import (
     build_rate_limiter,
 )
 from akande.services import SYSTEM_PROMPT, OpenAIImpl
+from akande.tools import default_registry
+from akande.tools.calling import (
+    ToolCallingResult,
+    run_tool_calling_loop,
+)
 from akande import telemetry
 from akande.utils import (
     validate_api_key,
@@ -611,6 +616,28 @@ class AkandeServer:
 
         provider_name = self._provider_name_for_log()
         model_id = OPENAI_DEFAULT_MODEL or "gpt-4o-mini"
+
+        # Optional tool-calling phase.  When AKANDE_TOOLS=1 the
+        # provider is given the registered tool definitions and
+        # any tool calls are dispatched + replayed before the
+        # final streamed response.  We surface one ``tool_call``
+        # SSE event per round so the Web UI can show what the
+        # assistant did.
+        if os.getenv("AKANDE_TOOLS") == "1":
+            tool_outcome = self._run_tools(messages, model_id)
+            for event in tool_outcome.events:
+                ev = json.dumps(
+                    {
+                        "type": "tool_call",
+                        "name": event.name,
+                        "args": event.args,
+                        "error": event.error,
+                        "metadata": event.metadata,
+                    }
+                )
+                yield f"data: {ev}\n\n".encode("utf-8")
+            messages = tool_outcome.messages
+
         try:
             with telemetry.span(
                 "llm.stream",
@@ -691,6 +718,20 @@ class AkandeServer:
             self.openai_service,
             "provider_name",
             "openai",
+        )
+
+    def _run_tools(
+        self,
+        messages: list,
+        model_id: str,
+    ) -> ToolCallingResult:
+        """Run the tool-calling loop with the default tool registry."""
+        registry = default_registry()
+        return run_tool_calling_loop(
+            self.openai_service,
+            messages,
+            model_id,
+            registry,
         )
 
     @cherrypy.expose

@@ -17,6 +17,7 @@ from typing import List, Optional
 
 from .audit import verify_command, verify_watermark_command
 from .data import data_command
+from .install_local import install_local_command
 from .mcp import mcp_command
 
 KNOWN_SUBCOMMANDS = {
@@ -25,6 +26,7 @@ KNOWN_SUBCOMMANDS = {
     "verify-pdf",
     "verify-watermark",
     "mcp",
+    "install-local",
 }
 
 
@@ -85,6 +87,30 @@ def _build_parser() -> argparse.ArgumentParser:
             "path",
             help="Path to the .audit.json file (or .pdf)",
         )
+
+    install_local = sub.add_parser(
+        "install-local",
+        help=(
+            "Bootstrap the fully-offline Àkàndé stack "
+            "(checks Ollama, pulls the LLM model, installs "
+            "local STT, writes an offline .env)"
+        ),
+    )
+    install_local.add_argument(
+        "--model",
+        default="llama3.1",
+        help="Ollama LLM model to pull (default llama3.1)",
+    )
+    install_local.add_argument(
+        "--env-path",
+        default=".env",
+        help="Where to write the merged .env (default ./.env)",
+    )
+    install_local.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print intended actions without executing them",
+    )
 
     mcp_parser = sub.add_parser(
         "mcp",
@@ -161,5 +187,7 @@ def dispatch_subcommand(
         return verify_watermark_command(ns)
     if ns.command == "mcp":
         return mcp_command(ns)
+    if ns.command == "install-local":
+        return install_local_command(ns)
     parser.print_help()
     return 2
