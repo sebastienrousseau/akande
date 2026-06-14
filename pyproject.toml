@@ -63,7 +63,7 @@ watermark = [
 # Higher-recall PII redaction for the cache (presidio-analyzer).
 # Falls back to the regex set when not installed.
 redact = ["presidio-analyzer>=2.2,<3"]
-memory = ["mem0ai>=0.1,<1"]
+memory = ["mem0ai>=0.1,<3"]
 # Official Anthropic-maintained Model Context Protocol SDK.
 # Required to run `akande mcp serve` (the server side, exposing
 # Àkàndé to Claude Desktop / Cursor / Continue) and `akande mcp
