@@ -4,4 +4,4 @@
 # anyway — the Space surfaces the gap textually).
 
 akande
-gradio>=4.40,<6
+gradio>=6.18.0,<7
