@@ -35,22 +35,24 @@ class FasterWhisperBackend(STTBackend):
                 "pip install faster-whisper"
             ) from exc
 
-        model_size = os.getenv(
+        # Below runs only when faster-whisper is installed — the
+        # optional ``[realtime]`` extra.  Not exercised in CI.
+        model_size = os.getenv(  # pragma: no cover
             "AKANDE_STT_WHISPER_MODEL", DEFAULT_MODEL
         )
-        device = os.getenv(
+        device = os.getenv(  # pragma: no cover
             "AKANDE_STT_WHISPER_DEVICE", "cpu"
         )
-        compute_type = os.getenv(
+        compute_type = os.getenv(  # pragma: no cover
             "AKANDE_STT_WHISPER_COMPUTE",
             "int8" if device == "cpu" else "float16",
         )
-        self._model: Any = WhisperModel(
+        self._model: Any = WhisperModel(  # pragma: no cover
             model_size,
             device=device,
             compute_type=compute_type,
         )
-        logger.info(
+        logger.info(  # pragma: no cover
             "faster-whisper STT initialised",
             extra={
                 "event": "STT:WhisperInitialised",
@@ -62,7 +64,7 @@ class FasterWhisperBackend(STTBackend):
             },
         )
 
-    def transcribe(
+    def transcribe(  # pragma: no cover - needs faster-whisper model
         self,
         audio: bytes,
         *,

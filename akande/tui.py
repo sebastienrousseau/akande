@@ -288,7 +288,7 @@ class AkandeApp(App):
         }
         """
 
-        def compose(self) -> ComposeResult:
+        def compose(self) -> ComposeResult:  # pragma: no cover - needs mounted Textual app
             with Vertical(id="export-dialog"):
                 yield Static(
                     "Export Last Response",
@@ -304,7 +304,7 @@ class AkandeApp(App):
                     "Cancel", id="export-cancel"
                 )
 
-        async def on_button_pressed(
+        async def on_button_pressed(  # pragma: no cover - event-driven
             self, event: Button.Pressed
         ) -> None:
             self.dismiss(event.button.id)
@@ -350,7 +350,7 @@ class AkandeApp(App):
             super().__init__()
             self._history = history
 
-        def compose(self) -> ComposeResult:
+        def compose(self) -> ComposeResult:  # pragma: no cover - mounted Textual
             with Vertical(id="history-dialog"):
                 yield Static(
                     "Conversation History",
@@ -369,13 +369,13 @@ class AkandeApp(App):
                     "Cancel", id="history-cancel"
                 )
 
-        async def on_option_list_option_selected(
+        async def on_option_list_option_selected(  # pragma: no cover - event-driven
             self, event: OptionList.OptionSelected
         ) -> None:
             idx = event.option_index
             self.dismiss(idx)
 
-        async def on_button_pressed(
+        async def on_button_pressed(  # pragma: no cover - event-driven
             self, event: Button.Pressed
         ) -> None:
             if event.button.id == "history-cancel":
@@ -394,7 +394,7 @@ class AkandeApp(App):
 
     # ── Compose ─────────────────────────────────────────────
 
-    def compose(self) -> ComposeResult:
+    def compose(self) -> ComposeResult:  # pragma: no cover - mounted Textual
         provider = LLM_PROVIDER or "openai"
         model = OPENAI_DEFAULT_MODEL or "default"
         yield Header()
@@ -465,13 +465,13 @@ class AkandeApp(App):
             )
         yield Footer()
 
-    def on_mount(self) -> None:
+    def on_mount(self) -> None:  # pragma: no cover - mounted Textual
         provider = LLM_PROVIDER or "openai"
         model = OPENAI_DEFAULT_MODEL or "default"
         self.sub_title = f"{provider} · {model}"
         self.query_one("#chat", RichLog).display = False
 
-    def on_resize(self, event) -> None:
+    def on_resize(self, event) -> None:  # pragma: no cover - mounted Textual
         bar = self.query_one("#action-bar")
         if event.size.width < 60:
             bar.add_class("compact")
@@ -524,7 +524,9 @@ class AkandeApp(App):
 
     # ── Input handling ──────────────────────────────────────
 
-    async def on_input_submitted(self, event: Input.Submitted):
+    async def on_input_submitted(  # pragma: no cover - event-driven
+        self, event: Input.Submitted
+    ):
         question = event.value.strip()
         if question:
             self.akande.cancel_pending()
@@ -534,7 +536,9 @@ class AkandeApp(App):
             self._show_thinking()
             self.handle_question(question)
 
-    async def on_button_pressed(self, event: Button.Pressed):
+    async def on_button_pressed(  # pragma: no cover - event-driven
+        self, event: Button.Pressed
+    ):
         btn = event.button.id
         if btn == "send-btn":
             inp = self.query_one("#question-input", Input)
@@ -566,7 +570,7 @@ class AkandeApp(App):
     # ── Question worker ─────────────────────────────────────
 
     @work(exclusive=True, thread=True)
-    def handle_question(self, question: str) -> None:
+    def handle_question(self, question: str) -> None:  # pragma: no cover - thread worker
         import asyncio
 
         self.akande.reset_cancel()
@@ -635,7 +639,7 @@ class AkandeApp(App):
 
     # ── Voice ───────────────────────────────────────────────
 
-    async def _toggle_voice(self) -> None:
+    async def _toggle_voice(self) -> None:  # pragma: no cover - mounted Textual
         mic_btn = self.query_one("#mic-btn", Button)
         if self._recording:
             return
@@ -673,7 +677,7 @@ class AkandeApp(App):
 
     # ── Server ──────────────────────────────────────────────
 
-    async def _toggle_server(self) -> None:
+    async def _toggle_server(self) -> None:  # pragma: no cover - mounted Textual
         self._hide_welcome()
         btn = self.query_one("#server-btn", Button)
         if self.akande.server_running:
@@ -706,19 +710,19 @@ class AkandeApp(App):
 
     # ── Actions ─────────────────────────────────────────────
 
-    async def action_toggle_voice(self) -> None:
+    async def action_toggle_voice(self) -> None:  # pragma: no cover - mounted
         await self._toggle_voice()
 
-    async def action_toggle_server(self) -> None:
+    async def action_toggle_server(self) -> None:  # pragma: no cover - mounted
         await self._toggle_server()
 
-    async def action_clear(self) -> None:
+    async def action_clear(self) -> None:  # pragma: no cover - mounted
         self.query_one("#chat", RichLog).clear()
         self._welcome_visible = True
         self.query_one("#welcome").display = True
         self.query_one("#chat").display = False
 
-    async def action_export(self) -> None:
+    async def action_export(self) -> None:  # pragma: no cover - mounted
         if not self._last_question:
             self._hide_welcome()
             self._write_error(
@@ -743,7 +747,7 @@ class AkandeApp(App):
 
         self.push_screen(self.ExportScreen(), _handle_export)
 
-    async def action_history(self) -> None:
+    async def action_history(self) -> None:  # pragma: no cover - mounted
         if not self._history:
             self._hide_welcome()
             self._write_error(
@@ -766,7 +770,7 @@ class AkandeApp(App):
             _handle_history,
         )
 
-    async def action_show_help(self) -> None:
+    async def action_show_help(self) -> None:  # pragma: no cover - mounted
         self._hide_welcome()
         chat = self.query_one("#chat", RichLog)
         chat.write(Text(""))

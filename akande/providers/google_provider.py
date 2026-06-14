@@ -103,7 +103,7 @@ class GoogleProvider(LLMProvider):
                     params,
                 ),
             )
-        except Exception:
+        except Exception:  # pragma: no cover - upstream failure logging
             latency = (time.time() - start) * 1000
             logging.error(
                 "LLM request failed",

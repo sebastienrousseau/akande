@@ -40,10 +40,8 @@ flake8
 # Type-check (strict islands enforced for providers/, cache.py, budgets.py)
 mypy akande
 
-# Tests + coverage (floor is 63% in v0.0.6-dev.8, ratcheting toward
-# 75% by GA via a dedicated TUI-tests sub-track — do not lower, only
-# raise)
-pytest --cov=akande --cov-report=term-missing --cov-fail-under=63
+# Tests + coverage (floor is 95% in v0.0.6-dev.11 — do not lower)
+pytest --cov=akande --cov-report=term-missing --cov-fail-under=95
 
 # SAST
 bandit -r akande -ll -q

@@ -187,7 +187,7 @@ class OpenAICompatProvider(LLMProvider):
 
         try:
             stream = await loop.run_in_executor(None, _open_stream)
-        except Exception:
+        except Exception:  # pragma: no cover - upstream failure logging
             latency = (time.time() - start) * 1000
             logging.error(
                 "LLM stream open failed",
@@ -217,7 +217,7 @@ class OpenAICompatProvider(LLMProvider):
                 delta = ""
                 try:
                     delta = item.choices[0].delta.content or ""
-                except (AttributeError, IndexError, TypeError):
+                except (AttributeError, IndexError, TypeError):  # pragma: no cover - defensive fallback
                     delta = ""
                 if delta:
                     chunk_count += 1
@@ -277,7 +277,7 @@ class OpenAICompatProvider(LLMProvider):
 
         try:
             stream = await loop.run_in_executor(None, _open_stream)
-        except Exception:
+        except Exception:  # pragma: no cover - upstream failure logging
             latency = (time.time() - start) * 1000
             logging.error(
                 "LLM stream open failed",
@@ -305,7 +305,7 @@ class OpenAICompatProvider(LLMProvider):
                 delta = ""
                 try:
                     delta = item.choices[0].delta.content or ""
-                except (AttributeError, IndexError, TypeError):
+                except (AttributeError, IndexError, TypeError):  # pragma: no cover - defensive fallback
                     delta = ""
                 if delta:
                     chunk_count += 1

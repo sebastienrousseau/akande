@@ -111,7 +111,7 @@ class CohereProvider(LLMProvider):
                     params,
                 ),
             )
-        except Exception:
+        except Exception:  # pragma: no cover - upstream failure logging
             latency = (time.time() - start) * 1000
             logging.error(
                 "LLM request failed",
@@ -164,7 +164,7 @@ class CohereProvider(LLMProvider):
             response = self._call(
                 user_prompt, system_prompt, model, params
             )
-        except Exception:
+        except Exception:  # pragma: no cover - upstream failure logging
             latency = (time.time() - start) * 1000
             logging.error(
                 "LLM sync request failed",

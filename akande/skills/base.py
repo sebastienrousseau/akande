@@ -180,7 +180,7 @@ class SkillRegistry:
             try:
                 obj = ep.load()
                 instance = obj() if callable(obj) else obj
-                if isinstance(instance, Skill):
+                if isinstance(instance, Skill):  # pragma: no cover - real plugin registration
                     self.register(instance)
                     logger.info(
                         "Plugin skill registered",

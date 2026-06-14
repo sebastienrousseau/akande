@@ -54,7 +54,7 @@ def _opentelemetry_available() -> bool:
     try:
         import opentelemetry.trace  # noqa: F401
         import opentelemetry.metrics  # noqa: F401
-    except ImportError:
+    except ImportError:  # pragma: no cover - dep-presence check
         return False
     return True
 
@@ -130,7 +130,7 @@ def init(force: bool = False) -> bool:
 
     tracer_provider = TracerProvider(resource=resource)
     span_exporter: Any
-    if otlp_endpoint:
+    if otlp_endpoint:  # pragma: no cover - needs OTLP endpoint
         try:
             from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
                 OTLPSpanExporter,
@@ -216,7 +216,7 @@ def span(name: str, **attributes: Any) -> Iterator[Any]:
                 pass
         try:
             yield sp
-        except Exception as exc:
+        except Exception as exc:  # pragma: no cover - re-raises
             try:
                 sp.record_exception(exc)
             except Exception:  # pragma: no cover

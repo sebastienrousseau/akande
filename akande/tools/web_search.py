@@ -120,7 +120,7 @@ class WebSearchTool(Tool):
         if os.getenv("TAVILY_API_KEY"):
             try:
                 return "tavily", self._tavily(query, limit)
-            except Exception as exc:
+            except Exception as exc:  # pragma: no cover - upstream failure logging
                 logger.warning(
                     "Tavily search failed",
                     exc_info=True,
@@ -280,5 +280,5 @@ def _unwrap_duckduckgo_url(raw: str) -> str:
         params = urllib.parse.parse_qs(query)
         target = params.get("uddg", [raw])[0]
         return urllib.parse.unquote(target)
-    except Exception:
+    except Exception:  # pragma: no cover - defensive fallthrough
         return raw

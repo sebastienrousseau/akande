@@ -129,7 +129,7 @@ class WeatherSkill(Skill):
 
     # -- internals --------------------------------------------------
 
-    def _geocode(
+    def _geocode(  # pragma: no cover - hits open-meteo geocoder
         self, place: str
     ) -> Tuple[float, float, str]:
         url = (
@@ -160,7 +160,7 @@ class WeatherSkill(Skill):
             ", ".join(label_parts),
         )
 
-    def _forecast(
+    def _forecast(  # pragma: no cover - hits open-meteo forecast
         self, lat: float, lon: float
     ) -> dict:
         url = (

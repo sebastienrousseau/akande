@@ -93,7 +93,7 @@ class ConversationDB:
         """Restrict the DB file to the owner (0600)."""
         try:
             os.chmod(self.db_path, 0o600)
-        except OSError:
+        except OSError:  # pragma: no cover - filesystem-specific
             # Not fatal on Windows or read-only mounts.
             pass
 

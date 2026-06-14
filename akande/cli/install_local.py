@@ -111,7 +111,7 @@ def _ensure_model(model: str, dry_run: bool) -> bool:
             text=True,
             timeout=600,
         )
-    except FileNotFoundError:
+    except FileNotFoundError:  # pragma: no cover - subprocess race
         print(
             "✗ `ollama` vanished between checks", file=sys.stderr
         )
@@ -148,7 +148,7 @@ def _install_extras(dry_run: bool) -> bool:
             text=True,
             timeout=600,
         )
-    except FileNotFoundError:
+    except FileNotFoundError:  # pragma: no cover - subprocess race
         print(
             "✗ python interpreter not found",
             file=sys.stderr,
@@ -183,7 +183,7 @@ def _write_env(
     target.write_text("\n".join(lines) + "\n")
     try:
         os.chmod(target, 0o600)
-    except OSError:
+    except OSError:  # pragma: no cover - filesystem-specific
         pass
     print(f"✓ wrote {target}")
 

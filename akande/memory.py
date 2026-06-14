@@ -59,7 +59,7 @@ class MemoryHit:
 def _mem0_available() -> bool:
     try:
         import mem0  # noqa: F401
-    except ImportError:
+    except ImportError:  # pragma: no cover - dep-presence check
         return False
     return True
 
@@ -98,7 +98,7 @@ class MemoryStore:
                 },
             )
             return
-        try:
+        try:  # pragma: no cover - mem0 not installed in CI
             from mem0 import Memory
 
             self._client = Memory()

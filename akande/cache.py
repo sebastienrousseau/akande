@@ -137,7 +137,7 @@ class SQLiteCache:
         """Set restrictive permissions (0600) on the database file."""
         try:
             os.chmod(self.db_path, 0o600)
-        except OSError:
+        except OSError:  # pragma: no cover - filesystem-specific
             pass  # May fail on Windows or if file is not owned
 
     def _initialize_cache(self) -> None:

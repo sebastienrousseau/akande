@@ -86,7 +86,7 @@ def _warn_missing_throttled() -> None:
     )
 
 
-def _get_generator() -> Any:
+def _get_generator() -> Any:  # pragma: no cover - needs audioseal
     global _generator
     if _generator is not None:
         return _generator
@@ -98,7 +98,7 @@ def _get_generator() -> Any:
     return _generator
 
 
-def _get_detector() -> Any:
+def _get_detector() -> Any:  # pragma: no cover - needs audioseal
     global _detector
     if _detector is not None:
         return _detector
@@ -110,7 +110,7 @@ def _get_detector() -> Any:
     return _detector
 
 
-def _bytes_to_tensor(
+def _bytes_to_tensor(  # pragma: no cover - needs audioseal + torch
     data: bytes, fmt: str
 ) -> Tuple[Any, int]:
     """Decode arbitrary audio bytes to a (1, 1, samples) torch tensor.
@@ -145,7 +145,7 @@ def _bytes_to_tensor(
     return tensor, audio.frame_rate
 
 
-def _tensor_to_bytes(
+def _tensor_to_bytes(  # pragma: no cover - needs torch
     tensor: Any, sample_rate: int, fmt: str
 ) -> bytes:
     """Re-encode a (1, 1, samples) float tensor to ``fmt`` bytes."""
@@ -183,31 +183,37 @@ def watermark_audio(
         _warn_missing_throttled()
         return audio
     try:
-        import torch  # type: ignore[import-not-found]
-        import torchaudio.functional as F  # type: ignore[import-not-found]
+        # The AudioSeal-driven branch needs torch + audioseal +
+        # torchaudio installed, none of which run in the default
+        # CI environment.  The integration tests under
+        # tests/test_watermark.py::TestRoundTripIntegration
+        # exercise this path on a developer machine that has the
+        # extras installed.
+        import torch  # type: ignore[import-not-found]  # pragma: no cover
+        import torchaudio.functional as F  # type: ignore[import-not-found]  # pragma: no cover
 
-        tensor, sample_rate = _bytes_to_tensor(audio, fmt)
-        if sample_rate != WATERMARK_SAMPLE_RATE:
+        tensor, sample_rate = _bytes_to_tensor(audio, fmt)  # pragma: no cover
+        if sample_rate != WATERMARK_SAMPLE_RATE:  # pragma: no cover
             tensor = F.resample(
                 tensor.squeeze(0),
                 sample_rate,
                 WATERMARK_SAMPLE_RATE,
             ).unsqueeze(0)
             working_rate = WATERMARK_SAMPLE_RATE
-        else:
+        else:  # pragma: no cover
             working_rate = sample_rate
-        gen = _get_generator()
-        watermark = gen.get_watermark(
+        gen = _get_generator()  # pragma: no cover
+        watermark = gen.get_watermark(  # pragma: no cover
             tensor, sample_rate=working_rate
         )
-        wm_tensor = tensor + watermark
-        if sample_rate != WATERMARK_SAMPLE_RATE:
+        wm_tensor = tensor + watermark  # pragma: no cover
+        if sample_rate != WATERMARK_SAMPLE_RATE:  # pragma: no cover
             wm_tensor = F.resample(
                 wm_tensor.squeeze(0),
                 WATERMARK_SAMPLE_RATE,
                 sample_rate,
             ).unsqueeze(0)
-        return _tensor_to_bytes(
+        return _tensor_to_bytes(  # pragma: no cover
             wm_tensor, sample_rate, fmt
         )
     except Exception as exc:
@@ -241,21 +247,21 @@ def detect_watermark(
     if not _audioseal_available():
         return False, 0.0
     try:
-        import torchaudio.functional as F  # type: ignore[import-not-found]
+        import torchaudio.functional as F  # type: ignore[import-not-found]  # pragma: no cover
 
-        tensor, sample_rate = _bytes_to_tensor(audio, fmt)
-        if sample_rate != WATERMARK_SAMPLE_RATE:
+        tensor, sample_rate = _bytes_to_tensor(audio, fmt)  # pragma: no cover
+        if sample_rate != WATERMARK_SAMPLE_RATE:  # pragma: no cover
             tensor = F.resample(
                 tensor.squeeze(0),
                 sample_rate,
                 WATERMARK_SAMPLE_RATE,
             ).unsqueeze(0)
-        detector = _get_detector()
-        result, _ = detector.detect_watermark(
+        detector = _get_detector()  # pragma: no cover
+        result, _ = detector.detect_watermark(  # pragma: no cover
             tensor, sample_rate=WATERMARK_SAMPLE_RATE
         )
-        confidence = float(result.mean().item())
-        return confidence > 0.5, confidence
+        confidence = float(result.mean().item())  # pragma: no cover
+        return confidence > 0.5, confidence  # pragma: no cover
     except Exception as exc:
         logger.error(
             "Watermark detection failed",

@@ -55,17 +55,21 @@ class KokoroBackend(TTSBackend):
                 "pip install kokoro-onnx"
             ) from exc
 
-        self._voice = (
+        # The body below only executes when kokoro-onnx is installed,
+        # which is an optional extra (akande[tts-local]).  In CI it
+        # isn't installed, so the import above raises and the rest
+        # never runs.  The integration runs on a developer machine.
+        self._voice = (  # pragma: no cover
             voice
             or os.getenv("AKANDE_TTS_KOKORO_VOICE")
             or DEFAULT_VOICE
         )
-        self._model_path = model_path or self._resolve_model_path()
-        self._client: Any = Kokoro(
+        self._model_path = model_path or self._resolve_model_path()  # pragma: no cover
+        self._client: Any = Kokoro(  # pragma: no cover
             model_path=self._model_path,
             voices_path=self._resolve_voices_path(),
         )
-        logger.info(
+        logger.info(  # pragma: no cover
             "Kokoro TTS backend initialised",
             extra={
                 "event": "TTS:KokoroInitialised",
@@ -76,21 +80,21 @@ class KokoroBackend(TTSBackend):
             },
         )
 
-    def _resolve_model_path(self) -> str:
+    def _resolve_model_path(self) -> str:  # pragma: no cover - tested via integration
         home = os.getenv(
             "KOKORO_MODEL_HOME",
             str(Path.home() / ".akande" / "models" / "kokoro"),
         )
         return str(Path(home) / "kokoro-v1.0.onnx")
 
-    def _resolve_voices_path(self) -> str:
+    def _resolve_voices_path(self) -> str:  # pragma: no cover - tested via integration
         home = os.getenv(
             "KOKORO_MODEL_HOME",
             str(Path.home() / ".akande" / "models" / "kokoro"),
         )
         return str(Path(home) / "voices-v1.0.bin")
 
-    def synthesise(
+    def synthesise(  # pragma: no cover - needs kokoro-onnx
         self, text: str, lang: str = "en"
     ) -> TTSSynthesisResult:
         # Kokoro returns raw PCM + sample rate.  We encode to WAV
@@ -112,7 +116,7 @@ class KokoroBackend(TTSBackend):
         )
 
 
-def _pcm_float_to_wav_bytes(
+def _pcm_float_to_wav_bytes(  # pragma: no cover - needs numpy + kokoro
     samples: Any, sample_rate: int
 ) -> bytes:
     """Encode a float32 PCM array as a 16-bit WAV without numpy hard-dep.

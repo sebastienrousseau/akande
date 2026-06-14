@@ -41,15 +41,15 @@ class OpenAIRealtimeProvider(S2SProvider):
                 "OPENAI_API_KEY is required for the OpenAI "
                 "Realtime S2S provider."
             )
-        self._api_key = api_key
-        self._model = os.getenv(
+        self._api_key = api_key  # pragma: no cover - needs OPENAI_API_KEY env
+        self._model = os.getenv(  # pragma: no cover
             "AKANDE_S2S_MODEL", DEFAULT_MODEL
         )
-        self._voice = os.getenv(
+        self._voice = os.getenv(  # pragma: no cover
             "AKANDE_S2S_VOICE", DEFAULT_VOICE
         )
 
-    def respond(
+    def respond(  # pragma: no cover - opens a real websocket
         self,
         audio: bytes,
         *,
@@ -58,7 +58,7 @@ class OpenAIRealtimeProvider(S2SProvider):
     ) -> S2SResult:
         try:
             import websockets.sync.client as ws  # type: ignore[import-not-found]
-        except ImportError as exc:  # pragma: no cover
+        except ImportError as exc:
             raise ImportError(
                 "websockets is required for the OpenAI Realtime "
                 "provider.  Install with: pip install websockets"

@@ -208,7 +208,7 @@ class KeyManager:
         key = serialization.load_pem_private_key(
             data, password=None
         )
-        if not isinstance(key, Ed25519PrivateKey):
+        if not isinstance(key, Ed25519PrivateKey):  # pragma: no cover - non-Ed25519 file
             raise RuntimeError(
                 f"key at {path} is not Ed25519"
             )
@@ -227,7 +227,7 @@ class KeyManager:
             fh.write(data)
         try:
             os.chmod(path, 0o600)
-        except OSError:
+        except OSError:  # pragma: no cover - filesystem-specific
             pass  # Windows or read-only mounts.
 
     @staticmethod
@@ -242,7 +242,7 @@ class KeyManager:
             fh.write(data)
         try:
             os.chmod(path, 0o644)
-        except OSError:
+        except OSError:  # pragma: no cover - filesystem-specific
             pass
 
 
@@ -354,7 +354,7 @@ def write_sidecar(
         )
     try:
         os.chmod(sidecar, 0o600)
-    except OSError:
+    except OSError:  # pragma: no cover - filesystem-specific
         pass
     logger.info(
         "Audit sidecar written",

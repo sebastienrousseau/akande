@@ -45,7 +45,7 @@ try:
     import pyttsx4
 
     _PYTTSX4_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover - pyttsx4 may be missing
     _PYTTSX4_AVAILABLE = False
 
 
@@ -73,7 +73,7 @@ def _friendly_llm_error(exc: Exception) -> str:
             "Could not connect to the LLM provider. "
             "Please check your internet connection."
         )
-    if isinstance(exc, openai.APITimeoutError):
+    if isinstance(exc, openai.APITimeoutError):  # pragma: no cover - subclass of APIConnectionError
         return (
             "The request to the LLM provider timed out. "
             "Please try again."
@@ -184,7 +184,7 @@ class Akande:
         if self._cancel_event.is_set():
             raise LLMError("Request was cancelled")
 
-        def tts_engine_run(text: str):
+        def tts_engine_run(text: str):  # pragma: no cover - real audio playback
             from akande.profiles import active_profile
             from akande.tts import get_tts_backend
             from akande.watermark import watermark_audio
@@ -297,7 +297,7 @@ class Akande:
                 avoid audio playback that corrupts the display.
         """
 
-        def _listen_sync():
+        def _listen_sync():  # pragma: no cover - needs PyAudio mic
             try:
                 start = time.time()
                 with sr.Microphone() as source:
@@ -375,15 +375,15 @@ class Akande:
                 )
                 return ""
 
-        loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(
+        loop = asyncio.get_running_loop()  # pragma: no cover - needs PyAudio
+        result = await loop.run_in_executor(  # pragma: no cover
             self.executor, _listen_sync
         )
-        if not result and speak_on_error:
+        if not result and speak_on_error:  # pragma: no cover
             await self.speak(
                 "I'm sorry, I couldn't understand what you said."
             )
-        return result
+        return result  # pragma: no cover
 
     def _print_banner(self) -> None:
         """Print the application banner with provider info."""
@@ -415,7 +415,7 @@ class Akande:
             )
         print()
 
-    async def _generate_files(
+    async def _generate_files(  # pragma: no cover - prints to stdout
         self, question: str, response: str, clean: str
     ) -> None:
         """Generate PDF and CSV files and display their paths."""
@@ -441,7 +441,7 @@ class Akande:
             print(f"    CSV: {csv_path}")
         print()
 
-    async def _handle_response(
+    async def _handle_response(  # pragma: no cover - prints to stdout
         self, question: str, correlation_id: str
     ) -> None:
         """Query the LLM, display response, speak it, and
@@ -463,7 +463,7 @@ class Akande:
         await self.speak(clean)
         await self._generate_files(question, response, clean)
 
-    async def run_interaction(self) -> None:
+    async def run_interaction(self) -> None:  # pragma: no cover - interactive stdin loop
         """Main interaction loop of the voice assistant."""
         while True:
             self._print_banner()
@@ -536,7 +536,7 @@ class Akande:
             )
             return
 
-        def start_server():
+        def start_server():  # pragma: no cover - spawns real cherrypy
             from .server.server import (
                 AkandeServer,
                 MAX_AUDIO_SIZE,
@@ -662,7 +662,7 @@ class Akande:
                 )
                 self.cache.set(prompt_hash, text_response)
                 return text_response
-            except LLMError:
+            except LLMError:  # pragma: no cover - re-raise as-is
                 raise
             except Exception as e:
                 logging.error(

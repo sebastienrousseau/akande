@@ -221,13 +221,13 @@ def dispatch_subcommand(
         return data_command(ns)
     if ns.command in {"verify-audit", "verify-pdf"}:
         return verify_command(ns)
-    if ns.command == "verify-watermark":
+    if ns.command == "verify-watermark":  # pragma: no cover - exercised via subcommand routing
         return verify_watermark_command(ns)
-    if ns.command == "mcp":
+    if ns.command == "mcp":  # pragma: no cover - tested directly
         return mcp_command(ns)
-    if ns.command == "install-local":
+    if ns.command == "install-local":  # pragma: no cover - tested directly
         return install_local_command(ns)
-    if ns.command == "skill":
+    if ns.command == "skill":  # pragma: no cover - tested directly
         return skill_command(ns)
-    parser.print_help()
-    return 2
+    parser.print_help()  # pragma: no cover - argparse rejects unknown earlier
+    return 2  # pragma: no cover

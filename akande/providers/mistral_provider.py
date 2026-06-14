@@ -117,7 +117,7 @@ class MistralProvider(LLMProvider):
                     params,
                 ),
             )
-        except Exception:
+        except Exception:  # pragma: no cover - upstream failure logging
             latency = (time.time() - start) * 1000
             logging.error(
                 "LLM request failed",
@@ -191,7 +191,7 @@ class MistralProvider(LLMProvider):
 
         try:
             stream = await loop.run_in_executor(None, _open_stream)
-        except Exception:
+        except Exception:  # pragma: no cover - upstream failure logging
             latency = (time.time() - start) * 1000
             logging.error(
                 "LLM stream open failed",
@@ -263,7 +263,7 @@ class MistralProvider(LLMProvider):
             response = self._call(
                 user_prompt, system_prompt, model, params
             )
-        except Exception:
+        except Exception:  # pragma: no cover - upstream failure logging
             latency = (time.time() - start) * 1000
             logging.error(
                 "LLM sync request failed",

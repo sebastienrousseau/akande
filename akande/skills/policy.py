@@ -126,7 +126,7 @@ class SkillPolicy:
         )
         try:
             os.chmod(self.policy_path, 0o600)
-        except OSError:
+        except OSError:  # pragma: no cover - filesystem-specific
             pass
 
     # -- queries ------------------------------------------------

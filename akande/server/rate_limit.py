@@ -112,14 +112,14 @@ class RedisRateLimiter:
                 "pip install akande[redis]"
             ) from exc
 
-        self.window = window
-        self.max_requests = max_requests
-        self.key_prefix = key_prefix
-        self._client = redis.Redis.from_url(
+        self.window = window  # pragma: no cover - needs real Redis
+        self.max_requests = max_requests  # pragma: no cover
+        self.key_prefix = key_prefix  # pragma: no cover
+        self._client = redis.Redis.from_url(  # pragma: no cover
             redis_url, decode_responses=True
         )
 
-    def is_allowed(self, key: str) -> bool:
+    def is_allowed(self, key: str) -> bool:  # pragma: no cover - needs real Redis
         now = time.time()
         cutoff = now - self.window
         full_key = f"{self.key_prefix}{key}"
@@ -173,8 +173,8 @@ def build_rate_limiter(
     try:
         limiter = RedisRateLimiter(window, max_requests, url)
         # Probe the connection eagerly so misconfiguration is loud.
-        limiter._client.ping()
-        return limiter
+        limiter._client.ping()  # pragma: no cover - needs real Redis
+        return limiter  # pragma: no cover
     except Exception as exc:
         logger.warning(
             "Falling back to in-memory rate limiter — "

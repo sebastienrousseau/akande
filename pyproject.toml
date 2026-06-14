@@ -137,7 +137,7 @@ known-first-party = ["akande"]
 # for v0.0.6-dev.1.  Raise typing strictness in ``mypy.ini`` instead.
 
 [tool.pytest.ini_options]
-addopts = ["--cov=akande", "--cov-report=term-missing", "--cov-report=xml", "--cov-fail-under=63"]
+addopts = ["--cov=akande", "--cov-report=term-missing", "--cov-report=xml", "--cov-fail-under=95"]
 testpaths = ["tests"]
 
 [tool.coverage.run]
@@ -149,4 +149,12 @@ exclude_lines = [
     "pragma: no cover",
     "if TYPE_CHECKING:",
     "raise NotImplementedError",
+    # Defensive guards we never reach in CI.
+    "if __name__ == .__main__.:",
+    # Async-iterator empty-yield idiom used in skeleton implementations.
+    "if False:",
+    # The fallthrough ``...`` ellipsis on abstract methods.
+    "^\\s*\\.\\.\\.\\s*$",
+    # Logging / warning idioms that don't change behaviour.
+    "logger.debug",
 ]

@@ -74,7 +74,7 @@ def build_server(
 
     # -- akande.briefing -------------------------------------------
     @app.tool()
-    def briefing(question: str) -> str:
+    def briefing(question: str) -> str:  # pragma: no cover - mcp tool callback
         """Generate a BLUF-formatted executive briefing for a question.
 
         Calls the LLM provider configured by ``LLM_PROVIDER``
@@ -102,7 +102,7 @@ def build_server(
 
     # -- akande.verify_audit ---------------------------------------
     @app.tool()
-    def verify_audit(path: str) -> str:
+    def verify_audit(path: str) -> str:  # pragma: no cover - mcp tool callback
         """Verify the Ed25519 signature on a sidecar audit JSON.
 
         Pass the path to either the ``.audit.json`` sidecar or the
@@ -130,7 +130,7 @@ def build_server(
 
     # -- akande.verify_watermark -----------------------------------
     @app.tool()
-    def verify_watermark(path: str) -> str:
+    def verify_watermark(path: str) -> str:  # pragma: no cover - mcp tool callback
         """Detect the AudioSeal watermark in an audio file.
 
         Returns ``PRESENT``/``ABSENT`` plus the mean detector
@@ -163,7 +163,7 @@ def build_server(
 
     # -- akande.conversation_list ----------------------------------
     @app.tool()
-    def conversation_list(
+    def conversation_list(  # pragma: no cover - mcp tool callback
         user_id: str = "default", limit: int = 20
     ) -> str:
         """List recent conversations for a user.
@@ -243,7 +243,7 @@ def _register_tool(app: Any, tool: Any) -> None:
     name = tool.name
     description = tool.description
 
-    def _runner(**kwargs: Any) -> str:
+    def _runner(**kwargs: Any) -> str:  # pragma: no cover - mcp tool callback
         try:
             result = tool.run(kwargs)
         except ToolError as exc:
@@ -257,7 +257,7 @@ def _register_tool(app: Any, tool: Any) -> None:
     app.add_tool(_runner, name=name, description=description)
 
 
-def serve(stdio: bool = True) -> None:
+def serve(stdio: bool = True) -> None:  # pragma: no cover - spawns real mcp server
     """Run the server on stdio (default) or via FastMCP's HTTP transport."""
     app = build_server()
     if stdio:
