@@ -128,10 +128,10 @@ pip install --upgrade --quiet pip setuptools wheel \
   || fail "pip upgrade failed"
 ok "upgraded pip / setuptools / wheel"
 
-pip install --quiet -e ".[all,dev]" mcp \
+pip install --quiet -e ".[all,dev,mic]" mcp \
   >"$LOG_DIR/02-install.log" 2>&1 \
   || fail "editable install failed (see $LOG_DIR/02-install.log)"
-ok "installed akande[all,dev] + mcp"
+ok "installed akande[all,dev,mic] + mcp"
 
 # --- phase 3: import smoke --------------------------------------------------
 

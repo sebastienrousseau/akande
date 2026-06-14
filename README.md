@@ -167,7 +167,7 @@ output directory.
 
 | Problem | Cause | Fix |
 |---|---|---|
-| `Could not find PyAudio` | PortAudio missing | Ubuntu: `sudo apt install portaudio19-dev`. macOS: `brew install portaudio`. Then `pip install pyaudio`. |
+| `Could not find PyAudio` | PortAudio missing | Ubuntu: `sudo apt install portaudio19-dev`. macOS: `brew install portaudio`. Then `pip install akande[mic]`. |
 | `ffmpeg not found` | ffmpeg not installed | Ubuntu: `sudo apt install ffmpeg`. macOS: `brew install ffmpeg`. |
 | Microphone not detected | OS permissions | Grant microphone access in system settings. |
 | `ModuleNotFoundError: No module named 'anthropic'` | Provider SDK not installed | `pip install akande[anthropic]`. See the provider table above. |

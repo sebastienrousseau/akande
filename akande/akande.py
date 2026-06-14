@@ -341,7 +341,7 @@ class Akande:
             except AttributeError:
                 logging.error(
                     "PyAudio is not installed. "
-                    "Install it with: pip install pyaudio",
+                    "Install it with: pip install akande[mic]",
                     extra={
                         "event": "Speech:DependencyMissing",
                         "extra_data": {

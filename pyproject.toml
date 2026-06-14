@@ -24,7 +24,6 @@ classifiers = [
 ]
 dependencies = [
     "openai>=1.50,<2",
-    "pyaudio>=0.2.14",
     "python-dotenv>=1.0.1",
     "gtts>=2.5.0",
     "reportlab>=4.1.0",
@@ -35,6 +34,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Microphone capture for the interactive STT path.  Optional
+# because pyaudio links against portaudio at build time and CI
+# images don't ship the system headers; the rest of Àkàndé works
+# fine without it.
+mic = ["pyaudio>=0.2.14"]
 anthropic = ["anthropic>=0.40,<1"]
 google = ["google-generativeai>=0.7,<1"]
 mistral = ["mistralai>=1.0,<2"]
