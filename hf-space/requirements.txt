@@ -1,0 +1,7 @@
+# Hugging Face Space dependencies for app.py.
+# Mirrors the relevant subset of akande/[all] without the heavy
+# optional extras (audioseal needs torch ~2GB and is fail-open
+# anyway — the Space surfaces the gap textually).
+
+akande
+gradio>=4.40,<6
