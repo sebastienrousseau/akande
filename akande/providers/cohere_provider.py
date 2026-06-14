@@ -33,7 +33,7 @@ class CohereProvider(LLMProvider):
     def provider_name(self) -> str:
         return "cohere"
 
-    def __init__(self):
+    def __init__(self) -> None:
         try:
             import cohere
         except ImportError:
@@ -64,18 +64,22 @@ class CohereProvider(LLMProvider):
         response = self.client.chat(
             model=model,
             messages=[
-                {
+                {  # type: ignore[list-item]
                     "role": "system",
                     "content": system_prompt,
                 },
-                {
+                {  # type: ignore[list-item]
                     "role": "user",
                     "content": user_prompt,
                 },
             ],
             **params,
         )
-        text = response.message.content[0].text
+        # Cohere v5 returns a typed union; the first content block is
+        # the assistant text for non-tool responses.
+        content = response.message.content or []
+        first = content[0] if content else None
+        text = getattr(first, "text", "") if first else ""
         return ProviderResponse(text)
 
     async def generate_response(

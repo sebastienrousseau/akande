@@ -1,0 +1,49 @@
+# Minimal compose for running Àkàndé in server mode.
+#
+# Quick start:
+#   cp .env.example .env             # set OPENAI_API_KEY etc.
+#   docker compose up --build        # web UI on http://127.0.0.1:8080
+#
+# To run against a fully-local Ollama instead of OpenAI, set
+# LLM_PROVIDER=ollama and uncomment the `ollama` service below.
+
+services:
+  akande:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: akande:latest
+    container_name: akande
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    env_file:
+      - .env
+    environment:
+      AKANDE_HOST: 0.0.0.0
+      AKANDE_PORT: 8080
+    volumes:
+      - akande-data:/home/akande
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/health',timeout=3).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    # Uncomment to talk to a sibling Ollama container.
+    # depends_on:
+    #   - ollama
+
+  # Uncomment to run a local Ollama alongside Àkàndé.
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: akande-ollama
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ollama-data:/root/.ollama
+  #   ports:
+  #     - "127.0.0.1:11434:11434"
+
+volumes:
+  akande-data:
+  # ollama-data:

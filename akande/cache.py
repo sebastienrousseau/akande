@@ -56,14 +56,14 @@ class SQLiteCache:
         self._initialize_cache()
         self._set_file_permissions()
 
-    def _set_file_permissions(self):
+    def _set_file_permissions(self) -> None:
         """Set restrictive permissions (0600) on the database file."""
         try:
             os.chmod(self.db_path, 0o600)
         except OSError:
             pass  # May fail on Windows or if file is not owned
 
-    def _initialize_cache(self):
+    def _initialize_cache(self) -> None:
         """Create the cache table and indexes if they don't exist."""
         with self.lock:
             cursor = self.conn.cursor()
@@ -190,9 +190,9 @@ class SQLiteCache:
             },
         )
 
-    def close(self):
+    def close(self) -> None:
         """Close the persistent database connection."""
         with self.lock:
             if self.conn:
                 self.conn.close()
-                self.conn = None
+                self.conn = None  # type: ignore[assignment]

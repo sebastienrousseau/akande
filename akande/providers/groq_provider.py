@@ -26,7 +26,7 @@ class GroqProvider(OpenAICompatProvider):
 
     _provider_name = "groq"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._api_key = os.getenv("GROQ_API_KEY", "")
         self._base_url = "https://api.groq.com/openai/v1"
         self._default_model = "llama3-8b-8192"

@@ -16,11 +16,13 @@
 import asyncio
 import logging
 import sys
+from typing import Union
 
 from .akande import Akande
 from .config import LLM_PROVIDER, OPENAI_API_KEY
 from .logger import basic_config
 from .providers import get_provider
+from .providers.base import LLMProvider
 from .services import OpenAIImpl
 from .utils import (
     get_output_directory,
@@ -65,6 +67,7 @@ def _build_akande() -> Akande:
         )
         sys.exit(1)
 
+    openai_service: Union[OpenAIImpl, LLMProvider]
     if provider_name == "openai":
         openai_service = OpenAIImpl()
     else:

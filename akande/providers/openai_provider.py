@@ -24,7 +24,7 @@ class OpenAIProvider(OpenAICompatProvider):
 
     _provider_name = "openai"
 
-    def __init__(self):
+    def __init__(self) -> None:
         from akande.config import (
             OPENAI_API_KEY,
             OPENAI_DEFAULT_MODEL,

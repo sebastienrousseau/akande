@@ -37,7 +37,7 @@ class OpenAICompatProvider(LLMProvider):
     _api_key: str = ""
     _default_model: str = ""
 
-    def _init_client(self):
+    def _init_client(self) -> None:
         """Initialise the OpenAI-compatible client."""
         import openai
         from akande.config import API_CALL_TIMEOUT

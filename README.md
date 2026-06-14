@@ -177,25 +177,45 @@ output directory.
 
 ## Roadmap
 
-- Streaming responses for reduced time-to-first-token
-- Conversation memory with multi-turn context
-- Plugin system for domain-specific briefing templates
-- Docker image for single-command deployment
+The v0.0.6 release in flight focuses on six tracks:
+
+- **Track A** -- CI, dep refresh, mypy, SAST/pip-audit, API-key auth,
+  pluggable rate limiter, modern Docker image (now)
+- **Track B** -- streaming responses, multi-turn conversations, Mem0
+  memory, realtime cascade pipeline (VAD + faster-whisper + Kokoro),
+  optional speech-to-speech mode
+- **Track C** -- one-flag local mode (Ollama + faster-whisper + Kokoro),
+  MCP server + client, generalised tool use
+- **Track D** -- skills baseline (briefing, web search, weather,
+  finance, sandboxed shell) with per-skill consent
+- **Track E** -- EU AI Act Article 50 readiness by 2026-08-02
+  (AI disclosure, AudioSeal watermarking, consent log for voice
+  cloning, signed audit-PDFs, GDPR data export/delete)
+- **Track F** -- VoiceBench score, HF ZeroGPU Space demo,
+  one-command installers, external security audit
+
+Deferred to v0.0.7+: Tauri desktop/mobile, browser extension, Home
+Assistant integration, wake-word, skill marketplace, Àkàndé Cloud.
 
 ![divider][divider]
 
 ## Trust
 
-- **160 tests** covering providers, caching, services, server, and
-  utilities
-- **Apache 2.0 licence** -- permissive, enterprise-friendly
-- **Euxis-audited** architecture and security posture
+- **187 tests** in CI with coverage gate, mypy, bandit (SAST), and
+  pip-audit (vulnerable-deps scan) on every pull request -- covering
+  providers, caching, services, server, and utilities
+- **Apache 2.0 / MIT dual licence** -- permissive, enterprise-friendly
+- **Security posture documented** in [SECURITY.md](SECURITY.md):
+  CSP nonces, custom-header CSRF, per-IP rate limiting, CSV-formula
+  injection prevention, filename sanitisation, IP hashing in logs
 
 ![divider][divider]
 
 ## Contributing
 
-Pull requests are welcome.
+Pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for
+the development loop and quality gates (lint, type-check, tests, SAST,
+dep audit).
 
 ![divider][divider]
 

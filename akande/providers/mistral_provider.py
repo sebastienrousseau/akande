@@ -33,7 +33,7 @@ class MistralProvider(LLMProvider):
     def provider_name(self) -> str:
         return "mistral"
 
-    def __init__(self):
+    def __init__(self) -> None:
         try:
             from mistralai import Mistral
         except ImportError:
@@ -63,7 +63,7 @@ class MistralProvider(LLMProvider):
         model = model or self._default_model
         response = self.client.chat.complete(
             model=model,
-            messages=[
+            messages=[  # type: ignore[arg-type]
                 {
                     "role": "system",
                     "content": system_prompt,
@@ -75,7 +75,17 @@ class MistralProvider(LLMProvider):
             ],
             **params,
         )
-        text = response.choices[0].message.content
+        raw = response.choices[0].message.content
+        # Mistral v1 returns str | content-block list | Unset | None.
+        # For the Akande BLUF use case we expect plain text.
+        if isinstance(raw, str):
+            text = raw
+        elif raw is None:
+            text = ""
+        else:
+            text = "".join(
+                getattr(chunk, "text", "") for chunk in raw
+            )
         return ProviderResponse(text)
 
     async def generate_response(

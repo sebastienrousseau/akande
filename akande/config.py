@@ -34,3 +34,15 @@ OPENAI_DEFAULT_MODEL = os.getenv("OPENAI_DEFAULT_MODEL")
 # Available: openai, anthropic, google, ollama, azure_openai, mistral,
 #            cohere, huggingface, groq, lmstudio
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")
+
+# Optional shared API key for the Web/HTTP surface.  When set, callers
+# must supply the same value in the ``X-Akande-Key`` request header on
+# every ``/api/*`` route.  Leave unset for purely local development; the
+# server logs a startup warning in that case.
+AKANDE_API_KEY = os.getenv("AKANDE_API_KEY")
+
+# Optional Redis URL for distributed rate limiting.  When set, the
+# server uses a Redis-backed sliding-window limiter so multiple
+# instances share state.  Falls back to in-memory if Redis is
+# unreachable (with a warning log).
+REDIS_URL = os.getenv("REDIS_URL")

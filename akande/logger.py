@@ -20,6 +20,7 @@ import sys
 import threading
 import traceback
 from datetime import datetime, timezone
+from typing import Any, Dict
 
 
 class JSONFormatter(logging.Formatter):
@@ -30,7 +31,7 @@ class JSONFormatter(logging.Formatter):
         self.service = service
 
     def format(self, record: logging.LogRecord) -> str:
-        log_entry = {
+        log_entry: Dict[str, Any] = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,

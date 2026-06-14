@@ -105,7 +105,7 @@ class OpenAIImpl(OpenAIService):
     ) -> Any:
         if not params:
             params = {}
-        model = model or OPENAI_DEFAULT_MODEL
+        model = model or OPENAI_DEFAULT_MODEL or "gpt-4o-mini"
         system_prompt = system_prompt or SYSTEM_PROMPT
 
         logging.info(
@@ -157,7 +157,7 @@ class OpenAIImpl(OpenAIService):
     ) -> Any:
         if not params:
             params = {}
-        model = model or OPENAI_DEFAULT_MODEL
+        model = model or OPENAI_DEFAULT_MODEL or "gpt-4o-mini"
         system_prompt = system_prompt or SYSTEM_PROMPT
 
         logging.info(

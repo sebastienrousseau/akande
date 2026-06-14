@@ -33,7 +33,7 @@ class HuggingFaceProvider(LLMProvider):
     def provider_name(self) -> str:
         return "huggingface"
 
-    def __init__(self):
+    def __init__(self) -> None:
         try:
             from huggingface_hub import InferenceClient
         except ImportError:

@@ -33,7 +33,7 @@ class AnthropicProvider(LLMProvider):
     def provider_name(self) -> str:
         return "anthropic"
 
-    def __init__(self):
+    def __init__(self) -> None:
         try:
             import anthropic
         except ImportError:

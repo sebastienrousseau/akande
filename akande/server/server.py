@@ -31,13 +31,19 @@ from pydub import AudioSegment
 from pydub.exceptions import CouldntDecodeError
 from akande.cache import SQLiteCache
 from akande.config import (
+    AKANDE_API_KEY,
     LLM_PROVIDER,
     OPENAI_API_KEY,
     OPENAI_DEFAULT_MODEL,
+    REDIS_URL,
 )
 from akande.akande import _friendly_llm_error
 from akande.logger import MetricsCollector
 from akande.providers import get_provider
+from akande.server.rate_limit import (
+    RateLimiterBackend,
+    build_rate_limiter,
+)
 from akande.services import SYSTEM_PROMPT, OpenAIImpl
 from akande.utils import (
     validate_api_key,
@@ -79,52 +85,12 @@ def _detect_audio_format(data: bytes) -> str:
     return ""
 
 
-class RateLimiter:
-    """Thread-safe in-memory per-IP rate limiter."""
-
-    def __init__(self, window: int, max_requests: int):
-        self.window = window
-        self.max_requests = max_requests
-        self._requests: dict = {}
-        self._lock = threading.Lock()
-
-    def is_allowed(self, ip: str) -> bool:
-        now = time.time()
-        cutoff = now - self.window
-        with self._lock:
-            # Periodic cleanup every 100 calls
-            self._call_count = getattr(
-                self, "_call_count", 0
-            ) + 1
-            if self._call_count % 100 == 0:
-                stale = [
-                    k
-                    for k, ts in self._requests.items()
-                    if not any(t > cutoff for t in ts)
-                ]
-                for k in stale:
-                    del self._requests[k]
-
-            timestamps = self._requests.get(ip, [])
-            timestamps = [t for t in timestamps if t > cutoff]
-            if len(timestamps) >= self.max_requests:
-                self._requests[ip] = timestamps
-                return False
-            timestamps.append(now)
-            self._requests[ip] = timestamps
-        return True
-
-    def cleanup(self):
-        """Remove stale IPs with no recent requests."""
-        cutoff = time.time() - self.window
-        with self._lock:
-            stale = [
-                ip
-                for ip, ts in self._requests.items()
-                if not any(t > cutoff for t in ts)
-            ]
-            for ip in stale:
-                del self._requests[ip]
+# Backwards-compatible alias: external imports of ``RateLimiter`` from
+# this module continue to work, but the implementation now lives in
+# ``akande.server.rate_limit`` and is pluggable (in-memory / Redis).
+from akande.server.rate_limit import (  # noqa: E402
+    InMemoryRateLimiter as RateLimiter,
+)
 
 
 def _hash_ip(ip: str) -> str:
@@ -193,10 +159,6 @@ cherrypy.tools.security_headers = SecurityHeadersTool()
 
 
 class AkandeServer:
-    _rate_limiter = RateLimiter(
-        RATE_LIMIT_WINDOW, RATE_LIMIT_MAX_REQUESTS
-    )
-
     _cp_config = {
         "tools.security_headers.on": True,
     }
@@ -221,10 +183,27 @@ class AkandeServer:
             Path(__file__).resolve().parent.parent.parent
             / "public"
         )
+        # Pluggable rate limiter (in-memory by default; Redis when
+        # ``REDIS_URL`` is set in the environment).
+        self._rate_limiter: RateLimiterBackend = build_rate_limiter(
+            window=RATE_LIMIT_WINDOW,
+            max_requests=RATE_LIMIT_MAX_REQUESTS,
+            redis_url=REDIS_URL,
+        )
         # Server-side cache
         directory_path = get_output_directory()
         cache_path = directory_path / CACHE_DB_NAME
-        self.cache = SQLiteCache(cache_path)
+        self.cache = SQLiteCache(str(cache_path))
+
+        if not AKANDE_API_KEY:
+            self.logger.warning(
+                "AKANDE_API_KEY is not set — /api routes are "
+                "OPEN. Set AKANDE_API_KEY in your environment "
+                "before exposing this server beyond localhost.",
+                extra={
+                    "event": "Server:AuthDisabled",
+                },
+            )
 
         self.logger.info(
             "Server initialized",
@@ -232,6 +211,10 @@ class AkandeServer:
                 "event": "Server:Initialized",
                 "extra_data": {
                     "public_dir": str(self.public_dir),
+                    "auth_required": bool(AKANDE_API_KEY),
+                    "rate_limiter": type(
+                        self._rate_limiter
+                    ).__name__,
                 },
             },
         )
@@ -259,6 +242,38 @@ class AkandeServer:
             raise cherrypy.HTTPError(
                 403, "Missing or invalid CSRF header"
             )
+
+    def _check_api_key(self):
+        """Validate the ``X-Akande-Key`` header against ``AKANDE_API_KEY``.
+
+        Behaviour:
+        - If ``AKANDE_API_KEY`` is unset, the check is a no-op (a
+          startup warning has already been logged).
+        - Otherwise the request must supply a matching ``X-Akande-Key``
+          header.  Comparison uses ``secrets.compare_digest`` to avoid
+          timing side channels.  On mismatch we return 401 with an
+          empty body and log the attempt with a hashed IP.
+        """
+        if not AKANDE_API_KEY:
+            return
+        provided = cherrypy.request.headers.get(
+            "X-Akande-Key", ""
+        )
+        if not secrets.compare_digest(
+            provided, AKANDE_API_KEY
+        ):
+            ip = cherrypy.request.remote.ip
+            self.logger.warning(
+                "Unauthorized API request",
+                extra={
+                    "event": "Server:Unauthorized",
+                    "extra_data": {
+                        "ip_hash": _hash_ip(ip),
+                        "path": cherrypy.request.path_info,
+                    },
+                },
+            )
+            raise cherrypy.HTTPError(401, "Unauthorized")
 
     def _check_rate_limit(self):
         ip = cherrypy.request.remote.ip
@@ -356,6 +371,7 @@ class AkandeServer:
     @cherrypy.expose
     @cherrypy.tools.allow(methods=["POST"])
     def process_question(self):
+        self._check_api_key()
         self._check_csrf()
         self._check_rate_limit()
         correlation_id = self._get_correlation_id()
@@ -491,6 +507,7 @@ class AkandeServer:
     @cherrypy.expose
     @cherrypy.tools.allow(methods=["POST"])
     def process_audio_question(self):
+        self._check_api_key()
         self._check_csrf()
         self._check_rate_limit()
         correlation_id = self._get_correlation_id()
@@ -650,6 +667,7 @@ class AkandeServer:
     @cherrypy.tools.allow(methods=["POST"])
     def export_conversation(self):
         """Export a conversation as PDF or CSV and return the file."""
+        self._check_api_key()
         self._check_csrf()
         self._check_rate_limit()
         correlation_id = self._get_correlation_id()

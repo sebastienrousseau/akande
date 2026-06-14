@@ -17,6 +17,7 @@ import cherrypy
 from .cache import SQLiteCache
 from .config import LLM_PROVIDER, OPENAI_DEFAULT_MODEL
 from .exceptions import LLMError
+from .providers.base import LLMProvider
 from .services import SYSTEM_PROMPT, OpenAIService
 from .utils import (
     generate_pdf,
@@ -28,6 +29,7 @@ from .utils import (
 
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
+from typing import Optional, Union
 import asyncio
 import hashlib
 import logging
@@ -111,9 +113,13 @@ class Akande:
     generating responses.
     """
 
-    def __init__(self, openai_service: OpenAIService, metrics=None):
+    def __init__(
+        self,
+        openai_service: Union[OpenAIService, LLMProvider],
+        metrics=None,
+    ):
         self.server = None
-        self.server_thread = None
+        self.server_thread: Optional[threading.Thread] = None
         self._server_running = threading.Event()
 
         # Cancellation support
@@ -128,7 +134,7 @@ class Akande:
 
         self.openai_service = openai_service
         self.recognizer = sr.Recognizer()
-        self.cache = SQLiteCache(cache_path)
+        self.cache = SQLiteCache(str(cache_path))
         self.executor = ThreadPoolExecutor(
             max_workers=MAX_THREAD_WORKERS
         )
@@ -602,7 +608,7 @@ class Akande:
                     await self.openai_service.generate_response(
                         prompt,
                         SYSTEM_PROMPT,
-                        OPENAI_DEFAULT_MODEL,
+                        OPENAI_DEFAULT_MODEL or "gpt-4o-mini",
                         {},
                     )
                 )

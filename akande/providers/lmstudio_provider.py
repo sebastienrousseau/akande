@@ -26,7 +26,7 @@ class LMStudioProvider(OpenAICompatProvider):
 
     _provider_name = "lmstudio"
 
-    def __init__(self):
+    def __init__(self) -> None:
         host = os.getenv(
             "LMSTUDIO_HOST", "http://localhost:1234"
         )

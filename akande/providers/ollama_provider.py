@@ -26,7 +26,7 @@ class OllamaProvider(OpenAICompatProvider):
 
     _provider_name = "ollama"
 
-    def __init__(self):
+    def __init__(self) -> None:
         host = os.getenv(
             "OLLAMA_HOST", "http://localhost:11434"
         )

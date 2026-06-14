@@ -33,7 +33,7 @@ class GoogleProvider(LLMProvider):
     def provider_name(self) -> str:
         return "google"
 
-    def __init__(self):
+    def __init__(self) -> None:
         try:
             import google.generativeai as genai
         except ImportError:
