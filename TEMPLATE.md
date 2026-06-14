@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD033 MD041 -->
 
 <img
-src="https://kura.pro/akande/images/logos/akande.webp"
+src="https://cloudcdn.pro/clients/akande/v1/logos/akande.svg"
 align="right"
 alt="Àkàndé Voice Assistant Logo"
 height="261"

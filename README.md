@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD033 MD041 -->
 
 <p align="center">
-  <img src="https://kura.pro/akande/images/logos/akande.webp" alt="Àkàndé logo" width="160" />
+  <img src="https://cloudcdn.pro/clients/akande/v1/logos/akande.svg" alt="Àkàndé logo" width="160" />
 </p>
 
 <h1 align="center">Àkàndé</h1>
