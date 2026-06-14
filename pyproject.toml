@@ -44,7 +44,7 @@ anthropic = ["anthropic>=0.40,<1"]
 google = ["google-generativeai>=0.7,<1"]
 mistral = ["mistralai>=1.0,<2"]
 cohere = ["cohere>=5.13,<6"]
-huggingface = ["huggingface_hub>=0.24,<1"]
+huggingface = ["huggingface_hub>=0.24,<2"]
 offline-tts = ["pyttsx4>=3.0.0"]
 groq = ["groq>=0.11,<1"]
 redis = ["redis>=5.0,<6"]
@@ -74,7 +74,7 @@ all = [
     "google-generativeai>=0.7,<1",
     "mistralai>=1.0,<2",
     "cohere>=5.13,<6",
-    "huggingface_hub>=0.24,<1",
+    "huggingface_hub>=0.24,<2",
     "groq>=0.11,<1",
     "pyttsx4>=3.0.0",
 ]
@@ -96,7 +96,7 @@ dev = [
     "google-generativeai>=0.7,<1",
     "mistralai>=1.0,<2",
     "cohere>=5.13,<6",
-    "huggingface_hub>=0.24,<1",
+    "huggingface_hub>=0.24,<2",
     "groq>=0.11,<1",
     "pyttsx4>=3.0.0",
     "mcp>=0.9,<2",
