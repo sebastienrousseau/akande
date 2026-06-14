@@ -19,6 +19,7 @@ from .audit import verify_command, verify_watermark_command
 from .data import data_command
 from .install_local import install_local_command
 from .mcp import mcp_command
+from .skill import skill_command
 
 KNOWN_SUBCOMMANDS = {
     "data",
@@ -27,6 +28,7 @@ KNOWN_SUBCOMMANDS = {
     "verify-watermark",
     "mcp",
     "install-local",
+    "skill",
 }
 
 
@@ -87,6 +89,23 @@ def _build_parser() -> argparse.ArgumentParser:
             "path",
             help="Path to the .audit.json file (or .pdf)",
         )
+
+    skill_parser = sub.add_parser(
+        "skill",
+        help="Manage skills (list / enable / disable / consent / revoke)",
+    )
+    skill_sub = skill_parser.add_subparsers(
+        dest="skill_command"
+    )
+    skill_sub.add_parser(
+        "list", help="List registered skills"
+    )
+    for action in ("enable", "disable", "consent", "revoke"):
+        ap = skill_sub.add_parser(
+            action,
+            help=f"{action} a skill by name",
+        )
+        ap.add_argument("name", help="Skill name")
 
     install_local = sub.add_parser(
         "install-local",
@@ -189,5 +208,7 @@ def dispatch_subcommand(
         return mcp_command(ns)
     if ns.command == "install-local":
         return install_local_command(ns)
+    if ns.command == "skill":
+        return skill_command(ns)
     parser.print_help()
     return 2

@@ -18,11 +18,11 @@ jobs:
       python-version: '3.11'
       run-ruff: true
       run-mypy: true
-      # Ratcheted back up to 60 % in v0.0.6-dev.3 — the Track E
-      # modules (profiles, disclosure, safety, audit, cli/data) ship
-      # with focused tests that lifted coverage from 56.68 % to
-      # 60.23 %.  Next step toward 75 % by GA: a dedicated TUI-tests
-      # sub-track to attack akande/tui.py (currently 14 %).
-      coverage-threshold: 60
+      # Ratcheted to 63 % in v0.0.6-dev.8 — Track D skills (skill
+      # protocol, policy, four starter skills, CLI) ship with 41
+      # focused tests that lifted coverage from 61.52 % to 63.63 %.
+      # Next step toward 75 % by GA: a dedicated TUI-tests sub-track
+      # to attack akande/tui.py (currently 14 %).
+      coverage-threshold: 63
       package-manager: 'pip'
     secrets: inherit
