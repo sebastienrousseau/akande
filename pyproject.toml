@@ -44,6 +44,22 @@ huggingface = ["huggingface_hub>=0.24,<1"]
 offline-tts = ["pyttsx4>=3.0.0"]
 groq = ["groq>=0.11,<1"]
 redis = ["redis>=5.0,<6"]
+# Optional local TTS backend (Kokoro-82M).  CPU-only, MIT-licensed,
+# ~80 MB ONNX model on first run.  Picked up by `AKANDE_TTS=kokoro`.
+tts-local = ["kokoro-onnx>=0.4,<1"]
+# AudioSeal watermarking (EU AI Act Article 50 §2).  Pulls torch +
+# torchaudio + numpy.  Required for full Article 50 coverage; the
+# package is fail-open without it (warns, does not block).
+watermark = [
+    "audioseal>=0.1,<1",
+    "torch>=2.1",
+    "torchaudio>=2.1",
+    "numpy>=1.26",
+]
+# Higher-recall PII redaction for the cache (presidio-analyzer).
+# Falls back to the regex set when not installed.
+redact = ["presidio-analyzer>=2.2,<3"]
+memory = ["mem0ai>=0.1,<1"]
 all = [
     "anthropic>=0.40,<1",
     "google-generativeai>=0.7,<1",

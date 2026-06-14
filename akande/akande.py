@@ -38,7 +38,6 @@ import time
 import threading
 import uuid
 import speech_recognition as sr
-from gtts import gTTS
 from pydub import AudioSegment
 from pydub.playback import play as pydub_play
 
@@ -171,26 +170,48 @@ class Akande:
 
     async def speak(self, text: str) -> None:
         """
-        Speak the given text using gTTS in an async manner.
+        Speak the given text using the configured TTS backend.
 
-        Generates an MP3 via Google Text-to-Speech, saves it to
-        the output directory, and plays it back using pydub.
-        Falls back to pyttsx4 for offline TTS if gTTS fails.
+        Synthesises audio via :class:`~akande.tts.TTSBackend`
+        (gTTS by default; ``AKANDE_TTS=kokoro`` switches to local
+        Kokoro), applies an AudioSeal watermark when the active
+        profile demands it (EU AI Act Article 50 §2 — see
+        :mod:`akande.watermark`), writes the result to the output
+        directory, and plays it back via pydub.  Falls back to
+        pyttsx4 for offline TTS if the primary backend fails and
+        pyttsx4 is installed.
         """
         if self._cancel_event.is_set():
             raise LLMError("Request was cancelled")
 
         def tts_engine_run(text: str):
+            from akande.profiles import active_profile
+            from akande.tts import get_tts_backend
+            from akande.watermark import watermark_audio
+
             start = time.time()
             directory_path = get_output_directory()
-            mp3_filename = get_output_filename(".mp3")
-            mp3_path = directory_path / mp3_filename
             try:
-                tts = gTTS(text=text, lang="en", tld="co.uk")
-                tts.save(str(mp3_path))
+                backend = get_tts_backend()
+                result = backend.synthesise(text)
+                audio_bytes = result.audio
+                profile = active_profile()
+                if profile.audio_watermark:
+                    audio_bytes = watermark_audio(
+                        audio_bytes, fmt=result.fmt
+                    )
+                ext = (
+                    ".mp3" if result.fmt == "mp3" else ".wav"
+                )
+                audio_filename = get_output_filename(ext)
+                audio_path = directory_path / audio_filename
+                with audio_path.open("wb") as fh:
+                    fh.write(audio_bytes)
 
-                audio = AudioSegment.from_mp3(str(mp3_path))
-                pydub_play(audio)
+                segment = AudioSegment.from_file(
+                    str(audio_path), format=result.fmt
+                )
+                pydub_play(segment)
 
                 latency = (time.time() - start) * 1000
                 if self.metrics:
@@ -200,18 +221,23 @@ class Akande:
                     extra={
                         "event": "Speech:SynthesisCompleted",
                         "extra_data": {
-                            "audio_file": str(mp3_path),
+                            "audio_file": str(audio_path),
                             "text_length": len(text),
+                            "backend": backend.name,
+                            "watermarked": (
+                                profile.audio_watermark
+                            ),
                             "latency_ms": round(latency, 2),
                         },
                     },
                 )
             except Exception as e:
                 logging.warning(
-                    f"gTTS failed: {type(e).__name__}, "
-                    f"trying pyttsx4 fallback",
+                    f"Primary TTS failed: "
+                    f"{type(e).__name__}, trying pyttsx4 "
+                    f"fallback",
                     extra={
-                        "event": "Speech:gTTSFailed",
+                        "event": "Speech:PrimaryFailed",
                     },
                 )
                 if _PYTTSX4_AVAILABLE:

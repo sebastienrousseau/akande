@@ -16,15 +16,28 @@ import argparse
 import dataclasses
 import json
 import sys
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from akande.conversation import ConversationStore
+from akande.memory import MemoryStore
 
 
 def _dump_user(
-    store: ConversationStore, user_id: str
+    store: ConversationStore,
+    user_id: str,
+    *,
+    memory: Optional[MemoryStore] = None,
 ) -> Dict[str, Any]:
-    """Build the JSON dump for a single data subject."""
+    """Build the JSON dump for a single data subject.
+
+    Includes:
+
+    - every conversation owned by ``user_id`` and all of its turns
+      (Article 15: right of access to the categories of personal
+      data processed)
+    - every Mem0 memory atom for that user when a memory store is
+      active (long-term inferred facts also fall under Article 15)
+    """
     conversations = store.list(user_id=user_id, limit=10_000)
     out: List[Dict[str, Any]] = []
     for conv in conversations:
@@ -37,10 +50,29 @@ def _dump_user(
                 ],
             }
         )
+
+    memories: List[Dict[str, Any]] = []
+    memory_enabled = False
+    if memory is not None and memory.enabled:
+        memory_enabled = True
+        for hit in memory.recall(
+            "", limit=10_000
+        ) or []:
+            memories.append(
+                {
+                    "text": hit.text,
+                    "score": hit.score,
+                    "memory_id": hit.memory_id,
+                }
+            )
+
     return {
         "user_id": user_id,
         "conversation_count": len(out),
         "conversations": out,
+        "memory_enabled": memory_enabled,
+        "memory_count": len(memories),
+        "memories": memories,
     }
 
 
@@ -58,7 +90,8 @@ def data_command(ns: argparse.Namespace) -> int:
 
 def _export(ns: argparse.Namespace) -> int:
     store = ConversationStore()
-    payload = _dump_user(store, ns.user)
+    memory = MemoryStore(user_id=ns.user)
+    payload = _dump_user(store, ns.user, memory=memory)
     text = json.dumps(
         payload,
         sort_keys=True,
@@ -85,25 +118,36 @@ def _export(ns: argparse.Namespace) -> int:
 
 def _delete(ns: argparse.Namespace) -> int:
     store = ConversationStore()
+    memory = MemoryStore(user_id=ns.user)
     conversations = store.list(user_id=ns.user, limit=10_000)
-    if not conversations:
+    memory_count = (
+        len(memory.recall("", limit=10_000) or [])
+        if memory.enabled
+        else 0
+    )
+
+    if not conversations and not memory_count:
         print(
-            f"No conversations found for user_id={ns.user!r}",
+            f"No data found for user_id={ns.user!r}",
             file=sys.stderr,
         )
         return 0
     if not ns.yes:
         print(
             f"Refusing to delete {len(conversations)} "
-            f"conversations for user_id={ns.user!r} without "
-            f"--yes",
+            f"conversations and {memory_count} memories for "
+            f"user_id={ns.user!r} without --yes",
             file=sys.stderr,
         )
         return 1
     for conv in conversations:
         store.delete(conv.id)
+    memory_deleted = (
+        memory.forget_all() if memory.enabled else 0
+    )
     print(
-        f"Deleted {len(conversations)} conversations for "
+        f"Deleted {len(conversations)} conversations and "
+        f"{memory_deleted} memories for "
         f"user_id={ns.user!r}",
         file=sys.stderr,
     )

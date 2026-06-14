@@ -15,10 +15,15 @@ import argparse
 import sys
 from typing import List, Optional
 
-from .audit import verify_command
+from .audit import verify_command, verify_watermark_command
 from .data import data_command
 
-KNOWN_SUBCOMMANDS = {"data", "verify-audit", "verify-pdf"}
+KNOWN_SUBCOMMANDS = {
+    "data",
+    "verify-audit",
+    "verify-pdf",
+    "verify-watermark",
+}
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -78,6 +83,27 @@ def _build_parser() -> argparse.ArgumentParser:
             "path",
             help="Path to the .audit.json file (or .pdf)",
         )
+
+    vw = sub.add_parser(
+        "verify-watermark",
+        help=(
+            "Detect the AudioSeal watermark in an audio file "
+            "(MP3 or WAV)"
+        ),
+    )
+    vw.add_argument(
+        "path",
+        help="Path to the audio file to inspect",
+    )
+    vw.add_argument(
+        "--threshold",
+        type=float,
+        default=0.5,
+        help=(
+            "Confidence threshold for declaring the watermark "
+            "present (default 0.5)"
+        ),
+    )
     return parser
 
 
@@ -99,5 +125,7 @@ def dispatch_subcommand(
         return data_command(ns)
     if ns.command in {"verify-audit", "verify-pdf"}:
         return verify_command(ns)
+    if ns.command == "verify-watermark":
+        return verify_watermark_command(ns)
     parser.print_help()
     return 2

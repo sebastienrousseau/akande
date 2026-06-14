@@ -207,9 +207,14 @@ class TestServerLifecycle:
 
 
 class TestTTSFallback:
+    # After the v0.0.6 TTS abstraction, speak() routes through
+    # ``akande.tts.get_tts_backend()`` → ``GTTSBackend.synthesise``
+    # which lazy-imports ``gtts``.  Tests therefore patch the call
+    # site directly, not the (now removed) top-level import in
+    # akande.akande.
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
-    @patch("akande.akande.gTTS")
+    @patch("gtts.gTTS")
     @patch("akande.akande._PYTTSX4_AVAILABLE", True)
     @patch("akande.akande.pyttsx4")
     def test_speak_gtts_fallback_to_pyttsx4(
@@ -232,7 +237,7 @@ class TestTTSFallback:
 
     @patch("akande.akande.SQLiteCache")
     @patch("akande.akande.sr.Recognizer")
-    @patch("akande.akande.gTTS")
+    @patch("gtts.gTTS")
     @patch("akande.akande._PYTTSX4_AVAILABLE", False)
     def test_speak_all_tts_fail_gracefully(
         self,
