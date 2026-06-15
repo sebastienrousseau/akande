@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "akande"
-version = "0.0.5"
+version = "0.0.6"
 description = "A self-hosted, provider-agnostic voice assistant that delivers structured executive briefings via voice or text from 10 LLM providers."
 readme = "README.md"
 license = {text = "Apache Software License"}
