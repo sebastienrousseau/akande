@@ -11,6 +11,12 @@ updates:
       - "dependencies"
       - "python"
     groups:
+      # Provider SDKs ship breaking majors regularly (mistralai 2.x
+      # removed the top-level `Mistral` symbol, openai 2.x reshaped
+      # response types).  Cap the group to minor + patch so PR #20-
+      # style group bumps with hidden majors stop appearing; a
+      # major bump for any provider needs a dedicated source-
+      # bearing PR.
       provider-sdks:
         patterns:
           - "openai"
@@ -20,6 +26,9 @@ updates:
           - "cohere"
           - "huggingface_hub"
           - "groq"
+        update-types:
+          - "minor"
+          - "patch"
       dev-tools:
         patterns:
           - "pytest*"
@@ -27,10 +36,30 @@ updates:
           - "bandit"
           - "pip-audit"
           - "respx"
+        update-types:
+          - "minor"
+          - "patch"
+      # textual 1.0 reshaped reactive bindings; cherrypy is stable
+      # but worth gating the same way until the TUI is re-verified
+      # against the next major.
       ui:
         patterns:
           - "textual"
           - "cherrypy"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # mem0ai 0.1.x carries four unfixed CVEs and the only patch
+      # is the 2.0.0b2 beta; we deliberately excluded it from
+      # [dev] in v0.0.6-dev.18 and keep it user-opt-in via
+      # [memory].  Skip until a stable 2.x with the CVEs cleared.
+      - dependency-name: "mem0ai"
+      # gradio drives the HF Space; 4 → 6 spans two majors with
+      # theme + streaming protocol breaks.  Held on PR #25 until
+      # the Space is smoke-tested.
+      - dependency-name: "gradio"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
@@ -51,3 +80,9 @@ updates:
     labels:
       - "dependencies"
       - "docker"
+    ignore:
+      # Hold the base image at the matrix's top floor (3.12)
+      # until the CI matrix is expanded to include 3.13/3.14.
+      # PR #19 (3.12 → 3.14) is held for this reason.
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major"]
