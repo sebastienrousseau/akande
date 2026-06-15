@@ -184,7 +184,14 @@ else
     || fail "bandit failed (see $LOG_DIR/05-bandit.log)"
   ok "bandit: 0 medium+ findings"
 
-  pip-audit --strict >"$LOG_DIR/05-pip-audit.log" 2>&1 \
+  # `--skip-editable` so pip-audit doesn't try to look up the
+  # in-tree akande package on PyPI before the release lands.
+  # `--strict` is incompatible with --skip-editable (strict
+  # treats any skipped package as a failure); without it the
+  # tool still exits non-zero on real CVEs, which is what this
+  # gate enforces.
+  pip-audit --skip-editable \
+    >"$LOG_DIR/05-pip-audit.log" 2>&1 \
     || fail "pip-audit failed (see $LOG_DIR/05-pip-audit.log)"
   ok "pip-audit: 0 known CVEs"
 fi
