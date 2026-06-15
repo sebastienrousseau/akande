@@ -107,9 +107,8 @@ updates:
     labels:
       - "dependencies"
       - "docker"
-    ignore:
-      # Hold the base image at the matrix's top floor (3.12)
-      # until the CI matrix is expanded to include 3.13/3.14.
-      # PR #19 (3.12 → 3.14) is held for this reason.
-      - dependency-name: "python"
-        update-types: ["version-update:semver-major"]
+    # No ignore block.  The previous hold on `python` semver-major
+    # bumps was dropped in v0.0.7-dev.6 once the CI + regression
+    # matrices proved green on 3.13 and 3.14.  Dependabot is now
+    # free to propose 3.13/3.14 base-image bumps for the
+    # Dockerfile (currently pinned at python:3.12-slim-bookworm).
