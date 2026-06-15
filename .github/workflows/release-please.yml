@@ -14,5 +14,13 @@ jobs:
     steps:
       - uses: googleapis/release-please-action@v4
         with:
+          # Use a PAT so the tag push + release-create events are
+          # attributed to a user identity, not the default
+          # GITHUB_TOKEN.  GitHub deliberately suppresses workflow
+          # triggers from GITHUB_TOKEN to prevent loops, which is
+          # why publish.yml needed manual `gh workflow run` in
+          # v0.0.6.  Falls back to GITHUB_TOKEN when the secret
+          # is absent so the workflow still runs in forks.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
