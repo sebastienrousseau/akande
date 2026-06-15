@@ -30,7 +30,7 @@ dependencies = [
     "speechrecognition>=3.10.1",
     "cherrypy>=18.8.0",
     "pydub>=0.25.1",
-    "textual>=0.80,<1",
+    "textual>=0.80,<9",
     "cryptography>=46.0.7,<50",
 ]
 
