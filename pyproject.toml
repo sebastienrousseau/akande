@@ -1,5 +1,6 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
+# setuptools 77+ for PEP 639 SPDX `license` field support.
+requires = ["setuptools>=77.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +8,11 @@ name = "akande"
 version = "0.0.7"
 description = "A self-hosted, provider-agnostic voice assistant that delivers structured executive briefings via voice or text from 10 LLM providers."
 readme = "README.md"
-license = {text = "Apache Software License"}
+# PEP 639 SPDX license expression — matches LICENSE-APACHE and
+# LICENSE-MIT in the repo root.  The legacy `License ::`
+# classifier is intentionally omitted (PEP 639 forbids both).
+license = "Apache-2.0 OR MIT"
+license-files = ["LICENSE-APACHE", "LICENSE-MIT"]
 requires-python = ">=3.10"
 authors = [
     {name = "Sebastien Rousseau", email = "sebastian.rousseau@gmail.com"},
@@ -15,12 +20,13 @@ authors = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
     "openai>=1.50,<2",

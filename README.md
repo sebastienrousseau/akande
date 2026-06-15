@@ -354,13 +354,13 @@ Claude Desktop drop-in (`claude_desktop_config.json`):
 
 ## Trust
 
-- **785 tests** + **95 % line coverage** in CI on every push and pull
-  request, on Python 3.10 / 3.11 / 3.12
+- **791 tests** + **95 % line coverage** in CI on every push and pull
+  request, on Python 3.10 / 3.11 / 3.12 / 3.13 / 3.14
 - **Quality gates**: ruff (lint + format), mypy (strict islands on the
   provider surface), bandit (SAST), pip-audit (vulnerable-deps scan) —
   all blocking
-- **Fresh-install regression matrix** (Ubuntu × 3.10/3.11/3.12 +
-  macOS × 3.12) reproduces the user install path on every push
+- **Fresh-install regression matrix** (Ubuntu × 3.10/3.11/3.12/3.13/3.14
+  + macOS × 3.12 + 3.14) reproduces the user install path on every push
 - **Security posture** documented in [SECURITY.md](SECURITY.md): CSP
   nonces, custom-header CSRF, per-IP rate limiting (in-memory or Redis),
   CSV-formula injection prevention, filename sanitisation, IP hashing

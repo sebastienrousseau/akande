@@ -15,7 +15,13 @@ jobs:
     name: Python CI
     uses: sebastienrousseau/pipelines/.github/workflows/python-ci.yml@main
     with:
+      # `python-version` drives the lint + mypy step (single pin).
+      # `python-versions` drives the test matrix.  Expanded for
+      # v0.0.7 to cover the full requires-python = ">=3.10" range
+      # plus the two newest releases.  Lets us drop the python-
+      # major Dependabot ignore once 3.13/3.14 stay green here.
       python-version: '3.11'
+      python-versions: '["3.10", "3.11", "3.12", "3.13", "3.14"]'
       run-ruff: true
       run-mypy: true
       coverage-threshold: 95
