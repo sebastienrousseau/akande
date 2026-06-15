@@ -23,7 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "openai>=1.50,<2",
+    "openai>=1.50,<3",
     "python-dotenv>=1.0.1",
     "gtts>=2.5.0",
     "reportlab>=4.1.0",
