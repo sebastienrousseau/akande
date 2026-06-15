@@ -60,6 +60,33 @@ updates:
       # the Space is smoke-tested.
       - dependency-name: "gradio"
         update-types: ["version-update:semver-major"]
+      # Provider-SDK major bumps need source rewrites — mistralai
+      # 2.x removed the top-level `Mistral` symbol, openai 2.x
+      # reshaped response types, cohere 5→7 changed message
+      # typing, groq 0.x → 1.x reshaped the client.  The group
+      # rule above only restricts the *grouped* bump shape;
+      # individual single-package PRs need explicit ignores too.
+      # Drop these when the matching provider module is rewritten
+      # against the new SDK.
+      - dependency-name: "openai"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "anthropic"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "google-generativeai"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "mistralai"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "cohere"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "huggingface_hub"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "groq"
+        update-types: ["version-update:semver-major"]
+      # textual 1.0 reshaped reactive bindings; the TUI surface
+      # was written against the 0.80 line.  Drop when the TUI is
+      # re-verified against the next major.
+      - dependency-name: "textual"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
