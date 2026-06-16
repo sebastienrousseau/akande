@@ -228,6 +228,80 @@ func (t Theme) renderHelp(width int) string {
 		Render(strings.Join(parts, "   "))
 }
 
+// renderPicker draws the startup provider-selection panel that
+// replaces the launcher script's `Choice (1-N):` shell prompt.
+// It fits the rest of the TUI's visual language: rounded
+// border, highlighted current row, dim descriptions, numeric
+// quick-pick (1–9), and a help footer.
+func (t Theme) renderPicker(
+	cands []ProviderCandidate, selected, width int,
+) string {
+	if len(cands) == 0 {
+		return ""
+	}
+	title := lipgloss.NewStyle().
+		Foreground(t.AccentAI).
+		Bold(true).
+		Render(" Pick your provider ")
+	sub := lipgloss.NewStyle().
+		Foreground(t.TextMuted).
+		Render(
+			"   detected on this machine · " +
+				"↑↓ to nav · Enter to confirm · " +
+				"1-9 to pick directly · Esc to quit",
+		)
+
+	keyStyle := lipgloss.NewStyle().
+		Foreground(t.AccentAI).
+		Bold(true)
+	descStyle := lipgloss.NewStyle().
+		Foreground(t.TextMuted)
+	dimStyle := lipgloss.NewStyle().
+		Foreground(t.TextDim)
+	selStyle := lipgloss.NewStyle().
+		Foreground(t.TextPrimary).
+		Background(t.BgPanel).
+		Bold(true)
+
+	var rows []string
+	for i, c := range cands {
+		num := fmt.Sprintf("%d", i+1)
+		modelHint := ""
+		if c.Model != "" {
+			modelHint = "  " + dimStyle.Render(
+				"· "+c.Model)
+		}
+		nameCol := fmt.Sprintf("%-20s", c.Name)
+		descCol := c.Description
+		if i == selected {
+			rows = append(rows,
+				"▌ "+selStyle.Render(
+					fmt.Sprintf("%s. %s  %s",
+						num, nameCol, descCol))+
+					modelHint)
+			continue
+		}
+		rows = append(rows,
+			"  "+keyStyle.Render(num+". "+nameCol)+
+				"  "+descStyle.Render(descCol)+
+				modelHint)
+	}
+
+	box := lipgloss.NewStyle().
+		Foreground(t.TextPrimary).
+		Background(t.BgPanel).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(t.AccentAI).
+		Padding(1, 2).
+		Margin(1, 0, 1, 0)
+	if width > 6 {
+		box = box.Width(width - 4)
+	}
+	body := title + "\n" + sub + "\n\n" +
+		strings.Join(rows, "\n")
+	return box.Render(body)
+}
+
 // renderNote is a labelled scrollback note (e.g. for AI
 // disclosures or tool-call events).
 func (t Theme) renderNote(label, content string) string {

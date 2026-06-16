@@ -1,6 +1,6 @@
 """Tests for akande.providers package.
 
-Tests all 11 provider adapters, the registry, the ABC, the
+Tests all 14 provider adapters, the registry, the ABC, the
 response normalisation layer, and the OpenAI-compatible base.
 """
 
@@ -173,8 +173,8 @@ class TestProviderRegistry:
         )
         assert "openai" in reg.available
 
-    def test_global_registry_has_11_providers(self):
-        assert len(_registry.available) == 11
+    def test_global_registry_has_14_providers(self):
+        assert len(_registry.available) == 14
 
     def test_global_registry_provider_names(self):
         expected = {
@@ -189,6 +189,9 @@ class TestProviderRegistry:
             "groq",
             "lmstudio",
             "claude_cli",
+            "codex_cli",
+            "copilot_cli",
+            "antigravity_cli",
         }
         assert set(_registry.available) == expected
 
@@ -1236,6 +1239,169 @@ class TestClaudeCliProvider:
             ".claude_cli_provider",
             "ClaudeCliProvider",
         )
+
+    def test_registry_resolves_v0_0_7_cli_providers(self):
+        """v0.0.7-dev.22: three new CLI-wrapping providers join
+        the registry alongside claude_cli."""
+        from akande.providers.registry import _PROVIDER_MAP
+
+        for name, expected in (
+            (
+                "codex_cli",
+                (".codex_cli_provider", "CodexCliProvider"),
+            ),
+            (
+                "copilot_cli",
+                (".copilot_cli_provider", "CopilotCliProvider"),
+            ),
+            (
+                "antigravity_cli",
+                (
+                    ".antigravity_cli_provider",
+                    "AntigravityCliProvider",
+                ),
+            ),
+        ):
+            assert name in _PROVIDER_MAP
+            assert _PROVIDER_MAP[name] == expected
+
+    def test_codex_cli_missing_binary_raises(self):
+        from akande.providers.codex_cli_provider import (
+            CodexCliProvider,
+        )
+
+        with patch(
+            "akande.providers.codex_cli_provider.shutil.which",
+            return_value=None,
+        ):
+            with pytest.raises(ImportError, match="codex"):
+                CodexCliProvider()
+
+    def test_copilot_cli_missing_binary_raises(self):
+        from akande.providers.copilot_cli_provider import (
+            CopilotCliProvider,
+        )
+
+        # Neither `copilot` nor `gh` is present.
+        with patch(
+            "akande.providers.copilot_cli_provider.shutil.which",
+            return_value=None,
+        ):
+            with pytest.raises(ImportError, match="Copilot"):
+                CopilotCliProvider()
+
+    def test_antigravity_cli_missing_binary_raises(self):
+        from akande.providers.antigravity_cli_provider import (
+            AntigravityCliProvider,
+        )
+
+        with patch(
+            "akande.providers.antigravity_cli_provider.shutil.which",
+            return_value=None,
+        ):
+            with pytest.raises(ImportError, match="antigravity"):
+                AntigravityCliProvider()
+
+    def test_codex_cli_invokes_codex_exec(self):
+        from akande.providers.codex_cli_provider import (
+            CodexCliProvider,
+        )
+
+        completed = MagicMock(stdout="42\n", returncode=0)
+        with patch(
+            "akande.providers.codex_cli_provider.shutil.which",
+            return_value="/usr/local/bin/codex",
+        ):
+            p = CodexCliProvider()
+
+        with patch(
+            "akande.providers.codex_cli_provider.subprocess.run",
+            return_value=completed,
+        ) as mock_run:
+            out = p.generate_response_sync(
+                "what is the answer?",
+                "be concise",
+                "gpt-5-codex",
+            )
+
+        argv = mock_run.call_args.args[0]
+        assert argv[0] == "/usr/local/bin/codex"
+        assert "exec" in argv
+        assert "--model" in argv
+        assert "gpt-5-codex" in argv
+        assert out.choices[0].message.content == "42"
+
+    def test_copilot_cli_prefers_standalone_binary(self):
+        """When both `copilot` and `gh` are present the standalone
+        binary wins so we don't pay the `gh` warm-up cost."""
+        from akande.providers.copilot_cli_provider import (
+            CopilotCliProvider,
+        )
+
+        def which(name):
+            if name == "copilot":
+                return "/usr/local/bin/copilot"
+            if name == "gh":
+                return "/usr/local/bin/gh"
+            return None
+
+        with patch(
+            "akande.providers.copilot_cli_provider.shutil.which",
+            side_effect=which,
+        ):
+            p = CopilotCliProvider()
+
+        assert p._cli_path == "/usr/local/bin/copilot"
+        assert p._cli_argv == ["/usr/local/bin/copilot"]
+
+    def test_copilot_cli_falls_back_to_gh_extension(self):
+        from akande.providers.copilot_cli_provider import (
+            CopilotCliProvider,
+        )
+
+        def which(name):
+            if name == "copilot":
+                return None
+            if name == "gh":
+                return "/usr/local/bin/gh"
+            return None
+
+        with patch(
+            "akande.providers.copilot_cli_provider.shutil.which",
+            side_effect=which,
+        ):
+            p = CopilotCliProvider()
+
+        assert p._cli_path == "/usr/local/bin/gh"
+        assert p._cli_argv == ["/usr/local/bin/gh", "copilot"]
+
+    def test_antigravity_cli_invokes_prompt_print(self):
+        from akande.providers.antigravity_cli_provider import (
+            AntigravityCliProvider,
+        )
+
+        completed = MagicMock(stdout="hello\n", returncode=0)
+        with patch(
+            "akande.providers.antigravity_cli_provider.shutil.which",
+            return_value="/usr/local/bin/antigravity",
+        ):
+            p = AntigravityCliProvider()
+
+        with patch(
+            "akande.providers.antigravity_cli_provider.subprocess.run",
+            return_value=completed,
+        ) as mock_run:
+            out = p.generate_response_sync(
+                "hi", "be concise", "gemini-2.5-pro"
+            )
+
+        argv = mock_run.call_args.args[0]
+        assert argv[0] == "/usr/local/bin/antigravity"
+        assert "prompt" in argv
+        assert "--print" in argv
+        assert "--model" in argv
+        assert "gemini-2.5-pro" in argv
+        assert out.choices[0].message.content == "hello"
 
     # ── v0.0.7-dev.11: real streaming via --output-format stream-json
 

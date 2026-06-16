@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -64,6 +65,14 @@ type model struct {
 	// every keystroke from the textarea's current value.
 	suggestions   []Command
 	suggestionIdx int
+
+	// Startup provider picker.  When `pickerActive` is true the
+	// view renders a centred selection list instead of the chat
+	// surface; Enter commits the highlighted choice and the TUI
+	// transitions to the normal chat flow.
+	pickerActive bool
+	pickerCands  []ProviderCandidate
+	pickerIdx    int
 }
 
 func newModel(ctx context.Context, cfg Config) model {
@@ -83,7 +92,7 @@ func newModel(ctx context.Context, cfg Config) model {
 		glamour.WithWordWrap(80),
 	)
 
-	return model{
+	m := model{
 		cfg:        cfg,
 		theme:      newTheme(),
 		ctx:        ctx,
@@ -92,6 +101,43 @@ func newModel(ctx context.Context, cfg Config) model {
 		model:      cfg.Model,
 		mdRenderer: r,
 	}
+
+	// Load the candidate list the launcher script exported.  If
+	// more than one is available — i.e. the legacy launcher
+	// would have shown its `Choice (1-N):` prompt — open the
+	// in-TUI picker instead.  A single candidate auto-applies
+	// silently and the chat surface comes up directly.
+	candidates := loadProviderCandidates()
+	if len(candidates) > 1 {
+		m.pickerActive = true
+		m.pickerCands = candidates
+		m.pickerIdx = 0
+	} else if len(candidates) == 1 {
+		applyCandidate(&m, candidates[0])
+	}
+	return m
+}
+
+// applyCandidate sets the provider + model on the model and
+// exports the matching env vars so the akande server picks them
+// up when the TUI eventually spawns it (or so any other
+// downstream consumer sees the right values).
+func applyCandidate(m *model, c ProviderCandidate) {
+	m.provider = c.Name
+	if c.Model != "" {
+		m.model = c.Model
+	}
+	_ = setEnvIfEmpty("LLM_PROVIDER", c.Name)
+	if c.Model != "" {
+		_ = setEnvIfEmpty("OPENAI_DEFAULT_MODEL", c.Model)
+	}
+}
+
+func setEnvIfEmpty(key, value string) error {
+	if os.Getenv(key) != "" {
+		return nil
+	}
+	return os.Setenv(key, value)
 }
 
 func (m model) Init() tea.Cmd {
@@ -147,6 +193,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
+		// Startup provider picker takes over key handling so the
+		// composer + slash popup do not steal navigation events.
+		if m.pickerActive {
+			return m.handlePickerKey(msg.String())
+		}
+
 		// Slash-command popup nav.  Intercept BEFORE textarea
 		// sees the keystroke so the popup feels like the
 		// autocomplete UIs in Claude Code and aider.
@@ -309,6 +361,55 @@ func (m *model) handleStreamEvent(ev StreamEvent) (tea.Model, tea.Cmd) {
 	return *m, readStreamEvent(m.streamCh, m.streamStart)
 }
 
+// handlePickerKey processes navigation for the startup picker.
+// Up/Down (and Ctrl+P/N) move the selection; Enter commits;
+// Ctrl+C / q quits without picking.
+func (m model) handlePickerKey(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "up", "ctrl+p":
+		m.pickerIdx--
+		if m.pickerIdx < 0 {
+			m.pickerIdx = len(m.pickerCands) - 1
+		}
+		return m, nil
+	case "down", "ctrl+n":
+		m.pickerIdx =
+			(m.pickerIdx + 1) % len(m.pickerCands)
+		return m, nil
+	case "enter":
+		chosen := m.pickerCands[m.pickerIdx]
+		applyCandidate(&m, chosen)
+		m.pickerActive = false
+		m.pickerCands = nil
+		m.pickerIdx = 0
+		// Print a confirmation line into scrollback so the
+		// banner that follows starts on a fresh row.
+		confirm := m.theme.renderNote(
+			"provider", fmt.Sprintf(
+				"%s · %s", m.provider, m.model))
+		return m, tea.Println(confirm)
+	case "ctrl+c", "esc":
+		return m, tea.Quit
+	}
+	// Numeric quick-pick: 1, 2, 3 … select directly.
+	if len(key) == 1 && key >= "1" && key <= "9" {
+		idx := int(key[0] - '1')
+		if idx < len(m.pickerCands) {
+			m.pickerIdx = idx
+			chosen := m.pickerCands[idx]
+			applyCandidate(&m, chosen)
+			m.pickerActive = false
+			m.pickerCands = nil
+			m.pickerIdx = 0
+			confirm := m.theme.renderNote(
+				"provider", fmt.Sprintf(
+					"%s · %s", m.provider, m.model))
+			return m, tea.Println(confirm)
+		}
+	}
+	return m, nil
+}
+
 func readStreamEvent(
 	ch <-chan StreamEvent, start time.Time,
 ) tea.Cmd {
@@ -328,6 +429,13 @@ func readStreamEvent(
 func (m model) View() string {
 	if !m.ready {
 		return ""
+	}
+
+	// Picker takes the full bottom strip when active.  No
+	// composer / streaming preview rendered behind it.
+	if m.pickerActive {
+		return m.theme.renderPicker(
+			m.pickerCands, m.pickerIdx, m.width)
 	}
 
 	var preview string
