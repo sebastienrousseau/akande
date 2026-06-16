@@ -84,15 +84,18 @@ func main() {
 
 	model := newModel(ctx, cfg)
 
-	// `WithMouseCellMotion` was leaking SGR mouse reports
-	// (`CSI <65;X;YM`) into the textarea on Apple Terminal —
-	// Bubble Tea v1's stdin parser does not handle that format
-	// reliably across emulators.  The chat TUI does not need
-	// hover tracking; scroll wheel events still reach the
-	// viewport through Bubble Tea's default key bindings.
-	p := tea.NewProgram(model,
-		tea.WithAltScreen(),
-	)
+	// No alt-screen and no mouse:
+	//
+	// - Skipping the alt-screen makes the chat history live in
+	//   the terminal's native scrollback.  Past turns are
+	//   scrollable with the user's usual gestures and the
+	//   binary's bottom strip (composer + status) is the only
+	//   thing Bubble Tea owns.  This mirrors the aider / Claude
+	//   CLI UX rather than fighting it with a managed viewport.
+	//
+	// - Skipping mouse tracking avoids the SGR-report leak we
+	//   hit on Apple Terminal (dev.17).
+	p := tea.NewProgram(model)
 	if _, err := p.Run(); err != nil {
 		log.Fatalf("akande-tui: %v", err)
 	}

@@ -3,146 +3,247 @@
 
 package main
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"fmt"
+	"strings"
 
-// Theme centralises every Lipgloss style the TUI uses.  Tokens
-// match the v0.0.6 design system shared with the Python TUI and
-// the Web UI so the three surfaces stay visually consistent.
-//
-// Colours are adaptive — Lipgloss picks the dark variant when the
-// terminal background is dark, the light variant otherwise.
+	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/lipgloss"
+)
+
+// Theme centralises every Lipgloss style + render helper.  Chat
+// history is printed into the terminal scrollback (no alt-screen,
+// no viewport) so the styles here cover one-shot blocks rather
+// than full-frame panels.
 type Theme struct {
-	BgPage       lipgloss.AdaptiveColor
-	BgPanel      lipgloss.AdaptiveColor
-	Border       lipgloss.AdaptiveColor
-	TextPrimary  lipgloss.AdaptiveColor
-	TextMuted    lipgloss.AdaptiveColor
-	TextDim      lipgloss.AdaptiveColor
-	AccentUser   lipgloss.AdaptiveColor
-	AccentAI     lipgloss.AdaptiveColor
-	AccentInfo   lipgloss.AdaptiveColor
-	AccentOK     lipgloss.AdaptiveColor
-	AccentWarn   lipgloss.AdaptiveColor
-	AccentError  lipgloss.AdaptiveColor
-
-	// Composed styles
-	Header     lipgloss.Style
-	HeaderSub  lipgloss.Style
-	StatusBar  lipgloss.Style
-	StatusOk   lipgloss.Style
-	StatusInfo lipgloss.Style
-	BubbleUser lipgloss.Style
-	BubbleAI   lipgloss.Style
-	BubbleErr  lipgloss.Style
-	BubbleFile lipgloss.Style
-	RoleBadge  lipgloss.Style
-	Composer   lipgloss.Style
-	HelpKey    lipgloss.Style
-	HelpDesc   lipgloss.Style
+	BgPanel     lipgloss.Color
+	TextPrimary lipgloss.Color
+	TextMuted   lipgloss.Color
+	TextDim     lipgloss.Color
+	AccentUser  lipgloss.Color
+	AccentAI    lipgloss.Color
+	AccentInfo  lipgloss.Color
+	AccentOK    lipgloss.Color
+	AccentWarn  lipgloss.Color
+	AccentError lipgloss.Color
 }
 
 func newTheme() Theme {
-	t := Theme{
-		BgPage: lipgloss.AdaptiveColor{
-			Light: "#fafafa", Dark: "#0f0f10"},
-		BgPanel: lipgloss.AdaptiveColor{
-			Light: "#ffffff", Dark: "#18181b"},
-		Border: lipgloss.AdaptiveColor{
-			Light: "#e5e5e7", Dark: "#2a2a2e"},
-		TextPrimary: lipgloss.AdaptiveColor{
-			Light: "#1d1d1f", Dark: "#f5f5f7"},
-		TextMuted: lipgloss.AdaptiveColor{
-			Light: "#86868b", Dark: "#98989d"},
-		TextDim: lipgloss.AdaptiveColor{
-			Light: "#aeaeb2", Dark: "#636366"},
-		AccentUser: lipgloss.AdaptiveColor{
-			Light: "#007aff", Dark: "#0a84ff"},
-		AccentAI: lipgloss.AdaptiveColor{
-			Light: "#af52de", Dark: "#bf5af2"},
-		AccentInfo: lipgloss.AdaptiveColor{
-			Light: "#5ac8fa", Dark: "#64d2ff"},
-		AccentOK: lipgloss.AdaptiveColor{
-			Light: "#34c759", Dark: "#32d74b"},
-		AccentWarn: lipgloss.AdaptiveColor{
-			Light: "#ff9500", Dark: "#ff9f0a"},
-		AccentError: lipgloss.AdaptiveColor{
-			Light: "#ff3b30", Dark: "#ff453a"},
+	return Theme{
+		BgPanel:     "#1a1a1d",
+		TextPrimary: "#f5f5f7",
+		TextMuted:   "#98989d",
+		TextDim:     "#636366",
+		AccentUser:  "#0a84ff",
+		AccentAI:    "#bf5af2",
+		AccentInfo:  "#64d2ff",
+		AccentOK:    "#32d74b",
+		AccentWarn:  "#ff9f0a",
+		AccentError: "#ff453a",
 	}
+}
 
-	base := lipgloss.NewStyle()
-
-	t.Header = base.
+// dot renders the live "online" marker for the status bar.
+func (t Theme) dot() string {
+	return lipgloss.NewStyle().
+		Foreground(t.AccentAI).
 		Bold(true).
-		Padding(0, 2).
-		Foreground(t.TextPrimary).
-		Background(t.BgPanel).
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderBottom(true).
-		BorderForeground(t.Border)
+		Render("●")
+}
 
-	t.HeaderSub = base.
+func (t Theme) warn(s string) string {
+	return lipgloss.NewStyle().
+		Foreground(t.AccentWarn).
+		Render("⚠ " + s)
+}
+
+// banner is the one-time welcome string printed into scrollback
+// before the first prompt.
+func (t Theme) banner(cfg Config) string {
+	title := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(t.AccentAI).
+		Render(" Àkàndé ")
+	sub := lipgloss.NewStyle().
 		Foreground(t.TextMuted).
-		Background(t.BgPanel)
+		Render(" Executive briefing assistant ")
+	meta := lipgloss.NewStyle().
+		Foreground(t.TextDim).
+		Render(fmt.Sprintf(
+			"   provider · %s   model · %s   %s",
+			cfg.Provider, cfg.Model, cfg.ServerURL))
+	hint := lipgloss.NewStyle().
+		Foreground(t.TextDim).
+		Render("   Enter to send · Esc to quit · " +
+			"Ctrl+C to cancel a stream")
+	return strings.Join([]string{
+		"",
+		title,
+		sub,
+		meta,
+		hint,
+		"",
+	}, "\n")
+}
 
-	t.StatusBar = base.
-		Padding(0, 2).
-		Foreground(t.TextMuted).
-		Background(t.BgPanel).
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderTop(true).
-		BorderForeground(t.Border)
-
-	t.StatusOk = base.Foreground(t.AccentOK).Bold(true)
-	t.StatusInfo = base.Foreground(t.AccentAI).Bold(true)
-
-	bubbleBase := base.
-		Padding(0, 1).
-		Margin(0, 0, 1, 0).
+// renderUser is the bubble printed into scrollback when the user
+// submits a question.  Minimal, single coloured glyph + text.
+func (t Theme) renderUser(text string) string {
+	label := lipgloss.NewStyle().
+		Foreground(t.AccentUser).
+		Bold(true).
+		Render("❯ you ")
+	body := lipgloss.NewStyle().
 		Foreground(t.TextPrimary).
-		Background(t.BgPanel).
-		BorderStyle(lipgloss.ThickBorder()).
-		BorderBackground(t.BgPage).
-		BorderLeft(true)
+		Render(text)
+	return label + body
+}
 
-	t.BubbleUser = bubbleBase.BorderForeground(t.AccentUser)
-	t.BubbleAI = bubbleBase.BorderForeground(t.AccentAI)
-	t.BubbleErr = bubbleBase.BorderForeground(t.AccentError).
-		Foreground(t.AccentError)
-	t.BubbleFile = bubbleBase.BorderForeground(t.AccentOK).
-		Foreground(t.TextMuted)
+// renderAssistant is the bubble printed into scrollback once the
+// assistant's stream completes.  We render the markdown with
+// glamour so headings, code blocks, lists, tables and inline
+// styles land fully styled in scrollback.
+func (t Theme) renderAssistant(
+	r *glamour.TermRenderer, markdown string,
+) string {
+	label := lipgloss.NewStyle().
+		Foreground(t.AccentAI).
+		Bold(true).
+		Render("❯ akande")
+	var body string
+	if r != nil {
+		rendered, err := r.Render(markdown)
+		if err == nil && rendered != "" {
+			body = strings.TrimRight(rendered, "\n")
+		}
+	}
+	if body == "" {
+		body = lipgloss.NewStyle().
+			Foreground(t.TextPrimary).
+			Render(markdown)
+	}
+	return label + "\n" + body
+}
 
-	t.RoleBadge = base.Bold(true).
-		Margin(0, 0, 0, 1).
-		Background(t.BgPage)
+// renderStreamingPreview is what shows above the composer while
+// a stream is in flight.  We re-render with glamour every refresh
+// so the partial markdown stays legible.
+func (t Theme) renderStreamingPreview(
+	r *glamour.TermRenderer, partial string, width int,
+) string {
+	if partial == "" {
+		return lipgloss.NewStyle().
+			Foreground(t.TextDim).
+			Padding(0, 1).
+			Render("⠋ thinking…")
+	}
+	var body string
+	if r != nil {
+		rendered, err := r.Render(partial)
+		if err == nil && rendered != "" {
+			body = strings.TrimRight(rendered, "\n")
+		}
+	}
+	if body == "" {
+		body = lipgloss.NewStyle().
+			Foreground(t.TextPrimary).
+			Render(partial)
+	}
+	// Clamp the live preview to a few lines so the composer +
+	// status stay visible.  Long previews trim to the last ~8
+	// lines; the full response lands in scrollback at end.
+	lines := strings.Split(body, "\n")
+	if len(lines) > 8 {
+		lines = append([]string{
+			lipgloss.NewStyle().
+				Foreground(t.TextDim).
+				Render(fmt.Sprintf(
+					"  ⋯ (%d lines above)",
+					len(lines)-8)),
+		}, lines[len(lines)-8:]...)
+		body = strings.Join(lines, "\n")
+	}
+	border := lipgloss.NewStyle().
+		Foreground(t.AccentAI).
+		Bold(true).
+		Render("❯ akande")
+	return border + "\n" + body
+}
 
-	t.Composer = base.
+// renderComposer wraps the textarea view in a rounded border.
+func (t Theme) renderComposer(view string, width int) string {
+	style := lipgloss.NewStyle().
 		Padding(0, 1).
+		Margin(1, 0, 0, 0).
 		Foreground(t.TextPrimary).
-		Background(t.BgPanel).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(t.Border).
-		BorderBackground(t.BgPage)
-
-	t.HelpKey = base.Foreground(t.AccentAI).
-		Background(t.BgPage).Bold(true)
-	t.HelpDesc = base.Foreground(t.TextMuted).
-		Background(t.BgPage)
-
-	return t
+		BorderForeground(t.TextDim)
+	if width > 4 {
+		style = style.Width(width - 2)
+	}
+	return style.Render(view)
 }
 
-// Page returns a style that paints the full-frame page background
-// so the alt-screen does not show through to the terminal
-// background (Ghostty / iTerm2 translucency, dim mode, etc.).
-func (t Theme) Page() lipgloss.Style {
+// renderStatus renders the one-line status bar at the bottom of
+// the program's footer.
+func (t Theme) renderStatus(left, right string, width int) string {
+	if width < 4 {
+		return left + "  " + right
+	}
+	gap := width - lipgloss.Width(left) - lipgloss.Width(right) - 2
+	if gap < 1 {
+		gap = 1
+	}
+	combined := left + strings.Repeat(" ", gap) + right
 	return lipgloss.NewStyle().
-		Background(t.BgPage).
-		Foreground(t.TextPrimary)
+		Padding(0, 1).
+		Foreground(t.TextMuted).
+		Render(combined)
 }
 
-// ChatArea paints the scrollable chat region behind the bubbles.
-func (t Theme) ChatArea() lipgloss.Style {
+// renderHelp is the dim shortcut row below the status bar.
+func (t Theme) renderHelp(width int) string {
+	keyStyle := lipgloss.NewStyle().
+		Foreground(t.AccentAI).
+		Bold(true)
+	descStyle := lipgloss.NewStyle().
+		Foreground(t.TextDim)
+	pairs := []struct{ k, d string }{
+		{"Enter", "send"},
+		{"Esc", "quit / cancel"},
+		{"Ctrl+C", "quit"},
+	}
+	var parts []string
+	for _, p := range pairs {
+		parts = append(parts,
+			keyStyle.Render(p.k)+" "+descStyle.Render(p.d))
+	}
 	return lipgloss.NewStyle().
-		Background(t.BgPage).
-		Foreground(t.TextPrimary)
+		Padding(0, 2).
+		Render(strings.Join(parts, "   "))
+}
+
+// renderNote is a labelled scrollback note (e.g. for AI
+// disclosures or tool-call events).
+func (t Theme) renderNote(label, content string) string {
+	tag := lipgloss.NewStyle().
+		Foreground(t.AccentInfo).
+		Bold(true).
+		Render("• " + label)
+	body := lipgloss.NewStyle().
+		Foreground(t.TextMuted).
+		Render(content)
+	return tag + "\n" + body
+}
+
+// renderError prints a labelled error block into scrollback.
+func (t Theme) renderError(msg string) string {
+	tag := lipgloss.NewStyle().
+		Foreground(t.AccentError).
+		Bold(true).
+		Render("✗ error")
+	body := lipgloss.NewStyle().
+		Foreground(t.AccentError).
+		Render(msg)
+	return tag + "\n" + body
 }

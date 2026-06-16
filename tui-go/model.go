@@ -10,127 +10,100 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/textarea"
-	"github.com/charmbracelet/bubbles/viewport"
-	"github.com/charmbracelet/glamour"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Message is one entry in the conversation log.
-type Message struct {
-	Role      string // user|assistant|file|error|status|disclosure
-	Body      string // raw markdown (or plain text for non-md bubbles)
-	Markdown  bool   // body should be rendered as markdown
-	Timestamp time.Time
-}
-
-// streamStart is a tea.Msg fired right before the SSE goroutine
-// is spawned, so the model can pin the bubble it will append to.
-type streamStart struct{}
-
-// streamEvent wraps StreamEvent so the Bubble Tea Update loop can
-// react to incoming SSE events as ordinary messages.
+// streamEvent / streamDone / errMsg / initServerReady are control
+// messages dispatched by the SSE consumer goroutine and the
+// initial health probe.
 type streamEvent struct{ ev StreamEvent }
-
-// streamDone signals the SSE goroutine has terminated (EOF or
-// error).  Latency is the wall-clock from streamStart.
 type streamDone struct {
 	latency time.Duration
 	err     error
 }
-
-// errMsg surfaces a non-fatal error in the footer.
 type errMsg struct{ err error }
-
-// initServerReady fires once the underlying HTTP server has been
-// confirmed reachable on launch.
 type initServerReady struct{}
 
-// model is the Bubble Tea application state.
+// model owns the bubbletea state.  The chat history lives in the
+// terminal's scrollback — we print it there via `tea.Println` —
+// so this struct only tracks the in-flight response, the
+// composer, and the bottom status strip.  The alt-screen is
+// disabled so the user can scroll back through past turns with
+// their terminal's normal scrollback gestures.
 type model struct {
-	cfg     Config
-	theme   Theme
-	ctx     context.Context
+	cfg   Config
+	theme Theme
+	ctx   context.Context
 
-	// Layout
 	width, height int
 	ready         bool
 
-	// Composer
 	textarea textarea.Model
 
-	// Chat
-	viewport       viewport.Model
-	messages       []Message
-	streamingBody  string
+	// In-flight streaming buffer.  Replaced by the final
+	// glamour-rendered response (printed into scrollback) once
+	// the stream completes.
+	streamingBody   string
 	streamingActive bool
+	streamStart     time.Time
+	streamCh        chan StreamEvent
+	streamCtx       context.CancelFunc
 
-	// Status
 	provider     string
 	model        string
 	conversation string
 	totalTokens  int
 	lastLatency  time.Duration
-	streamStart  time.Time
 	statusNote   string
 
-	// Streaming
-	streamCh    chan StreamEvent
-	streamCtx   context.CancelFunc
-
-	// Help overlay
-	showHelp bool
-
-	// Markdown renderer
 	mdRenderer *glamour.TermRenderer
 }
 
 func newModel(ctx context.Context, cfg Config) model {
 	ta := textarea.New()
-	ta.Placeholder = "Ask me anything — Enter to send, Esc to quit"
+	ta.Placeholder = "Ask me anything — Enter to send"
 	ta.Focus()
-	ta.Prompt = "▌ "
+	ta.Prompt = "▎ "
 	ta.CharLimit = 4096
 	ta.SetWidth(80)
-	ta.SetHeight(3)
+	ta.SetHeight(1)
 	ta.ShowLineNumbers = false
+	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
+	ta.BlurredStyle.CursorLine = lipgloss.NewStyle()
 
-	vp := viewport.New(80, 20)
-
-	// Glamour with a dark-friendly theme.  Width is set per-render
-	// once the terminal size is known.
 	r, _ := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
+		glamour.WithStandardStyle("dark"),
 		glamour.WithWordWrap(80),
 	)
 
-	m := model{
+	return model{
 		cfg:        cfg,
 		theme:      newTheme(),
 		ctx:        ctx,
 		textarea:   ta,
-		viewport:   vp,
 		provider:   cfg.Provider,
 		model:      cfg.Model,
 		mdRenderer: r,
-		messages: []Message{
-			{
-				Role:      "assistant",
-				Body:      welcomeMessage(cfg),
-				Markdown:  true,
-				Timestamp: time.Now(),
-			},
-		},
 	}
-	return m
 }
 
 func (m model) Init() tea.Cmd {
-	return tea.Batch(textarea.Blink, m.pollServer())
+	return tea.Batch(
+		textarea.Blink,
+		m.pollServer(),
+		m.printBanner(),
+	)
 }
 
-// pollServer is a one-shot command that confirms the server is up
-// before the user sees the prompt as enabled.
+// printBanner emits the one-time welcome panel into the
+// terminal's scrollback so the rest of the UI starts on a
+// fresh line below it.
+func (m model) printBanner() tea.Cmd {
+	return tea.Println(m.theme.banner(m.cfg))
+}
+
 func (m model) pollServer() tea.Cmd {
 	return func() tea.Msg {
 		deadline := time.Now().Add(5 * time.Second)
@@ -151,29 +124,37 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.layout()
+		w := msg.Width - 4
+		if w < 30 {
+			w = 30
+		}
+		m.textarea.SetWidth(w)
+		// Re-create the markdown renderer so wrapping matches
+		// the new viewport.
+		r, err := glamour.NewTermRenderer(
+			glamour.WithStandardStyle("dark"),
+			glamour.WithWordWrap(w),
+		)
+		if err == nil {
+			m.mdRenderer = r
+		}
 		m.ready = true
 		return m, nil
 
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "esc":
-			if m.streamingActive {
-				// Esc cancels in-flight stream; first press only.
-				if m.streamCtx != nil {
-					m.streamCtx()
-				}
+		case "ctrl+c":
+			if m.streamingActive && m.streamCtx != nil {
+				m.streamCtx()
 				return m, nil
 			}
 			return m, tea.Quit
-		case "ctrl+l":
-			m.messages = m.messages[:0]
-			m.renderViewport()
-			return m, nil
-		case "ctrl+h", "f1":
-			m.showHelp = !m.showHelp
-			m.renderViewport()
-			return m, nil
+		case "esc":
+			if m.streamingActive && m.streamCtx != nil {
+				m.streamCtx()
+				return m, nil
+			}
+			return m, tea.Quit
 		case "enter":
 			if m.streamingActive {
 				return m, nil
@@ -183,22 +164,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			m.textarea.Reset()
-			m.messages = append(m.messages, Message{
-				Role:      "user",
-				Body:      q,
-				Markdown:  false,
-				Timestamp: time.Now(),
-			})
+			userLine := m.theme.renderUser(q)
 			m.streamingBody = ""
 			m.streamingActive = true
 			m.streamStart = time.Now()
-			m.renderViewport()
-			// Mutate first, then return — `return m, m.foo(q)`
-			// snapshots m before startStream's pointer-receiver
-			// mutations land, leaving streamCh nil on the
-			// returned model.
-			cmd := m.startStream(q)
-			return m, cmd
+			ctx, cancel := context.WithCancel(m.ctx)
+			m.streamCtx = cancel
+			m.streamCh = make(chan StreamEvent, 64)
+			go openStream(ctx, m.cfg, q, m.conversation,
+				m.streamCh)
+			return m, tea.Batch(
+				tea.Println(userLine),
+				readStreamEvent(m.streamCh, m.streamStart),
+			)
 		}
 
 	case initServerReady:
@@ -210,22 +188,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case streamDone:
 		m.streamingActive = false
+		m.lastLatency = msg.latency
+		// Final clean render with glamour so headings, code
+		// blocks, lists land in scrollback in their fully
+		// styled form.  Drop the partial preview that was
+		// rendering above the composer.
+		body := strings.TrimRight(m.streamingBody, "\n")
+		m.streamingBody = ""
+		var cmds []tea.Cmd
+		if body != "" {
+			cmds = append(cmds,
+				tea.Println(m.theme.renderAssistant(
+					m.mdRenderer, body)))
+		}
 		if msg.err != nil {
 			m.statusNote = fmt.Sprintf("stream: %v", msg.err)
 		}
-		m.lastLatency = msg.latency
-		// Finalise the assistant bubble.
-		if m.streamingBody != "" {
-			m.messages = append(m.messages, Message{
-				Role:      "assistant",
-				Body:      m.streamingBody,
-				Markdown:  true,
-				Timestamp: time.Now(),
-			})
-		}
-		m.streamingBody = ""
-		m.renderViewport()
-		return m, nil
+		return m, tea.Batch(cmds...)
 
 	case errMsg:
 		m.statusNote = msg.err.Error()
@@ -234,10 +213,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 	m.textarea, cmd = m.textarea.Update(msg)
-	cmds := []tea.Cmd{cmd}
-	m.viewport, cmd = m.viewport.Update(msg)
-	cmds = append(cmds, cmd)
-	return m, tea.Batch(cmds...)
+	return m, cmd
 }
 
 func (m *model) handleStreamEvent(ev StreamEvent) (tea.Model, tea.Cmd) {
@@ -247,60 +223,32 @@ func (m *model) handleStreamEvent(ev StreamEvent) (tea.Model, tea.Cmd) {
 			m.conversation = ev.ConversationID
 		}
 	case "disclosure":
-		m.messages = append(m.messages, Message{
-			Role:      "status",
-			Body:      ev.Content,
-			Markdown:  false,
-			Timestamp: time.Now(),
-		})
-		m.renderViewport()
+		// Disclosures print into scrollback as a labelled note.
+		return *m, tea.Batch(
+			tea.Println(m.theme.renderNote(
+				"disclosure", ev.Content)),
+			readStreamEvent(m.streamCh, m.streamStart),
+		)
 	case "delta":
 		m.streamingBody += ev.Content
 		m.totalTokens++
-		m.renderViewport()
 	case "tool_call":
-		m.messages = append(m.messages, Message{
-			Role: "status",
-			Body: fmt.Sprintf(
-				"tool · %s", ev.Name),
-			Markdown:  false,
-			Timestamp: time.Now(),
-		})
-		m.renderViewport()
+		return *m, tea.Batch(
+			tea.Println(m.theme.renderNote(
+				"tool", ev.Name)),
+			readStreamEvent(m.streamCh, m.streamStart),
+		)
 	case "error":
-		m.messages = append(m.messages, Message{
-			Role:      "error",
-			Body:      ev.Message,
-			Markdown:  false,
-			Timestamp: time.Now(),
-		})
-		m.renderViewport()
+		return *m, tea.Batch(
+			tea.Println(m.theme.renderError(ev.Message)),
+			readStreamEvent(m.streamCh, m.streamStart),
+		)
 	case "done":
-		// streamDone follows when the goroutine returns; nothing
-		// more to do here.
+		// streamDone follows when the goroutine returns.
 	}
 	return *m, readStreamEvent(m.streamCh, m.streamStart)
 }
 
-// startStream opens the SSE connection in a goroutine, stores the
-// channel + cancel on the model, and returns a Cmd that waits for
-// the first event.  The returned Cmd's closure captures the
-// channel and stream-start time by *local variable* — not by
-// model field — so the right channel is used even when Bubble
-// Tea copies the model around between Update calls.
-func (m *model) startStream(question string) tea.Cmd {
-	ctx, cancel := context.WithCancel(m.ctx)
-	m.streamCtx = cancel
-	m.streamCh = make(chan StreamEvent, 64)
-	go openStream(ctx, m.cfg, question, m.conversation, m.streamCh)
-	return readStreamEvent(m.streamCh, m.streamStart)
-}
-
-// readStreamEvent returns a Cmd that blocks on the next SSE event.
-// When the channel closes (openStream always closes it on EOF or
-// error), the Cmd emits a streamDone.  Each event handler in
-// Update re-issues this Cmd so a single goroutine consumes the
-// channel — no races with a parallel completion watcher.
 func readStreamEvent(
 	ch <-chan StreamEvent, start time.Time,
 ) tea.Cmd {
@@ -313,248 +261,57 @@ func readStreamEvent(
 	}
 }
 
-// layout recomputes child widget sizes based on the terminal size.
-func (m *model) layout() {
-	composerHeight := 5
-	headerHeight := 2
-	statusHeight := 2
-	chatHeight := m.height - composerHeight - headerHeight - statusHeight
-	if chatHeight < 3 {
-		chatHeight = 3
-	}
-	m.viewport.Width = m.width
-	m.viewport.Height = chatHeight
-	m.textarea.SetWidth(m.width - 4)
-
-	if m.mdRenderer != nil {
-		_ = m.mdRenderer
-	}
-	// Re-create the renderer at the new width so wrapping matches.
-	width := m.width - 6
-	if width < 40 {
-		width = 40
-	}
-	r, err := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
-		glamour.WithWordWrap(width),
-	)
-	if err == nil {
-		m.mdRenderer = r
-	}
-	m.renderViewport()
-}
-
-// renderViewport rebuilds the chat content + scrolls to bottom.
-func (m *model) renderViewport() {
-	if !m.ready {
-		return
-	}
-	var parts []string
-	for _, msg := range m.messages {
-		parts = append(parts, m.renderMessage(msg))
-	}
-	if m.streamingActive {
-		parts = append(parts, m.renderMessage(Message{
-			Role:     "assistant",
-			Body:     m.streamingBody + " ▌",
-			Markdown: true,
-		}))
-	}
-	if m.showHelp {
-		parts = append(parts, m.helpPanel())
-	}
-	m.viewport.SetContent(
-		lipgloss.JoinVertical(lipgloss.Left, parts...))
-	m.viewport.GotoBottom()
-}
-
-func (m *model) renderMessage(msg Message) string {
-	var bubbleStyle lipgloss.Style
-	var roleStyle lipgloss.Style
-	var label string
-	switch msg.Role {
-	case "user":
-		bubbleStyle = m.theme.BubbleUser
-		roleStyle = lipgloss.NewStyle().Bold(true).
-			Foreground(m.theme.AccentUser)
-		label = "you"
-	case "assistant":
-		bubbleStyle = m.theme.BubbleAI
-		roleStyle = lipgloss.NewStyle().Bold(true).
-			Foreground(m.theme.AccentAI)
-		label = "akande"
-	case "error":
-		bubbleStyle = m.theme.BubbleErr
-		roleStyle = lipgloss.NewStyle().Bold(true).
-			Foreground(m.theme.AccentError)
-		label = "error"
-	case "file":
-		bubbleStyle = m.theme.BubbleFile
-		roleStyle = lipgloss.NewStyle().Bold(true).
-			Foreground(m.theme.AccentOK)
-		label = "files"
-	default:
-		bubbleStyle = m.theme.BubbleFile
-		roleStyle = lipgloss.NewStyle().Bold(true).
-			Foreground(m.theme.AccentInfo)
-		label = msg.Role
-	}
-
-	bodyMaxWidth := m.width - 6
-	if bodyMaxWidth < 40 {
-		bodyMaxWidth = 40
-	}
-
-	var body string
-	if msg.Markdown && m.mdRenderer != nil {
-		rendered, err := m.mdRenderer.Render(msg.Body)
-		if err != nil || rendered == "" {
-			body = msg.Body
-		} else {
-			body = strings.TrimRight(rendered, "\n")
-		}
-	} else {
-		body = lipgloss.NewStyle().Width(bodyMaxWidth).
-			Render(msg.Body)
-	}
-
-	bubble := bubbleStyle.
-		Width(m.width - 2).
-		Render(body)
-
-	role := roleStyle.Margin(0, 0, 0, 1).Render(label)
-
-	return lipgloss.JoinVertical(lipgloss.Left, role, bubble)
-}
-
+// View renders the bottom strip — the in-flight streaming
+// preview (when active), the composer, and the status line.
+// History prints into scrollback above this strip via
+// `tea.Println`.
 func (m model) View() string {
 	if !m.ready {
-		return "  akande-tui starting…"
+		return ""
 	}
 
-	header := m.theme.Header.
-		Width(m.width).
-		Render(fmt.Sprintf(" Àkàndé · %s", m.cfg.ServerURL))
+	var preview string
+	if m.streamingActive {
+		preview = m.theme.renderStreamingPreview(
+			m.mdRenderer, m.streamingBody, m.width)
+	}
 
-	subtitle := m.theme.HeaderSub.
-		Width(m.width).
-		Padding(0, 2).
-		Render(fmt.Sprintf(
-			"provider · %s   model · %s",
-			m.provider, m.model,
-		))
-
-	chat := m.theme.ChatArea().
-		Width(m.width).
-		Height(m.viewport.Height).
-		Render(m.viewport.View())
-
-	composer := m.theme.Composer.
-		Width(m.width - 2).
-		Render(m.textarea.View())
+	composer := m.theme.renderComposer(
+		m.textarea.View(), m.width)
 
 	statusLeft := fmt.Sprintf(
 		"%s %s · %s",
-		m.theme.StatusInfo.Render("●"),
+		m.theme.dot(),
 		m.provider,
 		m.model,
 	)
-	statusRight := ""
-	if m.streamingActive {
+	var statusRight string
+	switch {
+	case m.statusNote != "":
+		statusRight = m.theme.warn(m.statusNote)
+	case m.streamingActive:
 		statusRight = fmt.Sprintf(
 			"streaming · %d tokens",
 			m.totalTokens,
 		)
-	} else if m.totalTokens > 0 {
+	case m.totalTokens > 0:
 		statusRight = fmt.Sprintf(
 			"%d tokens · %d ms",
 			m.totalTokens, m.lastLatency.Milliseconds(),
 		)
-	} else {
+	default:
 		statusRight = "ready"
 	}
-	if m.statusNote != "" {
-		statusRight = m.theme.HelpKey.Render("⚠ ") +
-			m.statusNote
-	}
+	status := m.theme.renderStatus(
+		statusLeft, statusRight, m.width)
 
-	statusWidth := m.width - 4
-	statusBar := m.theme.StatusBar.
-		Width(statusWidth).
-		Render(joinSplit(statusLeft, statusRight, statusWidth))
+	help := m.theme.renderHelp(m.width)
 
-	footer := m.theme.Page().
-		Width(m.width).
-		Render(m.helpHints())
-
-	return m.theme.Page().
-		Width(m.width).
-		Render(lipgloss.JoinVertical(lipgloss.Left,
-			header,
-			subtitle,
-			chat,
-			composer,
-			statusBar,
-			footer,
-		))
-}
-
-func (m model) helpHints() string {
-	hints := []struct{ key, desc string }{
-		{"Enter", "send"},
-		{"Esc", "quit / cancel stream"},
-		{"Ctrl+L", "clear chat"},
-		{"F1", "help"},
-	}
 	var parts []string
-	for _, h := range hints {
-		parts = append(parts,
-			m.theme.HelpKey.Render(h.key)+
-				" "+m.theme.HelpDesc.Render(h.desc))
+	if preview != "" {
+		parts = append(parts, preview)
 	}
-	return lipgloss.NewStyle().
-		Padding(0, 2).
-		Render(strings.Join(parts, "   "))
-}
+	parts = append(parts, composer, status, help)
 
-func (m model) helpPanel() string {
-	help := `**Keyboard**
-
-- **Enter**   send message
-- **Esc**     cancel active stream (or quit when idle)
-- **Ctrl+L**  clear chat
-- **Ctrl+H** / **F1**  toggle this help
-- **Mouse**   scroll the chat region
-
-**Environment**
-
-- LLM_PROVIDER, OPENAI_DEFAULT_MODEL — pick provider + model
-- AKANDE_SERVER_URL — point at a remote akande server
-- AKANDE_PYTHON — interpreter used to launch the server`
-	if m.mdRenderer != nil {
-		if rendered, err := m.mdRenderer.Render(help); err == nil {
-			return strings.TrimRight(rendered, "\n")
-		}
-	}
-	return help
-}
-
-func welcomeMessage(cfg Config) string {
-	return fmt.Sprintf(
-		"# Àkàndé\n\n"+
-			"_Executive briefing assistant_  ·  "+
-			"`%s` · `%s`\n\n"+
-			"Type a question below — answers stream in as "+
-			"Markdown with code blocks, lists, and citations "+
-			"rendered live.  Press **F1** for shortcuts.",
-		cfg.Provider, cfg.Model,
-	)
-}
-
-func joinSplit(left, right string, width int) string {
-	gap := width - lipgloss.Width(left) - lipgloss.Width(right)
-	if gap < 1 {
-		gap = 1
-	}
-	return left + strings.Repeat(" ", gap) + right
+	return lipgloss.JoinVertical(lipgloss.Left, parts...)
 }
