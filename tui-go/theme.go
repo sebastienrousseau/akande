@@ -241,6 +241,61 @@ func (t Theme) renderNote(label, content string) string {
 	return tag + "\n" + body
 }
 
+// renderSuggestions draws the inline autocomplete popup that
+// appears above the composer when the user starts typing a slash
+// command.  ``selected`` is the highlighted index — Up / Down
+// nav, Tab accepts, Esc dismisses, Enter sends.
+func (t Theme) renderSuggestions(
+	cmds []Command, selected int, width int,
+) string {
+	if len(cmds) == 0 {
+		return ""
+	}
+	keyStyle := lipgloss.NewStyle().
+		Foreground(t.AccentAI).
+		Bold(true)
+	hintStyle := lipgloss.NewStyle().
+		Foreground(t.TextMuted)
+	dimStyle := lipgloss.NewStyle().
+		Foreground(t.TextDim)
+	selStyle := lipgloss.NewStyle().
+		Foreground(t.TextPrimary).
+		Background(t.BgPanel).
+		Bold(true)
+	var rows []string
+	for i, c := range cmds {
+		left := "/" + c.Name
+		if c.Args != "" {
+			left += " " + c.Args
+		}
+		// Reserve a leading column for the selection caret so
+		// the layout stays stable as the highlight moves.
+		caret := "  "
+		styledLeft := keyStyle.Render(
+			fmt.Sprintf("%-18s", left))
+		styledRight := hintStyle.Render(c.Description)
+		if i == selected {
+			caret = selStyle.Render("▌ ")
+			styledRight = selStyle.Render(c.Description)
+		}
+		rows = append(rows,
+			caret+styledLeft+"  "+styledRight)
+	}
+	hint := dimStyle.Render(
+		"  ↑↓ to navigate · Tab to accept · " +
+			"Esc to dismiss")
+	box := lipgloss.NewStyle().
+		Foreground(t.TextPrimary).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(t.AccentAI).
+		Padding(0, 1)
+	if width > 4 {
+		box = box.Width(width - 2)
+	}
+	body := strings.Join(rows, "\n") + "\n" + hint
+	return box.Render(body)
+}
+
 // helpTitle is the section heading inside the `/help` block.
 func (t Theme) helpTitle(s string) string {
 	return lipgloss.NewStyle().

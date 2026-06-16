@@ -161,6 +161,39 @@ func findCommand(name string) (Command, bool) {
 	return Command{}, false
 }
 
+// matchCommands returns the slash commands whose name starts with
+// the prefix in `input` (without the leading slash) — the list
+// the inline autocomplete popup shows.  Returns nil when the
+// input is past the command-name position (e.g. after a space)
+// so user-supplied args don't keep the popup open.
+func matchCommands(input string) []Command {
+	input = strings.TrimSpace(input)
+	if !strings.HasPrefix(input, "/") {
+		return nil
+	}
+	body := strings.TrimPrefix(input, "/")
+	// Once the user types a space, they are typing args; stop
+	// suggesting command names.
+	if strings.Contains(body, " ") {
+		return nil
+	}
+	body = strings.ToLower(body)
+	var hits []Command
+	for _, c := range allCommands() {
+		if strings.HasPrefix(c.Name, body) {
+			hits = append(hits, c)
+			continue
+		}
+		for _, alias := range c.Aliases {
+			if strings.HasPrefix(alias, body) {
+				hits = append(hits, c)
+				break
+			}
+		}
+	}
+	return hits
+}
+
 // dispatchSlash parses a `/foo bar baz` line and runs the matching
 // command.  Returns ok=false when the line is not a slash command
 // (caller should send it to the LLM instead).

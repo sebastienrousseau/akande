@@ -59,6 +59,11 @@ type model struct {
 	statusNote   string
 
 	mdRenderer *glamour.TermRenderer
+
+	// Inline slash-command autocomplete state.  Recomputed on
+	// every keystroke from the textarea's current value.
+	suggestions   []Command
+	suggestionIdx int
 }
 
 func newModel(ctx context.Context, cfg Config) model {
@@ -142,6 +147,36 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
+		// Slash-command popup nav.  Intercept BEFORE textarea
+		// sees the keystroke so the popup feels like the
+		// autocomplete UIs in Claude Code and aider.
+		if len(m.suggestions) > 0 {
+			switch msg.String() {
+			case "up", "ctrl+p":
+				m.suggestionIdx--
+				if m.suggestionIdx < 0 {
+					m.suggestionIdx = len(m.suggestions) - 1
+				}
+				return m, nil
+			case "down", "ctrl+n":
+				m.suggestionIdx =
+					(m.suggestionIdx + 1) %
+						len(m.suggestions)
+				return m, nil
+			case "tab":
+				chosen := m.suggestions[m.suggestionIdx]
+				m.textarea.SetValue("/" + chosen.Name + " ")
+				m.textarea.CursorEnd()
+				m.suggestions = nil
+				m.suggestionIdx = 0
+				return m, nil
+			case "esc":
+				m.suggestions = nil
+				m.suggestionIdx = 0
+				return m, nil
+			}
+		}
+
 		switch msg.String() {
 		case "ctrl+c":
 			if m.streamingActive && m.streamCtx != nil {
@@ -232,6 +267,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 	m.textarea, cmd = m.textarea.Update(msg)
+	// Re-compute the slash-command suggestions after every
+	// textarea update so the popup tracks the user's typing.
+	m.suggestions = matchCommands(m.textarea.Value())
+	if m.suggestionIdx >= len(m.suggestions) {
+		m.suggestionIdx = 0
+	}
 	return m, cmd
 }
 
@@ -295,6 +336,12 @@ func (m model) View() string {
 			m.mdRenderer, m.streamingBody, m.width)
 	}
 
+	var suggestions string
+	if len(m.suggestions) > 0 {
+		suggestions = m.theme.renderSuggestions(
+			m.suggestions, m.suggestionIdx, m.width)
+	}
+
 	composer := m.theme.renderComposer(
 		m.textarea.View(), m.width)
 
@@ -329,6 +376,9 @@ func (m model) View() string {
 	var parts []string
 	if preview != "" {
 		parts = append(parts, preview)
+	}
+	if suggestions != "" {
+		parts = append(parts, suggestions)
 	}
 	parts = append(parts, composer, status, help)
 
