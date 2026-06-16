@@ -16,6 +16,7 @@
 import asyncio
 import hashlib
 import logging
+import sys
 import threading
 import time
 import uuid
@@ -358,9 +359,50 @@ class Akande:
                         "event": "Speech:MicrophoneError",
                         "extra_data": {
                             "error_type": type(e).__name__,
+                            "platform": sys.platform,
                         },
                     },
                 )
+                # macOS TCC and Linux pulseaudio denials both raise
+                # OSError with messages that read like
+                # "Stream startup failed" or "Permission denied".
+                # The log entry above only reaches the file in
+                # classic mode (dev.9 raised the console threshold)
+                # — print a user-facing remediation hint here so
+                # the menu does not just say "No voice command
+                # detected" and leave the user puzzled.
+                err_str = str(e).lower()
+                permission_like = any(
+                    needle in err_str
+                    for needle in (
+                        "permission",
+                        "denied",
+                        "not authorized",
+                        "tccd",
+                        "-9986",
+                        "no default input device",
+                        "no input device",
+                    )
+                )
+                if (
+                    permission_like or sys.platform == "darwin"
+                ):  # pragma: no cover - interactive
+                    print(
+                        "\n  ✗ Microphone access denied.\n"
+                        "\n"
+                        "  macOS:  System Settings → Privacy "
+                        "& Security → Microphone → enable for "
+                        "your terminal app, then quit and re-"
+                        "open the terminal (TCC permissions are "
+                        "process-scoped).\n"
+                        "  Linux:  check `pactl info` /\n"
+                        "          `pipewire --version`; the\n"
+                        "          shell may be inside a sandbox\n"
+                        "          (Flatpak/Snap) without mic\n"
+                        "          portal access.\n"
+                    )
+                else:  # pragma: no cover - interactive
+                    print(f"\n  ✗ Microphone error: {e}\n")
                 return ""
 
         loop = (
