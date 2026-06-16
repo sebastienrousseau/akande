@@ -8,8 +8,9 @@
 
 <p align="center">
   A self-hosted, provider-agnostic voice assistant that delivers structured
-  executive briefings from any of ten LLM providers — including fully private
-  local inference via Ollama and LM Studio.
+  executive briefings from any of eleven LLM providers — including fully private
+  local inference via Ollama and LM Studio, and a "no-key" path that borrows
+  the local Claude Code CLI's own login session.
 </p>
 
 <p align="center">
@@ -166,6 +167,7 @@ its own credentials from environment variables.
 | Azure OpenAI | `azure_openai` | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` | *(included)* | `gpt-35-turbo` |
 | Ollama | `ollama` | `OLLAMA_HOST` *(optional)* | *(included)* | `llama3` |
 | LM Studio | `lmstudio` | `LMSTUDIO_HOST` *(optional)* | *(included)* | `local-model` |
+| Claude Code CLI | `claude_cli` | — *(uses the `claude` CLI's own session)* | install the [`claude` CLI](https://docs.claude.com/claude-code) | `sonnet` |
 
 > ¹ Override per-call with the `model` argument or globally with
 > `OPENAI_DEFAULT_MODEL`.

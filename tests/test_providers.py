@@ -1,6 +1,6 @@
 """Tests for akande.providers package.
 
-Tests all 10 provider adapters, the registry, the ABC, the
+Tests all 11 provider adapters, the registry, the ABC, the
 response normalisation layer, and the OpenAI-compatible base.
 """
 
@@ -173,8 +173,8 @@ class TestProviderRegistry:
         )
         assert "openai" in reg.available
 
-    def test_global_registry_has_10_providers(self):
-        assert len(_registry.available) == 10
+    def test_global_registry_has_11_providers(self):
+        assert len(_registry.available) == 11
 
     def test_global_registry_provider_names(self):
         expected = {
@@ -188,6 +188,7 @@ class TestProviderRegistry:
             "huggingface",
             "groq",
             "lmstudio",
+            "claude_cli",
         }
         assert set(_registry.available) == expected
 
@@ -1083,3 +1084,155 @@ class TestImportErrors:
                 sys.modules["huggingface_hub"] = saved
             else:
                 sys.modules.pop("huggingface_hub", None)
+
+
+# ────────────────────────────────────────────────────────────
+# Claude CLI provider — wraps the local `claude` binary
+# ────────────────────────────────────────────────────────────
+
+
+class TestClaudeCliProvider:
+    """The `claude_cli` provider piggybacks on Claude Code's local
+    session; we never need to network out in tests."""
+
+    def test_missing_cli_raises_importerror(self):
+        from akande.providers.claude_cli_provider import (
+            ClaudeCliProvider,
+        )
+
+        with patch(
+            "akande.providers.claude_cli_provider.shutil.which",
+            return_value=None,
+        ):
+            with pytest.raises(ImportError, match="claude"):
+                ClaudeCliProvider()
+
+    def test_provider_name(self):
+        from akande.providers.claude_cli_provider import (
+            ClaudeCliProvider,
+        )
+
+        with patch(
+            "akande.providers.claude_cli_provider.shutil.which",
+            return_value="/usr/local/bin/claude",
+        ):
+            p = ClaudeCliProvider()
+        assert p.provider_name == "claude_cli"
+        assert p._default_model == "sonnet"
+
+    def test_generate_response_sync_returns_envelope(self):
+        from akande.providers.claude_cli_provider import (
+            ClaudeCliProvider,
+        )
+
+        completed = MagicMock()
+        completed.stdout = "  the answer is 42  \n"
+        completed.returncode = 0
+
+        with patch(
+            "akande.providers.claude_cli_provider.shutil.which",
+            return_value="/usr/local/bin/claude",
+        ):
+            p = ClaudeCliProvider()
+
+        with patch(
+            "akande.providers.claude_cli_provider.subprocess.run",
+            return_value=completed,
+        ) as mock_run:
+            out = p.generate_response_sync(
+                "what's the answer?",
+                "you are concise",
+                "sonnet",
+            )
+
+        # Whitespace stripped + envelope shape matches every other
+        # provider's response.
+        assert out.choices[0].message.content == "the answer is 42"
+        # System prompt is forwarded via --append-system-prompt; the
+        # model flag is passed through.
+        argv = mock_run.call_args.args[0]
+        assert argv[0] == "/usr/local/bin/claude"
+        assert "-p" in argv
+        assert "--append-system-prompt" in argv
+        assert "you are concise" in argv
+        assert "--model" in argv
+        assert "sonnet" in argv
+
+    def test_skips_model_flag_for_openai_shaped_default(self):
+        # The launcher auto-sets OPENAI_DEFAULT_MODEL which may leak
+        # an OpenAI-shaped name like `gpt-4o-mini` into the call;
+        # the CLI does not understand those, so we drop the flag.
+        from akande.providers.claude_cli_provider import (
+            ClaudeCliProvider,
+        )
+
+        completed = MagicMock(stdout="hello", returncode=0)
+
+        with patch(
+            "akande.providers.claude_cli_provider.shutil.which",
+            return_value="/usr/local/bin/claude",
+        ):
+            p = ClaudeCliProvider()
+
+        with patch(
+            "akande.providers.claude_cli_provider.subprocess.run",
+            return_value=completed,
+        ) as mock_run:
+            p.generate_response_sync("hi", "system", "gpt-4o-mini")
+
+        argv = mock_run.call_args.args[0]
+        assert "--model" not in argv
+
+    def test_timeout_raises_runtime_error(self):
+        import subprocess as sp
+
+        from akande.providers.claude_cli_provider import (
+            ClaudeCliProvider,
+        )
+
+        with patch(
+            "akande.providers.claude_cli_provider.shutil.which",
+            return_value="/usr/local/bin/claude",
+        ):
+            p = ClaudeCliProvider()
+
+        with patch(
+            "akande.providers.claude_cli_provider.subprocess.run",
+            side_effect=sp.TimeoutExpired(cmd=["claude"], timeout=30),
+        ):
+            with pytest.raises(RuntimeError, match="timed out"):
+                p.generate_response_sync("hi", "s", "sonnet")
+
+    def test_async_wrapper_runs_subprocess(self):
+        from akande.providers.claude_cli_provider import (
+            ClaudeCliProvider,
+        )
+
+        completed = MagicMock(stdout="async ok", returncode=0)
+
+        with patch(
+            "akande.providers.claude_cli_provider.shutil.which",
+            return_value="/usr/local/bin/claude",
+        ):
+            p = ClaudeCliProvider()
+
+        async def _go():
+            with patch(
+                "akande.providers.claude_cli_provider.subprocess.run",
+                return_value=completed,
+            ):
+                return await p.generate_response("hi", "s", "sonnet")
+
+        result = asyncio.run(_go())
+        assert result.choices[0].message.content == "async ok"
+
+    def test_registry_resolves_claude_cli(self):
+        # The registry's lazy import map should know the new
+        # provider — same shape as every other entry.
+        from akande.providers.registry import _PROVIDER_MAP
+
+        assert "claude_cli" in _PROVIDER_MAP
+        assert _PROVIDER_MAP["claude_cli"] == (
+            ".claude_cli_provider",
+            "ClaudeCliProvider",
+        )

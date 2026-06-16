@@ -62,6 +62,10 @@ _PROVIDER_MAP: dict[str, tuple] = {
         ".huggingface_provider",
         "HuggingFaceProvider",
     ),
+    "claude_cli": (
+        ".claude_cli_provider",
+        "ClaudeCliProvider",
+    ),
 }
 
 
