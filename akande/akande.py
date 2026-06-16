@@ -432,10 +432,21 @@ class Akande:
         """Query the LLM, display response, speak it, and
         generate output files."""
         try:
-            response = await self.generate_response(
-                question,
-                correlation_id=correlation_id,
-            )
+            # Show a live spinner while the provider is thinking.
+            # rich is already in the dep graph via textual.
+            from rich.console import Console
+            from rich.status import Status
+
+            console = Console()
+            with Status(
+                "[bold cyan]Thinking…[/]",
+                console=console,
+                spinner="dots",
+            ):
+                response = await self.generate_response(
+                    question,
+                    correlation_id=correlation_id,
+                )
         except LLMError as e:
             print(f"\nError: {e.user_message}\n")
             return
@@ -473,10 +484,20 @@ class Akande:
                 await self.stop_server()
                 break
             elif choice == "3":
+                import webbrowser
+
                 await self.run_server()
-                print("  Server running at http://127.0.0.1:8080")
-                print("  Open the URL in your browser.")
-                input("\n  Press Enter to continue...")
+                url = "http://127.0.0.1:8080"
+                print(f"  Server running at {url}")
+                # Open the browser automatically so the user does
+                # not have to copy/paste the URL.  Failures (e.g.
+                # headless environment) are swallowed; the URL is
+                # still printed above.
+                try:
+                    webbrowser.open(url)
+                except Exception:
+                    pass
+                input("\n  Press Ctrl+C or Enter to stop the server…")
             elif choice == "2":
                 question = input("Your question: ").strip()
                 if question:
