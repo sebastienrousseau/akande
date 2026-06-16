@@ -444,7 +444,10 @@ func (m model) View() string {
 			m.provider, m.model,
 		))
 
-	chat := m.viewport.View()
+	chat := m.theme.ChatArea().
+		Width(m.width).
+		Height(m.viewport.Height).
+		Render(m.viewport.View())
 
 	composer := m.theme.Composer.
 		Width(m.width - 2).
@@ -480,16 +483,20 @@ func (m model) View() string {
 		Width(statusWidth).
 		Render(joinSplit(statusLeft, statusRight, statusWidth))
 
-	footer := m.helpHints()
+	footer := m.theme.Page().
+		Width(m.width).
+		Render(m.helpHints())
 
-	return lipgloss.JoinVertical(lipgloss.Left,
-		header,
-		subtitle,
-		chat,
-		composer,
-		statusBar,
-		footer,
-	)
+	return m.theme.Page().
+		Width(m.width).
+		Render(lipgloss.JoinVertical(lipgloss.Left,
+			header,
+			subtitle,
+			chat,
+			composer,
+			statusBar,
+			footer,
+		))
 }
 
 func (m model) helpHints() string {

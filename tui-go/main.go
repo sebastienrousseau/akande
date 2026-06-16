@@ -22,7 +22,18 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 )
+
+func init() {
+	// Pin the color profile so termenv does NOT issue OSC 10/11
+	// (foreground/background) queries to the terminal at startup.
+	// On Ghostty / iTerm2 / kitty the reply (e.g. `;rgb:1313/1616/
+	// 1a1a`) leaks into Bubble Tea's stdin reader and shows up as
+	// literal text in the textarea.
+	lipgloss.SetColorProfile(termenv.TrueColor)
+}
 
 func main() {
 	cfg, err := loadConfig()

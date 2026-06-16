@@ -99,7 +99,9 @@ func newTheme() Theme {
 		Padding(0, 1).
 		Margin(0, 0, 1, 0).
 		Foreground(t.TextPrimary).
+		Background(t.BgPanel).
 		BorderStyle(lipgloss.ThickBorder()).
+		BorderBackground(t.BgPage).
 		BorderLeft(true)
 
 	t.BubbleUser = bubbleBase.BorderForeground(t.AccentUser)
@@ -110,15 +112,37 @@ func newTheme() Theme {
 		Foreground(t.TextMuted)
 
 	t.RoleBadge = base.Bold(true).
-		Margin(0, 0, 0, 1)
+		Margin(0, 0, 0, 1).
+		Background(t.BgPage)
 
 	t.Composer = base.
 		Padding(0, 1).
+		Foreground(t.TextPrimary).
+		Background(t.BgPanel).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(t.Border)
+		BorderForeground(t.Border).
+		BorderBackground(t.BgPage)
 
-	t.HelpKey = base.Foreground(t.AccentAI).Bold(true)
-	t.HelpDesc = base.Foreground(t.TextMuted)
+	t.HelpKey = base.Foreground(t.AccentAI).
+		Background(t.BgPage).Bold(true)
+	t.HelpDesc = base.Foreground(t.TextMuted).
+		Background(t.BgPage)
 
 	return t
+}
+
+// Page returns a style that paints the full-frame page background
+// so the alt-screen does not show through to the terminal
+// background (Ghostty / iTerm2 translucency, dim mode, etc.).
+func (t Theme) Page() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Background(t.BgPage).
+		Foreground(t.TextPrimary)
+}
+
+// ChatArea paints the scrollable chat region behind the bubbles.
+func (t Theme) ChatArea() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Background(t.BgPage).
+		Foreground(t.TextPrimary)
 }
