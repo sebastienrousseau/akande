@@ -29,10 +29,27 @@ import (
 func init() {
 	// Pin the color profile so termenv does NOT issue OSC 10/11
 	// (foreground/background) queries to the terminal at startup.
-	// On Ghostty / iTerm2 / kitty the reply (e.g. `;rgb:1313/1616/
-	// 1a1a`) leaks into Bubble Tea's stdin reader and shows up as
-	// literal text in the textarea.
+	// On Ghostty / iTerm2 / kitty / Apple Terminal the reply
+	// (e.g. `;rgb:1313/1616/1a1a\`) leaks into Bubble Tea v1's
+	// stdin reader and shows up as literal text in the textarea.
+	//
+	// `SetHasDarkBackground` covers the *second* probe that
+	// SetColorProfile alone does not suppress — termenv uses an
+	// OSC 11 query to detect background luminance and adapt
+	// styles.  We render against an explicit dark palette anyway,
+	// so it is safe to short-circuit the probe.
+	//
+	// Belt and braces: also nail TERM / COLORTERM so other
+	// downstream callers that read env directly land on the right
+	// profile without querying the tty.
 	lipgloss.SetColorProfile(termenv.TrueColor)
+	lipgloss.SetHasDarkBackground(true)
+	if os.Getenv("COLORTERM") == "" {
+		_ = os.Setenv("COLORTERM", "truecolor")
+	}
+	if os.Getenv("TERM") == "" {
+		_ = os.Setenv("TERM", "xterm-256color")
+	}
 }
 
 func main() {
@@ -67,9 +84,14 @@ func main() {
 
 	model := newModel(ctx, cfg)
 
+	// `WithMouseCellMotion` was leaking SGR mouse reports
+	// (`CSI <65;X;YM`) into the textarea on Apple Terminal —
+	// Bubble Tea v1's stdin parser does not handle that format
+	// reliably across emulators.  The chat TUI does not need
+	// hover tracking; scroll wheel events still reach the
+	// viewport through Bubble Tea's default key bindings.
 	p := tea.NewProgram(model,
 		tea.WithAltScreen(),
-		tea.WithMouseCellMotion(),
 	)
 	if _, err := p.Run(); err != nil {
 		log.Fatalf("akande-tui: %v", err)
