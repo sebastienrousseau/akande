@@ -713,3 +713,92 @@ class Akande:
                 raise LLMError(
                     _friendly_llm_error(e), original=e
                 ) from e
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        correlation_id: str = "",
+    ):
+        """Stream the LLM response delta-by-delta.
+
+        Asynchronous generator that yields :class:`str` chunks as the
+        provider emits them.  When the prompt is already in the
+        cache, the full cached text is yielded as a single chunk so
+        callers don't have to special-case the cache-hit path.  On
+        provider error an ``LLMError`` is raised (matching
+        :meth:`generate_response`'s contract).
+
+        Wires the TUI and Web UI into the streaming pipeline that
+        used to be exclusive to the SSE endpoint, so the UI shows
+        tokens as they arrive instead of waiting for the full
+        completion (v0.0.7-dev.11).
+        """
+        if self._cancel_event.is_set():
+            raise LLMError("Request was cancelled")
+
+        prompt_hash = self.hash_prompt(prompt)
+        cached_response = self.cache.get(prompt_hash)
+        if cached_response:
+            logging.info(
+                "Using cached response (stream)",
+                extra={
+                    "event": "Response:CacheHit",
+                    "correlation_id": correlation_id,
+                    "extra_data": {
+                        "prompt_hash": prompt_hash[:12],
+                    },
+                },
+            )
+            yield cached_response
+            return
+
+        logging.info(
+            "Cache miss, streaming LLM response",
+            extra={
+                "event": "Response:CacheMiss",
+                "correlation_id": correlation_id,
+                "extra_data": {
+                    "prompt_hash": prompt_hash[:12],
+                },
+            },
+        )
+        start = time.time()
+        buffer: list[str] = []
+        try:
+            # `openai_service` is `OpenAIService | LLMProvider`; the
+            # legacy OpenAIService wrapper does not expose
+            # `generate_stream` but every real provider does, and
+            # this method is only reached from the TUI + Web UI
+            # which always run against an `LLMProvider`.
+            stream = self.openai_service.generate_stream(  # type: ignore[union-attr]
+                prompt,
+                SYSTEM_PROMPT,
+                OPENAI_DEFAULT_MODEL or "gpt-4o-mini",
+                None,
+            )
+            async for delta in stream:
+                if self._cancel_event.is_set():
+                    raise LLMError("Request was cancelled")
+                if not delta:
+                    continue
+                buffer.append(delta)
+                yield delta
+        except LLMError:  # pragma: no cover - re-raise as-is
+            raise
+        except Exception as e:
+            logging.error(
+                f"LLM stream error: {type(e).__name__}: {e}",
+                exc_info=True,
+                extra={
+                    "event": "LLM:StreamError",
+                    "correlation_id": correlation_id,
+                },
+            )
+            raise LLMError(_friendly_llm_error(e), original=e) from e
+
+        latency = (time.time() - start) * 1000
+        if self.metrics:
+            self.metrics.record("llm", latency)
+        final = "".join(buffer).strip()
+        if final:
+            self.cache.set(prompt_hash, final)
