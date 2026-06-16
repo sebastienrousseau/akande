@@ -80,7 +80,7 @@ func (t Theme) banner(cfg Config) string {
 	hint := lipgloss.NewStyle().
 		Foreground(t.TextDim).
 		Render("   Enter to send · Esc to quit · " +
-			"Ctrl+C to cancel a stream")
+			"/help for commands")
 	return strings.Join([]string{
 		"",
 		title,
@@ -239,6 +239,30 @@ func (t Theme) renderNote(label, content string) string {
 		Foreground(t.TextMuted).
 		Render(content)
 	return tag + "\n" + body
+}
+
+// helpTitle is the section heading inside the `/help` block.
+func (t Theme) helpTitle(s string) string {
+	return lipgloss.NewStyle().
+		Foreground(t.AccentAI).
+		Bold(true).
+		Render(s)
+}
+
+// helpRow is a `  /name      description` row inside `/help`.
+func (t Theme) helpRow(left, right string) string {
+	pad := 18 - lipgloss.Width(left)
+	if pad < 1 {
+		pad = 1
+	}
+	return "  " + lipgloss.NewStyle().
+		Foreground(t.TextPrimary).
+		Bold(true).
+		Render(left) +
+		strings.Repeat(" ", pad) +
+		lipgloss.NewStyle().
+			Foreground(t.TextMuted).
+			Render(right)
 }
 
 // renderError prints a labelled error block into scrollback.

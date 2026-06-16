@@ -63,7 +63,7 @@ type model struct {
 
 func newModel(ctx context.Context, cfg Config) model {
 	ta := textarea.New()
-	ta.Placeholder = "Ask me anything — Enter to send"
+	ta.Placeholder = "Ask anything — /help for commands · Enter to send"
 	ta.Focus()
 	ta.Prompt = "▎ "
 	ta.CharLimit = 4096
@@ -164,6 +164,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			m.textarea.Reset()
+			// Slash commands intercept BEFORE the LLM call.
+			// They never hit the akande server — pure UI
+			// affordances (status, model switch, log path,
+			// clear screen, quit, …).
+			if strings.HasPrefix(q, "/") {
+				lines, follow, next, ok := dispatchSlash(m, q)
+				if ok {
+					var cmds []tea.Cmd
+					cmds = append(cmds,
+						tea.Println(m.theme.renderUser(q)))
+					for _, l := range lines {
+						cmds = append(cmds, tea.Println(l))
+					}
+					if follow != nil {
+						cmds = append(cmds, follow)
+					}
+					return next, tea.Batch(cmds...)
+				}
+			}
 			userLine := m.theme.renderUser(q)
 			m.streamingBody = ""
 			m.streamingActive = true
