@@ -588,11 +588,20 @@ class AkandeApp(App):
         self, question: str
     ) -> None:  # pragma: no cover - thread worker
         import asyncio
+        import time as _time
 
         self.akande.reset_cancel()
         buffer: list[str] = []
 
-        def _update_live_preview(text: str) -> None:
+        # Throttle UI updates to ~10/s.  Without this, claude_cli
+        # emits ~30–60 deltas/s once streaming starts; each
+        # `call_from_thread` synchronously waits for the main
+        # Textual thread to process the message, so the worker
+        # blocks on every token, the subprocess pipe back-pressures,
+        # and the TUI appears frozen.
+        _UPDATE_INTERVAL_S = 0.10
+
+        def _update_live_preview(preview: str) -> None:
             """Stream the partial response into the thinking row.
 
             RichLog cannot easily update a single line in-place, so
@@ -600,25 +609,43 @@ class AkandeApp(App):
             preview area: it grows token-by-token while the stream
             is running and is replaced by the final assistant
             bubble once the stream completes.
+
+            ``preview`` is already a plain, length-clamped string
+            built by the worker thread — keep this callback cheap
+            so the main UI thread does not block the producer.
             """
-            preview = strip_markdown(text)
-            # Trim long previews so the typing row stays a single
-            # visual line in the TUI; the full response lands in
-            # the chat log at the end.
-            if len(preview) > 200:
-                preview = "…" + preview[-200:]
             w = self.query_one("#thinking", Static)
             w.update(f"  {preview}")
             if "visible" not in (w.classes or set()):
                 w.add_class("visible")
 
+        def _build_preview(text: str) -> str:
+            """Produce the trimmed, plain-text preview off-thread."""
+            preview = strip_markdown(text)
+            if len(preview) > 200:
+                preview = "…" + preview[-200:]
+            return preview
+
         async def _drive_stream() -> str:
+            last_push = 0.0
             async for delta in self.akande.generate_stream(question):
                 if not delta:
                     continue
                 buffer.append(delta)
+                now = _time.monotonic()
+                if (now - last_push) < _UPDATE_INTERVAL_S:
+                    continue
+                last_push = now
+                preview = _build_preview("".join(buffer))
+                self.call_from_thread(_update_live_preview, preview)
+            # Always show the last frame of the preview before the
+            # stream finalises so the user does not see a brief
+            # "Thinking..." gap between the last throttled update
+            # and the final write to the chat log.
+            if buffer:
+                final_preview = _build_preview("".join(buffer))
                 self.call_from_thread(
-                    _update_live_preview, "".join(buffer)
+                    _update_live_preview, final_preview
                 )
             return "".join(buffer)
 
