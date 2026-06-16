@@ -590,12 +590,42 @@ class AkandeApp(App):
         import asyncio
 
         self.akande.reset_cancel()
-        try:
-            response = asyncio.run(
-                self.akande.generate_response(question)
-            )
+        buffer: list[str] = []
 
-            def _update_ui():
+        def _update_live_preview(text: str) -> None:
+            """Stream the partial response into the thinking row.
+
+            RichLog cannot easily update a single line in-place, so
+            we recycle the existing thinking indicator as a live
+            preview area: it grows token-by-token while the stream
+            is running and is replaced by the final assistant
+            bubble once the stream completes.
+            """
+            preview = strip_markdown(text)
+            # Trim long previews so the typing row stays a single
+            # visual line in the TUI; the full response lands in
+            # the chat log at the end.
+            if len(preview) > 200:
+                preview = "…" + preview[-200:]
+            w = self.query_one("#thinking", Static)
+            w.update(f"  {preview}")
+            if "visible" not in (w.classes or set()):
+                w.add_class("visible")
+
+        async def _drive_stream() -> str:
+            async for delta in self.akande.generate_stream(question):
+                if not delta:
+                    continue
+                buffer.append(delta)
+                self.call_from_thread(
+                    _update_live_preview, "".join(buffer)
+                )
+            return "".join(buffer)
+
+        try:
+            response = asyncio.run(_drive_stream())
+
+            def _finalise_ui() -> None:
                 self._hide_thinking()
                 if not response:
                     self._write_error("No response was generated.")
@@ -627,7 +657,7 @@ class AkandeApp(App):
                 if parts:
                     self._write_file("   ".join(parts))
 
-            self.call_from_thread(_update_ui)
+            self.call_from_thread(_finalise_ui)
 
             if response:
                 clean = strip_markdown(response)

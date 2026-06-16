@@ -152,3 +152,105 @@ class TestGenerateResponseCacheHit:
         assert result == "cached"
         # Provider should not be called when cache hits.
         akande.openai_service.generate_response.assert_not_called()
+
+
+class TestGenerateStream:
+    """v0.0.7-dev.11: Akande.generate_stream wires the TUI + Web UI
+    into the provider's streaming pipeline."""
+
+    @staticmethod
+    async def _collect(agen):
+        out = []
+        async for chunk in agen:
+            out.append(chunk)
+        return out
+
+    def test_cache_hit_yields_single_chunk(self, akande):
+        akande.cache.get.return_value = "cached briefing"
+        collected = asyncio.run(
+            self._collect(akande.generate_stream("q"))
+        )
+        assert collected == ["cached briefing"]
+        # Provider stream should not be opened on cache hit.
+        assert not akande.openai_service.generate_stream.called, (
+            "cache hit should short-circuit the provider"
+        )
+
+    def test_cache_miss_streams_provider_deltas(self, akande):
+        akande.cache.get.return_value = None
+
+        async def fake_stream(*_a, **_kw):
+            for chunk in ("Hel", "lo ", "world"):
+                yield chunk
+
+        akande.openai_service.generate_stream = fake_stream
+
+        collected = asyncio.run(
+            self._collect(akande.generate_stream("q"))
+        )
+        assert collected == ["Hel", "lo ", "world"]
+        # Assembled response gets written to the cache.
+        akande.cache.set.assert_called_once()
+        cached_value = akande.cache.set.call_args.args[1]
+        assert cached_value == "Hello world"
+
+    def test_empty_deltas_are_skipped(self, akande):
+        akande.cache.get.return_value = None
+
+        async def fake_stream(*_a, **_kw):
+            for chunk in ("", "real", "", "stuff"):
+                yield chunk
+
+        akande.openai_service.generate_stream = fake_stream
+
+        collected = asyncio.run(
+            self._collect(akande.generate_stream("q"))
+        )
+        assert collected == ["real", "stuff"]
+
+    def test_cancel_before_start_raises(self, akande):
+        akande.cancel_pending()
+
+        async def go():
+            agen = akande.generate_stream("q")
+            return await agen.__anext__()
+
+        with pytest.raises(LLMError, match="cancelled"):
+            asyncio.run(go())
+
+    def test_cancel_mid_stream_raises(self, akande):
+        akande.cache.get.return_value = None
+        consumed = []
+
+        async def fake_stream(*_a, **_kw):
+            yield "first"
+            akande.cancel_pending()
+            yield "second"
+
+        akande.openai_service.generate_stream = fake_stream
+
+        async def go():
+            async for chunk in akande.generate_stream("q"):
+                consumed.append(chunk)
+
+        with pytest.raises(LLMError, match="cancelled"):
+            asyncio.run(go())
+        # The first delta makes it through before cancellation;
+        # the second one is rejected.
+        assert consumed == ["first"]
+
+    def test_provider_error_wrapped_in_llm_error(self, akande):
+        akande.cache.get.return_value = None
+
+        async def fake_stream(*_a, **_kw):
+            raise RuntimeError("upstream boom")
+            yield  # unreachable; keeps mypy happy
+
+        akande.openai_service.generate_stream = fake_stream
+
+        async def go():
+            async for _chunk in akande.generate_stream("q"):
+                pass
+
+        with pytest.raises(LLMError, match="LLM provider"):
+            asyncio.run(go())

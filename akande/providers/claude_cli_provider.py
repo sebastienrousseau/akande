@@ -161,23 +161,177 @@ class ClaudeCliProvider(LLMProvider):
             params,
         )
 
-    async def generate_stream(  # pragma: no cover - subprocess streaming
+    async def generate_stream(
         self,
         user_prompt: str,
         system_prompt: str,
         model: str,
         params: dict[str, Any] | None = None,
     ) -> AsyncIterator[str]:
-        """Yield the response as a single chunk.
+        """Stream text deltas from the local Claude Code CLI.
 
-        The claude CLI's ``-p`` mode returns the full completion when
-        the subprocess exits.  A real streaming implementation would
-        need to spawn the CLI without ``-p`` and parse incremental
-        stdout — out of scope for the first cut.
+        Spawns ``claude -p --output-format stream-json
+        --include-partial-messages --verbose`` and parses each JSONL
+        line as it arrives, yielding the text of every
+        ``content_block_delta`` event.  Other event types
+        (system/init, rate_limit_event, message_start/stop, etc.)
+        are skipped.
         """
-        response = await self.generate_response(
-            user_prompt, system_prompt, model, params
+        async for delta in self._stream_argv(
+            user_prompt, system_prompt, model
+        ):
+            yield delta
+
+    async def generate_stream_messages(
+        self,
+        messages: list[dict[str, str]],
+        model: str,
+        params: dict[str, Any] | None = None,
+    ) -> AsyncIterator[str]:
+        """Multi-turn streaming entry-point used by the server.
+
+        Collapses the OpenAI-shaped message list into the
+        single-turn shape the CLI accepts (system + last user
+        turn), then delegates to :meth:`generate_stream`.  Earlier
+        assistant turns are folded into the system prompt as a
+        transcript so the CLI sees the conversation history.
+        """
+        system_prompt = ""
+        history: list[dict[str, str]] = []
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            if role == "system" and not system_prompt:
+                system_prompt = content
+                continue
+            history.append({"role": role, "content": content})
+
+        if history and history[-1].get("role") == "user":
+            current_user = history[-1]["content"]
+            prior = history[:-1]
+        else:
+            current_user = ""
+            prior = history
+
+        if prior:
+            transcript = "\n".join(
+                f"{m['role']}: {m['content']}" for m in prior
+            )
+            system_with_history = (
+                f"{system_prompt}\n\n"
+                "<previous_conversation>\n"
+                f"{transcript}\n"
+                "</previous_conversation>"
+            )
+        else:
+            system_with_history = system_prompt
+
+        async for delta in self._stream_argv(
+            current_user, system_with_history, model
+        ):
+            yield delta
+
+    async def _stream_argv(  # noqa: C901 — straightforward state machine
+        self,
+        user_prompt: str,
+        system_prompt: str,
+        model: str,
+    ) -> AsyncIterator[str]:
+        import json as _json
+
+        from akande.config import API_CALL_TIMEOUT
+
+        cmd: list[str] = [
+            self._cli_path,
+            "-p",
+            "--output-format",
+            "stream-json",
+            "--include-partial-messages",
+            "--verbose",
+        ]
+        if system_prompt:
+            cmd.extend(["--append-system-prompt", system_prompt])
+        chosen = model or self._default_model
+        if chosen and not chosen.startswith("gpt-"):
+            cmd.extend(["--model", chosen])
+
+        start = time.time()
+        logger.info(
+            "claude CLI stream open",
+            extra={
+                "event": "LLM:StreamRequestSent",
+                "extra_data": {
+                    "provider": self.provider_name,
+                    "model": chosen,
+                },
+            },
         )
-        text = response.choices[0].message.content or ""
-        if text:
-            yield text
+        # nosec B603 — argv list, no shell, path resolved by
+        # shutil.which on init.
+        proc = await asyncio.create_subprocess_exec(  # noqa: S603
+            *cmd,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        assert proc.stdin is not None and proc.stdout is not None
+        stdin = proc.stdin
+        stdout = proc.stdout
+
+        async def _feed_stdin() -> None:
+            try:
+                stdin.write(user_prompt.encode("utf-8"))
+                await stdin.drain()
+            finally:
+                stdin.close()
+
+        feeder = asyncio.create_task(_feed_stdin())
+        chunk_count = 0
+        try:
+            while True:
+                try:
+                    line = await asyncio.wait_for(
+                        stdout.readline(),
+                        timeout=API_CALL_TIMEOUT,
+                    )
+                except asyncio.TimeoutError as exc:  # pragma: no cover
+                    proc.kill()
+                    raise RuntimeError(
+                        f"claude CLI stream timed out after "
+                        f"{API_CALL_TIMEOUT}s"
+                    ) from exc
+                if not line:
+                    break
+                try:
+                    payload = _json.loads(line.decode("utf-8"))
+                except (
+                    ValueError,
+                    UnicodeDecodeError,
+                ):  # pragma: no cover
+                    continue
+                if payload.get("type") != "stream_event":
+                    continue
+                event = payload.get("event") or {}
+                if event.get("type") != "content_block_delta":
+                    continue
+                delta = (event.get("delta") or {}).get("text", "")
+                if delta:
+                    chunk_count += 1
+                    yield delta
+        finally:
+            await feeder
+            await proc.wait()
+            latency_ms = (time.time() - start) * 1000
+            logger.info(
+                "claude CLI stream completed",
+                extra={
+                    "event": "LLM:StreamCompleted",
+                    "extra_data": {
+                        "provider": self.provider_name,
+                        "model": chosen,
+                        "chunks": chunk_count,
+                        "latency_ms": round(latency_ms, 2),
+                        "exit_code": proc.returncode,
+                    },
+                },
+            )

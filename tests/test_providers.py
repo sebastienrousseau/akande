@@ -1236,3 +1236,282 @@ class TestClaudeCliProvider:
             ".claude_cli_provider",
             "ClaudeCliProvider",
         )
+
+    # ── v0.0.7-dev.11: real streaming via --output-format stream-json
+
+    @staticmethod
+    def _fake_proc(stdout_lines: list[bytes]):
+        """Build a fake `asyncio.subprocess.Process` whose stdout
+        yields the supplied lines, then EOF."""
+
+        class FakeStdin:
+            def __init__(self) -> None:
+                self.closed = False
+
+            def write(self, data: bytes) -> None:
+                pass
+
+            async def drain(self) -> None:
+                pass
+
+            def close(self) -> None:
+                self.closed = True
+
+        class FakeStdout:
+            def __init__(self, lines: list[bytes]) -> None:
+                self._lines = list(lines) + [b""]
+
+            async def readline(self) -> bytes:
+                return self._lines.pop(0)
+
+        class FakeProc:
+            def __init__(self, lines: list[bytes]) -> None:
+                self.stdin = FakeStdin()
+                self.stdout = FakeStdout(lines)
+                self.returncode: int | None = None
+
+            async def wait(self) -> int:
+                self.returncode = 0
+                return 0
+
+            def kill(self) -> None:  # pragma: no cover - safety only
+                pass
+
+        return FakeProc(stdout_lines)
+
+    def test_generate_stream_parses_content_block_deltas(self):
+        import json as _json
+
+        from akande.providers.claude_cli_provider import (
+            ClaudeCliProvider,
+        )
+
+        with patch(
+            "akande.providers.claude_cli_provider.shutil.which",
+            return_value="/usr/local/bin/claude",
+        ):
+            p = ClaudeCliProvider()
+
+        lines = [
+            (
+                _json.dumps(
+                    {"type": "system", "subtype": "init"}
+                ).encode()
+                + b"\n"
+            ),
+            (
+                _json.dumps(
+                    {
+                        "type": "stream_event",
+                        "event": {
+                            "type": "content_block_delta",
+                            "delta": {
+                                "type": "text_delta",
+                                "text": "Hello",
+                            },
+                        },
+                    }
+                ).encode()
+                + b"\n"
+            ),
+            (
+                _json.dumps(
+                    {
+                        "type": "stream_event",
+                        "event": {
+                            "type": "content_block_delta",
+                            "delta": {
+                                "type": "text_delta",
+                                "text": " world",
+                            },
+                        },
+                    }
+                ).encode()
+                + b"\n"
+            ),
+            (
+                _json.dumps(
+                    {
+                        "type": "stream_event",
+                        "event": {"type": "message_stop"},
+                    }
+                ).encode()
+                + b"\n"
+            ),
+            (
+                _json.dumps(
+                    {"type": "result", "subtype": "success"}
+                ).encode()
+                + b"\n"
+            ),
+        ]
+        proc = self._fake_proc(lines)
+
+        async def _spawn(*_a, **_kw):
+            return proc
+
+        async def go():
+            collected = []
+            with patch(
+                "akande.providers.claude_cli_provider"
+                ".asyncio.create_subprocess_exec",
+                side_effect=_spawn,
+            ):
+                async for delta in p.generate_stream(
+                    "hi", "you are concise", "sonnet"
+                ):
+                    collected.append(delta)
+            return collected
+
+        result = asyncio.run(go())
+        assert result == ["Hello", " world"]
+        assert proc.stdin.closed is True
+
+    def test_generate_stream_messages_collapses_history(self):
+        import json as _json
+
+        from akande.providers.claude_cli_provider import (
+            ClaudeCliProvider,
+        )
+
+        with patch(
+            "akande.providers.claude_cli_provider.shutil.which",
+            return_value="/usr/local/bin/claude",
+        ):
+            p = ClaudeCliProvider()
+
+        lines = [
+            (
+                _json.dumps(
+                    {
+                        "type": "stream_event",
+                        "event": {
+                            "type": "content_block_delta",
+                            "delta": {
+                                "type": "text_delta",
+                                "text": "ok",
+                            },
+                        },
+                    }
+                ).encode()
+                + b"\n"
+            )
+        ]
+        proc = self._fake_proc(lines)
+        captured: dict[str, list[str]] = {}
+
+        async def _spawn(*args, **_kw):
+            captured["argv"] = list(args)
+            return proc
+
+        async def go():
+            collected = []
+            with patch(
+                "akande.providers.claude_cli_provider"
+                ".asyncio.create_subprocess_exec",
+                side_effect=_spawn,
+            ):
+                async for delta in p.generate_stream_messages(
+                    [
+                        {
+                            "role": "system",
+                            "content": "system prompt",
+                        },
+                        {
+                            "role": "user",
+                            "content": "first user",
+                        },
+                        {
+                            "role": "assistant",
+                            "content": "earlier reply",
+                        },
+                        {
+                            "role": "user",
+                            "content": "current question",
+                        },
+                    ],
+                    "sonnet",
+                    None,
+                ):
+                    collected.append(delta)
+            return collected
+
+        result = asyncio.run(go())
+        assert result == ["ok"]
+        # The collapsed system prompt should carry both the
+        # original system text and the prior transcript inside
+        # <previous_conversation> tags.
+        argv = captured["argv"]
+        idx = argv.index("--append-system-prompt")
+        system_payload = argv[idx + 1]
+        assert "system prompt" in system_payload
+        assert "<previous_conversation>" in system_payload
+        assert "earlier reply" in system_payload
+        assert "first user" in system_payload
+
+    def test_generate_stream_skips_non_text_events(self):
+        import json as _json
+
+        from akande.providers.claude_cli_provider import (
+            ClaudeCliProvider,
+        )
+
+        with patch(
+            "akande.providers.claude_cli_provider.shutil.which",
+            return_value="/usr/local/bin/claude",
+        ):
+            p = ClaudeCliProvider()
+
+        lines = [
+            # content_block_delta but with non-text delta — skip
+            (
+                _json.dumps(
+                    {
+                        "type": "stream_event",
+                        "event": {
+                            "type": "content_block_delta",
+                            "delta": {
+                                "type": "thinking_delta",
+                                "thinking": "internal",
+                            },
+                        },
+                    }
+                ).encode()
+                + b"\n"
+            ),
+            # Real text delta
+            (
+                _json.dumps(
+                    {
+                        "type": "stream_event",
+                        "event": {
+                            "type": "content_block_delta",
+                            "delta": {
+                                "type": "text_delta",
+                                "text": "real",
+                            },
+                        },
+                    }
+                ).encode()
+                + b"\n"
+            ),
+        ]
+        proc = self._fake_proc(lines)
+
+        async def _spawn(*_a, **_kw):
+            return proc
+
+        async def go():
+            out = []
+            with patch(
+                "akande.providers.claude_cli_provider"
+                ".asyncio.create_subprocess_exec",
+                side_effect=_spawn,
+            ):
+                async for delta in p.generate_stream(
+                    "q", "s", "sonnet"
+                ):
+                    out.append(delta)
+            return out
+
+        assert asyncio.run(go()) == ["real"]
