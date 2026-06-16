@@ -176,7 +176,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "enter":
 			if m.streamingActive {
-				// Ignore Enter while streaming.
 				return m, nil
 			}
 			q := strings.TrimSpace(m.textarea.Value())
@@ -194,7 +193,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.streamingActive = true
 			m.streamStart = time.Now()
 			m.renderViewport()
-			return m, m.startStream(q)
+			// Mutate first, then return — `return m, m.foo(q)`
+			// snapshots m before startStream's pointer-receiver
+			// mutations land, leaving streamCh nil on the
+			// returned model.
+			cmd := m.startStream(q)
+			return m, cmd
 		}
 
 	case initServerReady:
@@ -275,38 +279,37 @@ func (m *model) handleStreamEvent(ev StreamEvent) (tea.Model, tea.Cmd) {
 		// streamDone follows when the goroutine returns; nothing
 		// more to do here.
 	}
-	return *m, m.nextStreamEvent()
+	return *m, readStreamEvent(m.streamCh, m.streamStart)
 }
 
-// startStream opens the SSE connection in a goroutine and returns
-// a Cmd that waits for the first event.
+// startStream opens the SSE connection in a goroutine, stores the
+// channel + cancel on the model, and returns a Cmd that waits for
+// the first event.  The returned Cmd's closure captures the
+// channel and stream-start time by *local variable* — not by
+// model field — so the right channel is used even when Bubble
+// Tea copies the model around between Update calls.
 func (m *model) startStream(question string) tea.Cmd {
 	ctx, cancel := context.WithCancel(m.ctx)
 	m.streamCtx = cancel
 	m.streamCh = make(chan StreamEvent, 64)
 	go openStream(ctx, m.cfg, question, m.conversation, m.streamCh)
-	return tea.Batch(m.nextStreamEvent(), m.watchStreamCompletion())
+	return readStreamEvent(m.streamCh, m.streamStart)
 }
 
-// nextStreamEvent returns a Cmd that blocks on the next SSE event.
-func (m model) nextStreamEvent() tea.Cmd {
+// readStreamEvent returns a Cmd that blocks on the next SSE event.
+// When the channel closes (openStream always closes it on EOF or
+// error), the Cmd emits a streamDone.  Each event handler in
+// Update re-issues this Cmd so a single goroutine consumes the
+// channel — no races with a parallel completion watcher.
+func readStreamEvent(
+	ch <-chan StreamEvent, start time.Time,
+) tea.Cmd {
 	return func() tea.Msg {
-		ev, ok := <-m.streamCh
+		ev, ok := <-ch
 		if !ok {
-			return nil
+			return streamDone{latency: time.Since(start)}
 		}
 		return streamEvent{ev: ev}
-	}
-}
-
-// watchStreamCompletion fires streamDone after the SSE channel
-// closes — which `openStream` always does on EOF or error.
-func (m model) watchStreamCompletion() tea.Cmd {
-	return func() tea.Msg {
-		// Drain the channel so we know the goroutine has exited.
-		for range m.streamCh {
-		}
-		return streamDone{latency: time.Since(m.streamStart)}
 	}
 }
 

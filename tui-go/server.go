@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 	"time"
 )
@@ -50,11 +51,29 @@ func ensureServer(cfg Config) (*ServerHandle, error) {
 	host, port := splitHostPort(cfg.ServerURL)
 	cmd := exec.Command(cfg.PythonBin, "-m", "akande", "server",
 		"--host", host, "--port", port)
-	cmd.Stdout = nil
-	cmd.Stderr = os.Stderr
+	// CherryPy and our own startup banner both write to stderr.
+	// Bubble Tea's alt-screen does not manage the child's fds, so
+	// any output from the spawned server corrupts the TUI mid-
+	// render.  Route both streams to a per-run log file the user
+	// can `tail -f` if something goes wrong.
+	logPath := os.Getenv("AKANDE_TUI_SERVER_LOG")
+	if logPath == "" {
+		logPath = filepath.Join(
+			os.TempDir(), "akande-server.log")
+	}
+	if f, err := os.OpenFile(logPath,
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644); err == nil {
+		cmd.Stdout = f
+		cmd.Stderr = f
+	} else {
+		// Last-resort: send to /dev/null so we still don't
+		// corrupt the alt-screen.
+		devnull, _ := os.OpenFile(os.DevNull,
+			os.O_WRONLY, 0o644)
+		cmd.Stdout = devnull
+		cmd.Stderr = devnull
+	}
 	cmd.Env = os.Environ()
-	// Detach into its own process group so a stray Ctrl+C in the
-	// TUI does not double-signal the server.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	if err := cmd.Start(); err != nil {
