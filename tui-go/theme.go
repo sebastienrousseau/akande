@@ -34,9 +34,14 @@ func newTheme() Theme {
 		TextPrimary: "#f5f5f7",
 		TextMuted:   "#98989d",
 		TextDim:     "#636366",
-		AccentUser:  "#0a84ff",
-		AccentAI:    "#bf5af2",
-		AccentInfo:  "#64d2ff",
+		// Apple HIG system blue for the assistant accent
+		// (banner title, ❯ akande prefix, status dot, help
+		// key labels).  User accent is a lighter sky blue so
+		// `❯ you` and `❯ akande` stay distinguishable when
+		// both turns scroll past in the history.
+		AccentUser:  "#64d2ff",
+		AccentAI:    "#0a84ff",
+		AccentInfo:  "#5ac8fa",
 		AccentOK:    "#32d74b",
 		AccentWarn:  "#ff9f0a",
 		AccentError: "#ff453a",
