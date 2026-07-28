@@ -7,7 +7,7 @@
 # requests < 2.33, python-dotenv < 1.2.2).
 annotated-types==0.8.0 ; python_version >= "3.10" and python_version < "4.0"
 anyio==4.14.2 ; python_version >= "3.10" and python_version < "4.0"
-certifi==2026.6.17 ; python_version >= "3.10" and python_version < "4.0"
+certifi==2026.7.22 ; python_version >= "3.10" and python_version < "4.0"
 charset-normalizer==3.4.9 ; python_version >= "3.10" and python_version < "4.0"
 colorama==0.4.6 ; python_version >= "3.10" and python_version < "4.0" and platform_system == "Windows"
 distro==1.9.0 ; python_version >= "3.10" and python_version < "4.0"
