@@ -31,7 +31,7 @@ dependencies = [
     "cherrypy>=18.8.0",
     "pydub>=0.25.1",
     "textual>=0.80,<8",
-    "cryptography>=46.0.7,<50",
+    "cryptography>=46.0.7,<51",
 ]
 
 [project.optional-dependencies]
