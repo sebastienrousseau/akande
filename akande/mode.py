@@ -78,7 +78,10 @@ def active_mode() -> Mode:
 
 
 def enforce_for_provider(provider_name: str) -> None:
-    """Raise :class:`OfflineModeViolation` for non-local providers in offline mode."""
+    """Reject non-local providers while offline mode is active.
+
+    Raises :class:`OfflineModeViolation`.
+    """
     mode = active_mode()
     if mode.allow_remote_providers:
         return

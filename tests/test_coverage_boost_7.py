@@ -105,7 +105,7 @@ class TestWebSearchExtraBranches:
             "akande.tools.web_search.urllib.request.urlopen",
             return_value=resp,
         ):
-            backend, _results = tool._brave("q", 5), None
+            backend = tool._brave("q", 5)
         # _brave returns the list directly.
         # Sanity: when results are empty, the list is empty.
         assert isinstance(backend, list)

@@ -371,7 +371,8 @@ class AkandeApp(App):
                 yield option_list
                 yield Button("Cancel", id="history-cancel")
 
-        async def on_option_list_option_selected(  # pragma: no cover - event-driven
+        # event-driven
+        async def on_option_list_option_selected(  # pragma: no cover
             self, event: OptionList.OptionSelected
         ) -> None:
             idx = event.option_index

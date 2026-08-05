@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "akande"
-version = "0.0.6"
+version = "0.0.7"
 description = "A self-hosted, provider-agnostic voice assistant that delivers structured executive briefings via voice or text from 10 LLM providers."
 readme = "README.md"
 license = {text = "Apache Software License"}
@@ -31,7 +31,7 @@ dependencies = [
     "cherrypy>=18.8.0",
     "pydub>=0.25.1",
     "textual>=0.80,<8",
-    "cryptography>=46.0.7,<50",
+    "cryptography>=46.0.7,<51",
 ]
 
 [project.optional-dependencies]
@@ -68,7 +68,7 @@ memory = ["mem0ai>=0.1,<1"]
 # Required to run `akande mcp serve` (the server side, exposing
 # Àkàndé to Claude Desktop / Cursor / Continue) and `akande mcp
 # list` (the client side, introspecting upstream servers).
-mcp = ["mcp>=0.9,<2"]
+mcp = ["mcp>=0.9,<3"]
 all = [
     "anthropic>=0.40,<1",
     "google-generativeai>=0.7,<1",
@@ -99,7 +99,7 @@ dev = [
     "huggingface_hub>=0.24,<2",
     "groq>=0.11,<2",
     "pyttsx4>=3.0.0",
-    "mcp>=0.9,<2",
+    "mcp>=0.9,<3",
     # mem0ai is intentionally excluded from [dev]: as of 2026-06
     # the latest release (0.1.118) carries four unfixed CVEs
     # (CVE-2026-31240/31241/31245, CVE-2026-7597 fixed only in

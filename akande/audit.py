@@ -329,7 +329,10 @@ def write_sidecar(
     pdf_path: Path | str,
     manager: KeyManager | None = None,
 ) -> Path:
-    """Write the signed manifest as ``<pdf>.audit.json`` and return the path."""
+    """Write the signed manifest and return its path.
+
+    The manifest is written as ``<pdf>.audit.json``.
+    """
     body = sign_manifest(manifest, manager=manager)
     sidecar = Path(str(pdf_path) + AUDIT_SUFFIX)
     with sidecar.open("w", encoding="utf-8") as fh:

@@ -145,7 +145,8 @@ class SkillRegistry:
         return None
 
     def discover_plugins(self) -> None:
-        """Register skills advertised via the ``akande.skills`` entry-point group.
+        """Register skills advertised via the ``akande.skills``
+        entry-point group.
 
         Errors during plugin load are logged and swallowed —
         a broken plugin must never prevent Àkàndé from starting.

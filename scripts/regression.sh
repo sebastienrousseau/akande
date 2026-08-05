@@ -184,9 +184,25 @@ else
     || fail "bandit failed (see $LOG_DIR/05-bandit.log)"
   ok "bandit: 0 medium+ findings"
 
-  pip-audit --strict >"$LOG_DIR/05-pip-audit.log" 2>&1 \
+  # PYSEC-2026-2132: command injection in click.edit() (click <= 8.3.2,
+  # fixed in 8.3.3). We cannot take the fix: gTTS pins click<8.2,>=7.1
+  # on every published release up to 2.5.4, which caps us at 8.1.8.
+  # The finding is unreachable here — akande never imports click (it
+  # arrives transitively via gTTS / uvicorn) and never calls
+  # click.edit(). Drop this ignore once gTTS relaxes its click cap.
+  #
+  # --strict is deliberately NOT used. It fails the audit whenever any
+  # distribution cannot be resolved, and phase 2 installs this project
+  # with `pip install -e`, so akande itself is always unresolvable —
+  # either "marked as editable" or, on a release branch, "not found on
+  # PyPI" because the bumped version is not published yet. That made
+  # the gate fail on every version bump. Dropping --strict costs
+  # nothing: pip-audit still exits non-zero when it finds a real
+  # vulnerability, which is what this gate is for.
+  pip-audit --skip-editable --ignore-vuln PYSEC-2026-2132 \
+    >"$LOG_DIR/05-pip-audit.log" 2>&1 \
     || fail "pip-audit failed (see $LOG_DIR/05-pip-audit.log)"
-  ok "pip-audit: 0 known CVEs"
+  ok "pip-audit: 0 known CVEs (PYSEC-2026-2132 waived, see above)"
 fi
 
 # --- summary ----------------------------------------------------------------
