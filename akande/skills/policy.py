@@ -12,7 +12,8 @@ Shape::
 
     {
       "skills": {
-        "weather":   {"enabled": true,  "consented_at": "2026-06-14T10:11:00Z"},
+        "weather": {"enabled": true,
+                    "consented_at": "2026-06-14T10:11:00Z"},
         "finance":   {"enabled": true,  "consented_at": null},
         "web_search":{"enabled": false, "consented_at": "..."}
       },

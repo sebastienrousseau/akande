@@ -10,7 +10,8 @@ uses** so operators can copy-paste an existing config.  Example::
       "mcpServers": {
         "filesystem": {
           "command": "npx",
-          "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/me/Notes"]
+          "args": ["-y", "@modelcontextprotocol/server-filesystem",
+                   "/Users/me/Notes"]
         },
         "github": {
           "command": "npx",

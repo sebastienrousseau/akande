@@ -173,7 +173,7 @@ class TestWebSearchTavily:
             "akande.tools.web_search.urllib.request.urlopen",
             return_value=resp,
         ):
-            backend, _results = tool._tavily("q", 5), None
+            backend = tool._tavily("q", 5)
         # _tavily returns just the list.
         assert isinstance(backend, list)
         assert backend[0]["title"] == "T"
