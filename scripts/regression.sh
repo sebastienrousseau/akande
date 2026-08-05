@@ -190,7 +190,16 @@ else
   # The finding is unreachable here — akande never imports click (it
   # arrives transitively via gTTS / uvicorn) and never calls
   # click.edit(). Drop this ignore once gTTS relaxes its click cap.
-  pip-audit --strict --ignore-vuln PYSEC-2026-2132 \
+  #
+  # --strict is deliberately NOT used. It fails the audit whenever any
+  # distribution cannot be resolved, and phase 2 installs this project
+  # with `pip install -e`, so akande itself is always unresolvable —
+  # either "marked as editable" or, on a release branch, "not found on
+  # PyPI" because the bumped version is not published yet. That made
+  # the gate fail on every version bump. Dropping --strict costs
+  # nothing: pip-audit still exits non-zero when it finds a real
+  # vulnerability, which is what this gate is for.
+  pip-audit --skip-editable --ignore-vuln PYSEC-2026-2132 \
     >"$LOG_DIR/05-pip-audit.log" 2>&1 \
     || fail "pip-audit failed (see $LOG_DIR/05-pip-audit.log)"
   ok "pip-audit: 0 known CVEs (PYSEC-2026-2132 waived, see above)"
