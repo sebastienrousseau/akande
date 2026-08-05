@@ -119,6 +119,7 @@ directory on every answered question.
 
 ```python
 """Ask Àkàndé a question programmatically."""
+
 import asyncio
 
 from akande.akande import Akande
@@ -127,7 +128,7 @@ from akande.providers import get_provider
 
 async def main() -> None:
     # 1. Pick any of the ten configured providers by name.
-    provider = get_provider("openai")             # honours $OPENAI_API_KEY
+    provider = get_provider("openai")  # honours $OPENAI_API_KEY
     akande = Akande(openai_service=provider)
 
     # 2. Ask a question.  The four-section briefing comes back as plain text.
@@ -269,7 +270,13 @@ Five ship in the box; third-party skills register via the
 # [project.entry-points."akande.skills"]
 # my_skill = "my_package.skill:MySkill"
 
-from akande.skills.base import Skill, SkillMeta, Intent, SkillContext, SkillResult
+from akande.skills.base import (
+    Skill,
+    SkillMeta,
+    Intent,
+    SkillContext,
+    SkillResult,
+)
 
 
 class MySkill(Skill):

@@ -984,9 +984,7 @@ class AkandeServer:
                 )
 
             # Sanitise messages
-            clean = (
-                []
-            )  # pragma: no cover - exercised by integration tests
+            clean = []  # pragma: no cover - exercised by integration tests
             for m in messages[:500]:  # pragma: no cover
                 role = str(m.get("role", ""))[:20]
                 content = str(m.get("content", ""))[:10000]
