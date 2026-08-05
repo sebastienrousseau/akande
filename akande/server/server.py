@@ -447,8 +447,10 @@ class AkandeServer:
             )
 
         # happy path needs cherrypy
-        conversation = self.conversations.get_or_create(  # pragma: no cover
-            conv_id=conv_id
+        conversation = (
+            self.conversations.get_or_create(  # pragma: no cover
+                conv_id=conv_id
+            )
         )
         self.conversations.append_turn(  # pragma: no cover
             conversation.id, "user", question
@@ -467,15 +469,11 @@ class AkandeServer:
         )
 
         # SSE headers + opt-in to chunked streaming.
-        cherrypy.response.headers[
-            "Content-Type"
-        ] = (  # pragma: no cover
-            "text/event-stream; charset=utf-8"
+        cherrypy.response.headers["Content-Type"] = (
+            "text/event-stream; charset=utf-8"  # pragma: no cover
         )
-        cherrypy.response.headers[
-            "Cache-Control"
-        ] = (  # pragma: no cover
-            "no-cache, no-transform"
+        cherrypy.response.headers["Cache-Control"] = (
+            "no-cache, no-transform"  # pragma: no cover
         )
         cherrypy.response.headers["X-Accel-Buffering"] = (
             "no"  # pragma: no cover
@@ -986,7 +984,9 @@ class AkandeServer:
                 )
 
             # Sanitise messages
-            clean = []  # pragma: no cover - exercised by integration tests
+            clean = (
+                []
+            )  # pragma: no cover - exercised by integration tests
             for m in messages[:500]:  # pragma: no cover
                 role = str(m.get("role", ""))[:20]
                 content = str(m.get("content", ""))[:10000]

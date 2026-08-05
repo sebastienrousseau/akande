@@ -133,21 +133,17 @@ class SQLiteCache:
         """Create the cache table and indexes if they don't exist."""
         with self.lock:
             cursor = self.conn.cursor()
-            cursor.execute(
-                """
+            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS cache (
                     prompt_hash TEXT PRIMARY KEY,
                     response TEXT,
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
-                """
-            )
-            cursor.execute(
-                """
+                """)
+            cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_cache_timestamp
                 ON cache(timestamp)
-                """
-            )
+                """)
             self.conn.commit()
         logging.info(
             "Cache initialized",

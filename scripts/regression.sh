@@ -184,9 +184,16 @@ else
     || fail "bandit failed (see $LOG_DIR/05-bandit.log)"
   ok "bandit: 0 medium+ findings"
 
-  pip-audit --strict >"$LOG_DIR/05-pip-audit.log" 2>&1 \
+  # PYSEC-2026-2132: command injection in click.edit() (click <= 8.3.2,
+  # fixed in 8.3.3). We cannot take the fix: gTTS pins click<8.2,>=7.1
+  # on every published release up to 2.5.4, which caps us at 8.1.8.
+  # The finding is unreachable here — akande never imports click (it
+  # arrives transitively via gTTS / uvicorn) and never calls
+  # click.edit(). Drop this ignore once gTTS relaxes its click cap.
+  pip-audit --strict --ignore-vuln PYSEC-2026-2132 \
+    >"$LOG_DIR/05-pip-audit.log" 2>&1 \
     || fail "pip-audit failed (see $LOG_DIR/05-pip-audit.log)"
-  ok "pip-audit: 0 known CVEs"
+  ok "pip-audit: 0 known CVEs (PYSEC-2026-2132 waived, see above)"
 fi
 
 # --- summary ----------------------------------------------------------------
