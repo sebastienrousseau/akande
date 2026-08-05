@@ -287,7 +287,7 @@ class AnthropicProvider(LLMProvider):
                 model=model,
                 max_tokens=1024,
                 system=system_text,
-                messages=chat_messages,  # type: ignore[arg-type, unused-ignore]
+                messages=chat_messages,  # type: ignore[arg-type,unused-ignore]
                 **params,
             )
 

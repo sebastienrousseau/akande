@@ -181,7 +181,7 @@ def watermark_audio(
         # tests/test_watermark.py::TestRoundTripIntegration
         # exercise this path on a developer machine that has the
         # extras installed.
-        import torchaudio.functional as F  # type: ignore[import-not-found]  # pragma: no cover
+        import torchaudio.functional as F  # type: ignore  # pragma: no cover
 
         tensor, sample_rate = _bytes_to_tensor(
             audio, fmt
@@ -240,7 +240,7 @@ def detect_watermark(
     if not _audioseal_available():
         return False, 0.0
     try:
-        import torchaudio.functional as F  # type: ignore[import-not-found]  # pragma: no cover
+        import torchaudio.functional as F  # type: ignore  # pragma: no cover
 
         tensor, sample_rate = _bytes_to_tensor(
             audio, fmt

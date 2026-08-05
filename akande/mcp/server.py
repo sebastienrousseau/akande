@@ -43,15 +43,28 @@ SERVER_NAME = "akande"
 
 
 def _require_mcp_sdk() -> Any:
+    """Return the MCP server class for whichever SDK major is installed.
+
+    ``mcp`` 2.0 renamed ``FastMCP`` to ``MCPServer``; the constructor
+    and the ``.tool()`` / ``.run()`` surface this module relies on are
+    unchanged, so either class works. ``pyproject`` allows
+    ``mcp>=0.9,<3``, so both have to be supported.
+    """
+    missing = ImportError(
+        "The 'mcp' package is required to run the Àkàndé "
+        "MCP server.  Install it with: "
+        "pip install akande[mcp]"
+    )
     try:
-        from mcp.server import FastMCP  # type: ignore[import-not-found]
+        import mcp.server as mcp_server  # type: ignore[import-not-found]
     except ImportError as exc:
-        raise ImportError(
-            "The 'mcp' package is required to run the Àkàndé "
-            "MCP server.  Install it with: "
-            "pip install akande[mcp]"
-        ) from exc
-    return FastMCP
+        raise missing from exc
+
+    for attr in ("MCPServer", "FastMCP"):
+        server_cls = getattr(mcp_server, attr, None)
+        if server_cls is not None:
+            return server_cls
+    raise missing
 
 
 def build_server(

@@ -446,7 +446,8 @@ class AkandeServer:
                 {"error": ("conversation_id must be a string")}
             )
 
-        conversation = self.conversations.get_or_create(  # pragma: no cover - happy path needs cherrypy
+        # happy path needs cherrypy
+        conversation = self.conversations.get_or_create(  # pragma: no cover
             conv_id=conv_id
         )
         self.conversations.append_turn(  # pragma: no cover

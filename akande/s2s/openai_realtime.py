@@ -59,7 +59,9 @@ class OpenAIRealtimeProvider(S2SProvider):
         sample_rate: int | None = None,
     ) -> S2SResult:
         try:
-            import websockets.sync.client as ws  # type: ignore[import-not-found]
+            from websockets.sync import (  # type: ignore[import-not-found]
+                client as ws,
+            )
         except ImportError as exc:
             raise ImportError(
                 "websockets is required for the OpenAI Realtime "

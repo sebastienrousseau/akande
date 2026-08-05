@@ -20,7 +20,7 @@ import re
 import sqlite3
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 # Module-level regex patterns for PII redaction.  Kept conservative
@@ -184,7 +184,16 @@ class SQLiteCache:
                 WHERE prompt_hash = ?
                 AND timestamp > ?
                 """,
-                (prompt_hash, datetime.now() - self.expiration),
+                # Rows are written with SQLite's CURRENT_TIMESTAMP,
+                # which is UTC. Comparing against a local-time
+                # datetime.now() makes the cutoff wrong by the UTC
+                # offset — west of UTC every expired row still
+                # compares as fresh and nothing ever expires.
+                (
+                    prompt_hash,
+                    datetime.now(timezone.utc).replace(tzinfo=None)
+                    - self.expiration,
+                ),
             )
             result = cursor.fetchone()
         hit = result is not None
