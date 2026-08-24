@@ -40,7 +40,7 @@ dependencies = [
 # images don't ship the system headers; the rest of Àkàndé works
 # fine without it.
 mic = ["pyaudio>=0.2.14"]
-anthropic = ["anthropic>=0.40,<1"]
+anthropic = ["anthropic>=0.40,<2"]
 google = ["google-generativeai>=0.7,<1"]
 mistral = ["mistralai>=1.0,<2"]
 cohere = ["cohere>=5.13,<8"]
@@ -70,7 +70,7 @@ memory = ["mem0ai>=0.1,<1"]
 # list` (the client side, introspecting upstream servers).
 mcp = ["mcp>=0.9,<3"]
 all = [
-    "anthropic>=0.40,<1",
+    "anthropic>=0.40,<2",
     "google-generativeai>=0.7,<1",
     "mistralai>=1.0,<2",
     "cohere>=5.13,<8",
@@ -92,7 +92,7 @@ dev = [
     # Bundled into [dev] so the reusable CI workflow (which runs
     # `pip install -e ".[dev]"`) has every optional surface
     # exercised by the test suite — provider SDKs, MCP, mem0.
-    "anthropic>=0.40,<1",
+    "anthropic>=0.40,<2",
     "google-generativeai>=0.7,<1",
     "mistralai>=1.0,<2",
     "cohere>=5.13,<8",
