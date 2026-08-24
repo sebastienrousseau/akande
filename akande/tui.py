@@ -21,13 +21,16 @@ from rich.text import Text
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
+from textual.containers import Container as _BaseContainer
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import (
     Button,
     Footer,
     Header,
     Input,
+    Label,
+    Markdown,
     OptionList,
     RichLog,
     Static,
@@ -40,6 +43,65 @@ from .utils import (
     generate_pdf,
     strip_markdown,
 )
+
+
+class MessageBubble(_BaseContainer):
+    """A single chat-history entry, themed by role.
+
+    Each bubble carries a one-line role badge and a body widget.
+    The body is a :class:`textual.widgets.Markdown` for assistant
+    + user content (so code blocks, lists, and tables render
+    properly) and a :class:`textual.widgets.Static` for short
+    plain-text rows (file paths, error toasts).
+
+    Bubble role is communicated through the CSS class on the
+    container ("user", "assistant", "file", "error", "status") —
+    the stylesheet sets the badge color and the left-edge accent
+    bar.  ``streaming`` is added while the bubble is being filled
+    delta-by-delta and removed once the response is finalised.
+    """
+
+    DEFAULT_CSS = ""
+
+    def __init__(
+        self,
+        role: str,
+        body: str,
+        *,
+        body_is_markdown: bool = True,
+        role_label: str | None = None,
+    ) -> None:
+        super().__init__()
+        self.add_class(role)
+        self._role = role
+        self._initial_body = body
+        self._body_is_markdown = body_is_markdown
+        self._role_label = role_label or {
+            "user": "you",
+            "assistant": "akande",
+            "file": "files",
+            "error": "error",
+            "status": "status",
+        }.get(role, role)
+
+    def compose(
+        self,
+    ) -> ComposeResult:  # pragma: no cover - mounted Textual app
+        yield Label(self._role_label, classes="role")
+        if self._body_is_markdown:
+            yield Markdown(self._initial_body or "", classes="body")
+        else:
+            yield Static(
+                self._initial_body or "",
+                classes="plain",
+            )
+
+    def append_markdown(
+        self, markdown: str
+    ) -> None:  # pragma: no cover - mounted Textual app
+        """Replace the markdown body (used by streaming updates)."""
+        md = self.query_one(Markdown)
+        md.update(markdown)
 
 
 @contextlib.contextmanager
@@ -90,27 +152,39 @@ class AkandeApp(App):
     # error:           #ff453a
 
     CSS = """
+    /*
+     * v0.0.7-dev.13 — TUI refresh.
+     * Refined Apple-HIG-leaning palette with proper chat bubbles,
+     * a markdown-rendered conversation history, an inline streaming
+     * widget, and a status bar that surfaces provider/model/tokens
+     * /latency at a glance.  Token names match the v0.0.6 design
+     * system so the Web UI and TUI stay visually consistent.
+     */
+
     Screen {
-        background: #1c1c1e;
+        background: #0f0f10;
+        layers: base overlay;
     }
 
     Header {
-        background: #2c2c2e;
+        background: #18181b;
         color: #f5f5f7;
-        border-bottom: solid #48484a;
+        border-bottom: solid #2a2a2e;
+        height: 1;
     }
 
     Footer {
-        background: #2c2c2e;
+        background: #18181b;
         color: #98989d;
-        border-top: solid #48484a;
+        border-top: solid #2a2a2e;
     }
 
     /* ── Layout ── */
 
     #main {
-        background: #1c1c1e;
+        background: #0f0f10;
         min-height: 3;
+        layout: vertical;
     }
 
     #welcome {
@@ -119,15 +193,99 @@ class AkandeApp(App):
         content-align: center middle;
         text-align: center;
         padding: 2 4;
+        color: #f5f5f7;
     }
 
+    /* ── Chat (scrollable container of message bubbles) ── */
+
     #chat {
-        background: #1c1c1e;
-        padding: 1 3;
-        scrollbar-color: #3a3a3c;
+        background: #0f0f10;
+        padding: 1 2 0 2;
+        scrollbar-color: #2a2a2e;
         scrollbar-color-hover: #0A84FF;
         scrollbar-color-active: #0A84FF;
+        scrollbar-background: #0f0f10;
+        scrollbar-background-hover: #0f0f10;
+        scrollbar-background-active: #0f0f10;
+        scrollbar-size: 1 1;
+        height: 1fr;
     }
+
+    /* ── Message bubble ── */
+
+    MessageBubble {
+        height: auto;
+        margin: 0 0 1 0;
+        padding: 0 1 0 0;
+        layout: vertical;
+    }
+
+    MessageBubble .role {
+        height: 1;
+        padding: 0 0 0 0;
+        color: #98989d;
+        text-style: bold;
+    }
+
+    MessageBubble.user .role {
+        color: #0A84FF;
+    }
+
+    MessageBubble.assistant .role {
+        color: #BF5AF2;
+    }
+
+    MessageBubble.file .role {
+        color: #32d74b;
+    }
+
+    MessageBubble.error .role {
+        color: #ff453a;
+    }
+
+    MessageBubble.status .role {
+        color: #FFD60A;
+    }
+
+    MessageBubble Markdown,
+    MessageBubble .plain {
+        background: #18181b;
+        color: #f5f5f7;
+        border-left: thick #2a2a2e;
+        padding: 0 1 0 1;
+        margin: 0 0 0 1;
+    }
+
+    MessageBubble.user Markdown,
+    MessageBubble.user .plain {
+        border-left: thick #0A84FF;
+    }
+
+    MessageBubble.assistant Markdown,
+    MessageBubble.assistant .plain {
+        border-left: thick #BF5AF2;
+    }
+
+    MessageBubble.file .plain {
+        border-left: thick #32d74b;
+        color: #98989d;
+    }
+
+    MessageBubble.error .plain {
+        border-left: thick #ff453a;
+        color: #ff453a;
+    }
+
+    MessageBubble.status .plain {
+        border-left: thick #FFD60A;
+        color: #FFD60A;
+    }
+
+    MessageBubble.streaming Markdown {
+        border-left: thick #BF5AF2;
+    }
+
+    /* ── Pre-stream "Thinking…" pulse ── */
 
     #thinking {
         height: auto;
@@ -138,6 +296,30 @@ class AkandeApp(App):
 
     #thinking.visible {
         display: block;
+    }
+
+    /* ── Status bar (provider · model · tokens · latency) ── */
+
+    #status-bar {
+        height: 1;
+        background: #18181b;
+        color: #98989d;
+        padding: 0 2;
+        border-top: solid #2a2a2e;
+    }
+
+    #status-left, #status-right {
+        width: 1fr;
+        color: #98989d;
+    }
+
+    #status-right {
+        text-align: right;
+    }
+
+    .status-accent {
+        color: #BF5AF2;
+        text-style: bold;
     }
 
     /* ── Input bar ── */
@@ -402,28 +584,40 @@ class AkandeApp(App):
     ) -> ComposeResult:  # pragma: no cover - mounted Textual
         provider = LLM_PROVIDER or "openai"
         model = OPENAI_DEFAULT_MODEL or "default"
-        yield Header()
+        yield Header(show_clock=True)
         with Vertical(id="main"):
             yield Static(
-                "\n[bold #f5f5f7]Akande[/]\n"
-                "[#636366]Executive Briefing Assistant[/]\n\n"
-                "[#98989d]Type a question below or "
-                "use the menu:[/]\n\n"
-                "[#0A84FF][1][/] [#98989d]Record  [/]"
-                "[#0A84FF][2][/] [#98989d]Web UI  [/]"
-                "[#0A84FF][3][/] [#98989d]Clear  [/]"
-                "[#0A84FF][4][/] [#98989d]Quit  [/]"
-                "[#0A84FF][5][/] [#98989d]Export  [/]"
-                "[#0A84FF][6][/] [#98989d]History[/]\n\n"
-                "[#636366]Tab to navigate · "
-                "Escape to exit · "
-                "F1 for help[/]\n\n"
-                f"[#636366]{provider}  ·  {model}[/]",
+                "\n"
+                "[bold #f5f5f7]Àkàndé[/]\n"
+                "[#98989d]Executive Briefing Assistant[/]\n\n"
+                "[#636366]Ask a question — answers stream in as "
+                "Markdown with code blocks, lists, and citations "
+                "rendered live.[/]\n\n"
+                "[#BF5AF2]1[/] [#98989d]Record  [/]"
+                "[#BF5AF2]2[/] [#98989d]Web UI  [/]"
+                "[#BF5AF2]3[/] [#98989d]Clear  [/]"
+                "[#BF5AF2]4[/] [#98989d]Quit  [/]"
+                "[#BF5AF2]5[/] [#98989d]Export  [/]"
+                "[#BF5AF2]6[/] [#98989d]History  [/]"
+                "[#BF5AF2]F1[/] [#98989d]Help[/]\n\n"
+                f"[#636366]provider · [#f5f5f7]{provider}[/]"
+                f"   model · [#f5f5f7]{model}[/][/]",
                 id="welcome",
                 markup=True,
             )
-            yield RichLog(id="chat", wrap=True, markup=True)
+            yield VerticalScroll(id="chat")
             yield Static("", id="thinking")
+        with Horizontal(id="status-bar"):
+            yield Static(
+                f"  [b #BF5AF2]●[/] {provider} · {model}",
+                id="status-left",
+                markup=True,
+            )
+            yield Static(
+                "0 tokens   0 ms",
+                id="status-right",
+                markup=True,
+            )
         with Horizontal(id="action-bar"):
             yield Button(
                 "[1] Record",
@@ -482,7 +676,10 @@ class AkandeApp(App):
         provider = LLM_PROVIDER or "openai"
         model = OPENAI_DEFAULT_MODEL or "default"
         self.sub_title = f"{provider} · {model}"
-        self.query_one("#chat", RichLog).display = False
+        self.query_one("#chat", VerticalScroll).display = False
+        self._total_tokens = 0
+        self._last_latency_ms = 0
+        self._streaming_bubble: MessageBubble | None = None
 
     def on_resize(
         self, event
@@ -503,7 +700,7 @@ class AkandeApp(App):
 
     def _show_thinking(self) -> None:
         w = self.query_one("#thinking", Static)
-        w.update("  Thinking...")
+        w.update(" [#BF5AF2]●[/] [#98989d]Thinking…[/]")
         w.add_class("visible")
 
     def _hide_thinking(self) -> None:
@@ -512,30 +709,55 @@ class AkandeApp(App):
         w.update("")
 
     # ── Message writers ─────────────────────────────────────
+    #
+    # These return the mounted MessageBubble so callers can update
+    # them (e.g. the streaming worker accumulates deltas into the
+    # assistant bubble's Markdown widget).  The signature stays
+    # str-in / nothing-meaningful-out so the v0.0.6 test surface
+    # keeps passing.
+
+    def _mount_bubble(
+        self,
+        role: str,
+        body: str,
+        *,
+        body_is_markdown: bool = True,
+    ) -> MessageBubble:
+        bubble = MessageBubble(
+            role, body, body_is_markdown=body_is_markdown
+        )
+        chat = self.query_one("#chat", VerticalScroll)
+        chat.mount(bubble)
+        chat.scroll_end(animate=False)
+        return bubble
 
     def _write_user(self, text: str) -> None:
-        chat = self.query_one("#chat", RichLog)
-        chat.write(Text(""))
-        msg = Text()
-        msg.append("you  ", style="#636366")
-        msg.append(text, style="#0A84FF")
-        chat.write(msg)
+        self._mount_bubble("user", text, body_is_markdown=False)
 
     def _write_assistant(self, text: str) -> None:
-        chat = self.query_one("#chat", RichLog)
-        chat.write(Text(text, style="#f5f5f7"))
+        self._mount_bubble("assistant", text, body_is_markdown=True)
 
     def _write_file(self, text: str) -> None:
-        chat = self.query_one("#chat", RichLog)
-        chat.write(Text(text, style="#636366"))
+        self._mount_bubble("file", text, body_is_markdown=False)
 
     def _write_error(self, text: str) -> None:
-        chat = self.query_one("#chat", RichLog)
-        chat.write(Text(text, style="#ff453a"))
+        self._mount_bubble("error", text, body_is_markdown=False)
 
     def _write_status(self, text: str) -> None:
-        chat = self.query_one("#chat", RichLog)
-        chat.write(Text(text, style="#32d74b"))
+        self._mount_bubble("status", text, body_is_markdown=False)
+
+    # ── Status bar ──────────────────────────────────────────
+
+    def _update_status(
+        self, tokens_delta: int = 0, latency_ms: int | None = None
+    ) -> None:  # pragma: no cover - mounted Textual
+        self._total_tokens += tokens_delta
+        if latency_ms is not None:
+            self._last_latency_ms = latency_ms
+        right = self.query_one("#status-right", Static)
+        right.update(
+            f"{self._total_tokens} tokens   {self._last_latency_ms} ms"
+        )
 
     # ── Input handling ──────────────────────────────────────
 
@@ -589,21 +811,88 @@ class AkandeApp(App):
         self, question: str
     ) -> None:  # pragma: no cover - thread worker
         import asyncio
+        import time as _time
 
         self.akande.reset_cancel()
-        try:
-            response = asyncio.run(
-                self.akande.generate_response(question)
-            )
+        buffer: list[str] = []
 
-            def _update_ui():
+        # Throttle UI updates to ~10/s.  claude_cli emits 30–60
+        # deltas/s once streaming starts; each `call_from_thread`
+        # waits for the main Textual thread to process the message
+        # so the worker stalls on every token and the subprocess
+        # pipe back-pressures, freezing the TUI.
+        _UPDATE_INTERVAL_S = 0.10
+        stream_start = _time.monotonic()
+
+        def _open_streaming_bubble() -> None:
+            self._hide_thinking()
+            bubble = self._mount_bubble("assistant", "")
+            bubble.add_class("streaming")
+            self._streaming_bubble = bubble
+
+        def _stream_md(markdown: str, tokens_delta: int) -> None:
+            if self._streaming_bubble is None:
+                return
+            self._streaming_bubble.append_markdown(markdown)
+            self._update_status(tokens_delta=tokens_delta)
+            chat = self.query_one("#chat", VerticalScroll)
+            chat.scroll_end(animate=False)
+
+        async def _drive_stream() -> str:
+            last_push = 0.0
+            tokens_since_push = 0
+            first = True
+            async for delta in self.akande.generate_stream(question):
+                if not delta:
+                    continue
+                buffer.append(delta)
+                tokens_since_push += 1
+                if first:
+                    self.call_from_thread(_open_streaming_bubble)
+                    first = False
+                now = _time.monotonic()
+                if (now - last_push) < _UPDATE_INTERVAL_S:
+                    continue
+                last_push = now
+                snapshot = "".join(buffer)
+                self.call_from_thread(
+                    _stream_md, snapshot, tokens_since_push
+                )
+                tokens_since_push = 0
+            if buffer:
+                final_snapshot = "".join(buffer)
+                self.call_from_thread(
+                    _stream_md, final_snapshot, tokens_since_push
+                )
+                latency_ms = int(
+                    (_time.monotonic() - stream_start) * 1000
+                )
+                self.call_from_thread(
+                    self._update_status, 0, latency_ms
+                )
+            return "".join(buffer)
+
+        try:
+            response = asyncio.run(_drive_stream())
+
+            def _finalise_ui() -> None:
                 self._hide_thinking()
                 if not response:
                     self._write_error("No response was generated.")
                     return
 
                 clean = strip_markdown(response)
-                self._write_assistant(clean)
+                # The streaming bubble already holds the full
+                # markdown — just drop the streaming class so the
+                # accent border returns to the static assistant
+                # colour.  If no bubble was opened (no deltas), fall
+                # back to mounting one with the final text.
+                if self._streaming_bubble is None:
+                    self._mount_bubble("assistant", response)
+                else:
+                    self._streaming_bubble.append_markdown(response)
+                    self._streaming_bubble.remove_class("streaming")
+                    self._streaming_bubble = None
 
                 self._last_question = question
                 self._last_response = response
@@ -628,7 +917,7 @@ class AkandeApp(App):
                 if parts:
                     self._write_file("   ".join(parts))
 
-            self.call_from_thread(_update_ui)
+            self.call_from_thread(_finalise_ui)
 
             if response:
                 clean = strip_markdown(response)

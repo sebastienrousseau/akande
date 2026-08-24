@@ -1,6 +1,6 @@
 """Tests for akande.providers package.
 
-Tests all 10 provider adapters, the registry, the ABC, the
+Tests all 14 provider adapters, the registry, the ABC, the
 response normalisation layer, and the OpenAI-compatible base.
 """
 
@@ -173,8 +173,8 @@ class TestProviderRegistry:
         )
         assert "openai" in reg.available
 
-    def test_global_registry_has_10_providers(self):
-        assert len(_registry.available) == 10
+    def test_global_registry_has_14_providers(self):
+        assert len(_registry.available) == 14
 
     def test_global_registry_provider_names(self):
         expected = {
@@ -188,6 +188,10 @@ class TestProviderRegistry:
             "huggingface",
             "groq",
             "lmstudio",
+            "claude_cli",
+            "codex_cli",
+            "copilot_cli",
+            "antigravity_cli",
         }
         assert set(_registry.available) == expected
 
@@ -1083,3 +1087,597 @@ class TestImportErrors:
                 sys.modules["huggingface_hub"] = saved
             else:
                 sys.modules.pop("huggingface_hub", None)
+
+
+# ────────────────────────────────────────────────────────────
+# Claude CLI provider — wraps the local `claude` binary
+# ────────────────────────────────────────────────────────────
+
+
+class TestClaudeCliProvider:
+    """The `claude_cli` provider piggybacks on Claude Code's local
+    session; we never need to network out in tests."""
+
+    def test_missing_cli_raises_importerror(self):
+        from akande.providers.claude_cli_provider import (
+            ClaudeCliProvider,
+        )
+
+        with patch(
+            "akande.providers.claude_cli_provider.shutil.which",
+            return_value=None,
+        ):
+            with pytest.raises(ImportError, match="claude"):
+                ClaudeCliProvider()
+
+    def test_provider_name(self):
+        from akande.providers.claude_cli_provider import (
+            ClaudeCliProvider,
+        )
+
+        with patch(
+            "akande.providers.claude_cli_provider.shutil.which",
+            return_value="/usr/local/bin/claude",
+        ):
+            p = ClaudeCliProvider()
+        assert p.provider_name == "claude_cli"
+        assert p._default_model == "sonnet"
+
+    def test_generate_response_sync_returns_envelope(self):
+        from akande.providers.claude_cli_provider import (
+            ClaudeCliProvider,
+        )
+
+        completed = MagicMock()
+        completed.stdout = "  the answer is 42  \n"
+        completed.returncode = 0
+
+        with patch(
+            "akande.providers.claude_cli_provider.shutil.which",
+            return_value="/usr/local/bin/claude",
+        ):
+            p = ClaudeCliProvider()
+
+        with patch(
+            "akande.providers.claude_cli_provider.subprocess.run",
+            return_value=completed,
+        ) as mock_run:
+            out = p.generate_response_sync(
+                "what's the answer?",
+                "you are concise",
+                "sonnet",
+            )
+
+        # Whitespace stripped + envelope shape matches every other
+        # provider's response.
+        assert out.choices[0].message.content == "the answer is 42"
+        # System prompt is forwarded via --append-system-prompt; the
+        # model flag is passed through.
+        argv = mock_run.call_args.args[0]
+        assert argv[0] == "/usr/local/bin/claude"
+        assert "-p" in argv
+        assert "--append-system-prompt" in argv
+        assert "you are concise" in argv
+        assert "--model" in argv
+        assert "sonnet" in argv
+
+    def test_skips_model_flag_for_openai_shaped_default(self):
+        # The launcher auto-sets OPENAI_DEFAULT_MODEL which may leak
+        # an OpenAI-shaped name like `gpt-4o-mini` into the call;
+        # the CLI does not understand those, so we drop the flag.
+        from akande.providers.claude_cli_provider import (
+            ClaudeCliProvider,
+        )
+
+        completed = MagicMock(stdout="hello", returncode=0)
+
+        with patch(
+            "akande.providers.claude_cli_provider.shutil.which",
+            return_value="/usr/local/bin/claude",
+        ):
+            p = ClaudeCliProvider()
+
+        with patch(
+            "akande.providers.claude_cli_provider.subprocess.run",
+            return_value=completed,
+        ) as mock_run:
+            p.generate_response_sync("hi", "system", "gpt-4o-mini")
+
+        argv = mock_run.call_args.args[0]
+        assert "--model" not in argv
+
+    def test_timeout_raises_runtime_error(self):
+        import subprocess as sp
+
+        from akande.providers.claude_cli_provider import (
+            ClaudeCliProvider,
+        )
+
+        with patch(
+            "akande.providers.claude_cli_provider.shutil.which",
+            return_value="/usr/local/bin/claude",
+        ):
+            p = ClaudeCliProvider()
+
+        with patch(
+            "akande.providers.claude_cli_provider.subprocess.run",
+            side_effect=sp.TimeoutExpired(cmd=["claude"], timeout=30),
+        ):
+            with pytest.raises(RuntimeError, match="timed out"):
+                p.generate_response_sync("hi", "s", "sonnet")
+
+    def test_async_wrapper_runs_subprocess(self):
+        from akande.providers.claude_cli_provider import (
+            ClaudeCliProvider,
+        )
+
+        completed = MagicMock(stdout="async ok", returncode=0)
+
+        with patch(
+            "akande.providers.claude_cli_provider.shutil.which",
+            return_value="/usr/local/bin/claude",
+        ):
+            p = ClaudeCliProvider()
+
+        async def _go():
+            with patch(
+                "akande.providers.claude_cli_provider.subprocess.run",
+                return_value=completed,
+            ):
+                return await p.generate_response("hi", "s", "sonnet")
+
+        result = asyncio.run(_go())
+        assert result.choices[0].message.content == "async ok"
+
+    def test_registry_resolves_claude_cli(self):
+        # The registry's lazy import map should know the new
+        # provider — same shape as every other entry.
+        from akande.providers.registry import _PROVIDER_MAP
+
+        assert "claude_cli" in _PROVIDER_MAP
+        assert _PROVIDER_MAP["claude_cli"] == (
+            ".claude_cli_provider",
+            "ClaudeCliProvider",
+        )
+
+    def test_registry_resolves_v0_0_7_cli_providers(self):
+        """v0.0.7-dev.22: three new CLI-wrapping providers join
+        the registry alongside claude_cli."""
+        from akande.providers.registry import _PROVIDER_MAP
+
+        for name, expected in (
+            (
+                "codex_cli",
+                (".codex_cli_provider", "CodexCliProvider"),
+            ),
+            (
+                "copilot_cli",
+                (".copilot_cli_provider", "CopilotCliProvider"),
+            ),
+            (
+                "antigravity_cli",
+                (
+                    ".antigravity_cli_provider",
+                    "AntigravityCliProvider",
+                ),
+            ),
+        ):
+            assert name in _PROVIDER_MAP
+            assert _PROVIDER_MAP[name] == expected
+
+    def test_codex_cli_missing_binary_raises(self):
+        from akande.providers.codex_cli_provider import (
+            CodexCliProvider,
+        )
+
+        with patch(
+            "akande.providers.codex_cli_provider.shutil.which",
+            return_value=None,
+        ):
+            with pytest.raises(ImportError, match="codex"):
+                CodexCliProvider()
+
+    def test_copilot_cli_missing_binary_raises(self):
+        from akande.providers.copilot_cli_provider import (
+            CopilotCliProvider,
+        )
+
+        # Neither `copilot` nor `gh` is present.
+        with patch(
+            "akande.providers.copilot_cli_provider.shutil.which",
+            return_value=None,
+        ):
+            with pytest.raises(ImportError, match="Copilot"):
+                CopilotCliProvider()
+
+    def test_antigravity_cli_missing_binary_raises(self):
+        from akande.providers.antigravity_cli_provider import (
+            AntigravityCliProvider,
+        )
+
+        with patch(
+            "akande.providers.antigravity_cli_provider.shutil.which",
+            return_value=None,
+        ):
+            with pytest.raises(ImportError, match="antigravity"):
+                AntigravityCliProvider()
+
+    def test_codex_cli_invokes_codex_exec(self):
+        from akande.providers.codex_cli_provider import (
+            CodexCliProvider,
+        )
+
+        completed = MagicMock(stdout="42\n", returncode=0)
+        with patch(
+            "akande.providers.codex_cli_provider.shutil.which",
+            return_value="/usr/local/bin/codex",
+        ):
+            p = CodexCliProvider()
+
+        with patch(
+            "akande.providers.codex_cli_provider.subprocess.run",
+            return_value=completed,
+        ) as mock_run:
+            out = p.generate_response_sync(
+                "what is the answer?",
+                "be concise",
+                "gpt-5-codex",
+            )
+
+        argv = mock_run.call_args.args[0]
+        assert argv[0] == "/usr/local/bin/codex"
+        assert "exec" in argv
+        assert "--model" in argv
+        assert "gpt-5-codex" in argv
+        assert out.choices[0].message.content == "42"
+
+    def test_copilot_cli_prefers_standalone_binary(self):
+        """When both `copilot` and `gh` are present the standalone
+        binary wins so we don't pay the `gh` warm-up cost."""
+        from akande.providers.copilot_cli_provider import (
+            CopilotCliProvider,
+        )
+
+        def which(name):
+            if name == "copilot":
+                return "/usr/local/bin/copilot"
+            if name == "gh":
+                return "/usr/local/bin/gh"
+            return None
+
+        with patch(
+            "akande.providers.copilot_cli_provider.shutil.which",
+            side_effect=which,
+        ):
+            p = CopilotCliProvider()
+
+        assert p._cli_path == "/usr/local/bin/copilot"
+        assert p._cli_argv == ["/usr/local/bin/copilot"]
+
+    def test_copilot_cli_falls_back_to_gh_extension(self):
+        from akande.providers.copilot_cli_provider import (
+            CopilotCliProvider,
+        )
+
+        def which(name):
+            if name == "copilot":
+                return None
+            if name == "gh":
+                return "/usr/local/bin/gh"
+            return None
+
+        with patch(
+            "akande.providers.copilot_cli_provider.shutil.which",
+            side_effect=which,
+        ):
+            p = CopilotCliProvider()
+
+        assert p._cli_path == "/usr/local/bin/gh"
+        assert p._cli_argv == ["/usr/local/bin/gh", "copilot"]
+
+    def test_antigravity_cli_invokes_prompt_print(self):
+        from akande.providers.antigravity_cli_provider import (
+            AntigravityCliProvider,
+        )
+
+        completed = MagicMock(stdout="hello\n", returncode=0)
+        with patch(
+            "akande.providers.antigravity_cli_provider.shutil.which",
+            return_value="/usr/local/bin/antigravity",
+        ):
+            p = AntigravityCliProvider()
+
+        with patch(
+            "akande.providers.antigravity_cli_provider.subprocess.run",
+            return_value=completed,
+        ) as mock_run:
+            out = p.generate_response_sync(
+                "hi", "be concise", "gemini-2.5-pro"
+            )
+
+        argv = mock_run.call_args.args[0]
+        assert argv[0] == "/usr/local/bin/antigravity"
+        assert "prompt" in argv
+        assert "--print" in argv
+        assert "--model" in argv
+        assert "gemini-2.5-pro" in argv
+        assert out.choices[0].message.content == "hello"
+
+    # ── v0.0.7-dev.11: real streaming via --output-format stream-json
+
+    @staticmethod
+    def _fake_proc(stdout_lines: list[bytes]):
+        """Build a fake `asyncio.subprocess.Process` whose stdout
+        yields the supplied lines, then EOF."""
+
+        class FakeStdin:
+            def __init__(self) -> None:
+                self.closed = False
+
+            def write(self, data: bytes) -> None:
+                pass
+
+            async def drain(self) -> None:
+                pass
+
+            def close(self) -> None:
+                self.closed = True
+
+        class FakeStdout:
+            def __init__(self, lines: list[bytes]) -> None:
+                self._lines = list(lines) + [b""]
+
+            async def readline(self) -> bytes:
+                return self._lines.pop(0)
+
+        class FakeProc:
+            def __init__(self, lines: list[bytes]) -> None:
+                self.stdin = FakeStdin()
+                self.stdout = FakeStdout(lines)
+                self.returncode: int | None = None
+
+            async def wait(self) -> int:
+                self.returncode = 0
+                return 0
+
+            def kill(self) -> None:  # pragma: no cover - safety only
+                pass
+
+        return FakeProc(stdout_lines)
+
+    def test_generate_stream_parses_content_block_deltas(self):
+        import json as _json
+
+        from akande.providers.claude_cli_provider import (
+            ClaudeCliProvider,
+        )
+
+        with patch(
+            "akande.providers.claude_cli_provider.shutil.which",
+            return_value="/usr/local/bin/claude",
+        ):
+            p = ClaudeCliProvider()
+
+        lines = [
+            (
+                _json.dumps(
+                    {"type": "system", "subtype": "init"}
+                ).encode()
+                + b"\n"
+            ),
+            (
+                _json.dumps(
+                    {
+                        "type": "stream_event",
+                        "event": {
+                            "type": "content_block_delta",
+                            "delta": {
+                                "type": "text_delta",
+                                "text": "Hello",
+                            },
+                        },
+                    }
+                ).encode()
+                + b"\n"
+            ),
+            (
+                _json.dumps(
+                    {
+                        "type": "stream_event",
+                        "event": {
+                            "type": "content_block_delta",
+                            "delta": {
+                                "type": "text_delta",
+                                "text": " world",
+                            },
+                        },
+                    }
+                ).encode()
+                + b"\n"
+            ),
+            (
+                _json.dumps(
+                    {
+                        "type": "stream_event",
+                        "event": {"type": "message_stop"},
+                    }
+                ).encode()
+                + b"\n"
+            ),
+            (
+                _json.dumps(
+                    {"type": "result", "subtype": "success"}
+                ).encode()
+                + b"\n"
+            ),
+        ]
+        proc = self._fake_proc(lines)
+
+        async def _spawn(*_a, **_kw):
+            return proc
+
+        async def go():
+            collected = []
+            with patch(
+                "akande.providers.claude_cli_provider"
+                ".asyncio.create_subprocess_exec",
+                side_effect=_spawn,
+            ):
+                async for delta in p.generate_stream(
+                    "hi", "you are concise", "sonnet"
+                ):
+                    collected.append(delta)
+            return collected
+
+        result = asyncio.run(go())
+        assert result == ["Hello", " world"]
+        assert proc.stdin.closed is True
+
+    def test_generate_stream_messages_collapses_history(self):
+        import json as _json
+
+        from akande.providers.claude_cli_provider import (
+            ClaudeCliProvider,
+        )
+
+        with patch(
+            "akande.providers.claude_cli_provider.shutil.which",
+            return_value="/usr/local/bin/claude",
+        ):
+            p = ClaudeCliProvider()
+
+        lines = [
+            (
+                _json.dumps(
+                    {
+                        "type": "stream_event",
+                        "event": {
+                            "type": "content_block_delta",
+                            "delta": {
+                                "type": "text_delta",
+                                "text": "ok",
+                            },
+                        },
+                    }
+                ).encode()
+                + b"\n"
+            )
+        ]
+        proc = self._fake_proc(lines)
+        captured: dict[str, list[str]] = {}
+
+        async def _spawn(*args, **_kw):
+            captured["argv"] = list(args)
+            return proc
+
+        async def go():
+            collected = []
+            with patch(
+                "akande.providers.claude_cli_provider"
+                ".asyncio.create_subprocess_exec",
+                side_effect=_spawn,
+            ):
+                async for delta in p.generate_stream_messages(
+                    [
+                        {
+                            "role": "system",
+                            "content": "system prompt",
+                        },
+                        {
+                            "role": "user",
+                            "content": "first user",
+                        },
+                        {
+                            "role": "assistant",
+                            "content": "earlier reply",
+                        },
+                        {
+                            "role": "user",
+                            "content": "current question",
+                        },
+                    ],
+                    "sonnet",
+                    None,
+                ):
+                    collected.append(delta)
+            return collected
+
+        result = asyncio.run(go())
+        assert result == ["ok"]
+        # The collapsed system prompt should carry both the
+        # original system text and the prior transcript inside
+        # <previous_conversation> tags.
+        argv = captured["argv"]
+        idx = argv.index("--append-system-prompt")
+        system_payload = argv[idx + 1]
+        assert "system prompt" in system_payload
+        assert "<previous_conversation>" in system_payload
+        assert "earlier reply" in system_payload
+        assert "first user" in system_payload
+
+    def test_generate_stream_skips_non_text_events(self):
+        import json as _json
+
+        from akande.providers.claude_cli_provider import (
+            ClaudeCliProvider,
+        )
+
+        with patch(
+            "akande.providers.claude_cli_provider.shutil.which",
+            return_value="/usr/local/bin/claude",
+        ):
+            p = ClaudeCliProvider()
+
+        lines = [
+            # content_block_delta but with non-text delta — skip
+            (
+                _json.dumps(
+                    {
+                        "type": "stream_event",
+                        "event": {
+                            "type": "content_block_delta",
+                            "delta": {
+                                "type": "thinking_delta",
+                                "thinking": "internal",
+                            },
+                        },
+                    }
+                ).encode()
+                + b"\n"
+            ),
+            # Real text delta
+            (
+                _json.dumps(
+                    {
+                        "type": "stream_event",
+                        "event": {
+                            "type": "content_block_delta",
+                            "delta": {
+                                "type": "text_delta",
+                                "text": "real",
+                            },
+                        },
+                    }
+                ).encode()
+                + b"\n"
+            ),
+        ]
+        proc = self._fake_proc(lines)
+
+        async def _spawn(*_a, **_kw):
+            return proc
+
+        async def go():
+            out = []
+            with patch(
+                "akande.providers.claude_cli_provider"
+                ".asyncio.create_subprocess_exec",
+                side_effect=_spawn,
+            ):
+                async for delta in p.generate_stream(
+                    "q", "s", "sonnet"
+                ):
+                    out.append(delta)
+            return out
+
+        assert asyncio.run(go()) == ["real"]

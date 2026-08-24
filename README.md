@@ -8,8 +8,9 @@
 
 <p align="center">
   A self-hosted, provider-agnostic voice assistant that delivers structured
-  executive briefings from any of ten LLM providers — including fully private
-  local inference via Ollama and LM Studio.
+  executive briefings from any of eleven LLM providers — including fully private
+  local inference via Ollama and LM Studio, and a "no-key" path that borrows
+  the local Claude Code CLI's own login session.
 </p>
 
 <p align="center">
@@ -167,6 +168,7 @@ its own credentials from environment variables.
 | Azure OpenAI | `azure_openai` | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` | *(included)* | `gpt-35-turbo` |
 | Ollama | `ollama` | `OLLAMA_HOST` *(optional)* | *(included)* | `llama3` |
 | LM Studio | `lmstudio` | `LMSTUDIO_HOST` *(optional)* | *(included)* | `local-model` |
+| Claude Code CLI | `claude_cli` | — *(uses the `claude` CLI's own session)* | install the [`claude` CLI](https://docs.claude.com/claude-code) | `sonnet` |
 
 > ¹ Override per-call with the `model` argument or globally with
 > `OPENAI_DEFAULT_MODEL`.
@@ -361,13 +363,13 @@ Claude Desktop drop-in (`claude_desktop_config.json`):
 
 ## Trust
 
-- **785 tests** + **95 % line coverage** in CI on every push and pull
-  request, on Python 3.10 / 3.11 / 3.12
+- **791 tests** + **95 % line coverage** in CI on every push and pull
+  request, on Python 3.10 / 3.11 / 3.12 / 3.13 / 3.14
 - **Quality gates**: ruff (lint + format), mypy (strict islands on the
   provider surface), bandit (SAST), pip-audit (vulnerable-deps scan) —
   all blocking
-- **Fresh-install regression matrix** (Ubuntu × 3.10/3.11/3.12 +
-  macOS × 3.12) reproduces the user install path on every push
+- **Fresh-install regression matrix** (Ubuntu × 3.10/3.11/3.12/3.13/3.14
+  + macOS × 3.12 + 3.14) reproduces the user install path on every push
 - **Security posture** documented in [SECURITY.md](SECURITY.md): CSP
   nonces, custom-header CSRF, per-IP rate limiting (in-memory or Redis),
   CSV-formula injection prevention, filename sanitisation, IP hashing

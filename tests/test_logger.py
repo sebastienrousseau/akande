@@ -71,6 +71,39 @@ def test_basic_config_replaces_existing_handlers(tmp_path):
         root.removeHandler(handler)
 
 
+def test_basic_config_console_level_overrides_default(tmp_path):
+    """v0.0.7-dev.9: classic CLI raises the console threshold to
+    WARNING so the menu is not buried in INFO chatter."""
+    log_file = tmp_path / "test_console_level.log"
+    root = logging.getLogger()
+    for handler in root.handlers[:]:
+        root.removeHandler(handler)
+
+    basic_config(
+        filename=str(log_file),
+        level=logging.INFO,
+        log_format="%(message)s",
+        console_level=logging.WARNING,
+    )
+
+    stream_handlers = [
+        h for h in root.handlers if type(h).__name__ == "StreamHandler"
+    ]
+    assert len(stream_handlers) == 1
+    assert stream_handlers[0].level == logging.WARNING
+
+    # File handler keeps the broader file `level` so the log file
+    # still records INFO + DEBUG.
+    file_handlers = [
+        h for h in root.handlers if type(h).__name__ == "FileHandler"
+    ]
+    assert len(file_handlers) == 1
+    assert file_handlers[0].level == logging.INFO
+
+    for handler in root.handlers[:]:
+        root.removeHandler(handler)
+
+
 def test_json_formatter_output():
     formatter = JSONFormatter(service="test-service")
     record = logging.LogRecord(

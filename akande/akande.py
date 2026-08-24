@@ -16,6 +16,7 @@
 import asyncio
 import hashlib
 import logging
+import sys
 import threading
 import time
 import uuid
@@ -358,9 +359,50 @@ class Akande:
                         "event": "Speech:MicrophoneError",
                         "extra_data": {
                             "error_type": type(e).__name__,
+                            "platform": sys.platform,
                         },
                     },
                 )
+                # macOS TCC and Linux pulseaudio denials both raise
+                # OSError with messages that read like
+                # "Stream startup failed" or "Permission denied".
+                # The log entry above only reaches the file in
+                # classic mode (dev.9 raised the console threshold)
+                # — print a user-facing remediation hint here so
+                # the menu does not just say "No voice command
+                # detected" and leave the user puzzled.
+                err_str = str(e).lower()
+                permission_like = any(
+                    needle in err_str
+                    for needle in (
+                        "permission",
+                        "denied",
+                        "not authorized",
+                        "tccd",
+                        "-9986",
+                        "no default input device",
+                        "no input device",
+                    )
+                )
+                if (
+                    permission_like or sys.platform == "darwin"
+                ):  # pragma: no cover - interactive
+                    print(
+                        "\n  ✗ Microphone access denied.\n"
+                        "\n"
+                        "  macOS:  System Settings → Privacy "
+                        "& Security → Microphone → enable for "
+                        "your terminal app, then quit and re-"
+                        "open the terminal (TCC permissions are "
+                        "process-scoped).\n"
+                        "  Linux:  check `pactl info` /\n"
+                        "          `pipewire --version`; the\n"
+                        "          shell may be inside a sandbox\n"
+                        "          (Flatpak/Snap) without mic\n"
+                        "          portal access.\n"
+                    )
+                else:  # pragma: no cover - interactive
+                    print(f"\n  ✗ Microphone error: {e}\n")
                 return ""
 
         loop = (
@@ -432,10 +474,21 @@ class Akande:
         """Query the LLM, display response, speak it, and
         generate output files."""
         try:
-            response = await self.generate_response(
-                question,
-                correlation_id=correlation_id,
-            )
+            # Show a live spinner while the provider is thinking.
+            # rich is already in the dep graph via textual.
+            from rich.console import Console
+            from rich.status import Status
+
+            console = Console()
+            with Status(
+                "[bold cyan]Thinking…[/]",
+                console=console,
+                spinner="dots",
+            ):
+                response = await self.generate_response(
+                    question,
+                    correlation_id=correlation_id,
+                )
         except LLMError as e:
             print(f"\nError: {e.user_message}\n")
             return
@@ -473,10 +526,20 @@ class Akande:
                 await self.stop_server()
                 break
             elif choice == "3":
+                import webbrowser
+
                 await self.run_server()
-                print("  Server running at http://127.0.0.1:8080")
-                print("  Open the URL in your browser.")
-                input("\n  Press Enter to continue...")
+                url = "http://127.0.0.1:8080"
+                print(f"  Server running at {url}")
+                # Open the browser automatically so the user does
+                # not have to copy/paste the URL.  Failures (e.g.
+                # headless environment) are swallowed; the URL is
+                # still printed above.
+                try:
+                    webbrowser.open(url)
+                except Exception:
+                    pass
+                input("\n  Press Ctrl+C or Enter to stop the server…")
             elif choice == "2":
                 question = input("Your question: ").strip()
                 if question:
@@ -650,3 +713,92 @@ class Akande:
                 raise LLMError(
                     _friendly_llm_error(e), original=e
                 ) from e
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        correlation_id: str = "",
+    ):
+        """Stream the LLM response delta-by-delta.
+
+        Asynchronous generator that yields :class:`str` chunks as the
+        provider emits them.  When the prompt is already in the
+        cache, the full cached text is yielded as a single chunk so
+        callers don't have to special-case the cache-hit path.  On
+        provider error an ``LLMError`` is raised (matching
+        :meth:`generate_response`'s contract).
+
+        Wires the TUI and Web UI into the streaming pipeline that
+        used to be exclusive to the SSE endpoint, so the UI shows
+        tokens as they arrive instead of waiting for the full
+        completion (v0.0.7-dev.11).
+        """
+        if self._cancel_event.is_set():
+            raise LLMError("Request was cancelled")
+
+        prompt_hash = self.hash_prompt(prompt)
+        cached_response = self.cache.get(prompt_hash)
+        if cached_response:
+            logging.info(
+                "Using cached response (stream)",
+                extra={
+                    "event": "Response:CacheHit",
+                    "correlation_id": correlation_id,
+                    "extra_data": {
+                        "prompt_hash": prompt_hash[:12],
+                    },
+                },
+            )
+            yield cached_response
+            return
+
+        logging.info(
+            "Cache miss, streaming LLM response",
+            extra={
+                "event": "Response:CacheMiss",
+                "correlation_id": correlation_id,
+                "extra_data": {
+                    "prompt_hash": prompt_hash[:12],
+                },
+            },
+        )
+        start = time.time()
+        buffer: list[str] = []
+        try:
+            # `openai_service` is `OpenAIService | LLMProvider`; the
+            # legacy OpenAIService wrapper does not expose
+            # `generate_stream` but every real provider does, and
+            # this method is only reached from the TUI + Web UI
+            # which always run against an `LLMProvider`.
+            stream = self.openai_service.generate_stream(  # type: ignore[union-attr]
+                prompt,
+                SYSTEM_PROMPT,
+                OPENAI_DEFAULT_MODEL or "gpt-4o-mini",
+                None,
+            )
+            async for delta in stream:
+                if self._cancel_event.is_set():
+                    raise LLMError("Request was cancelled")
+                if not delta:
+                    continue
+                buffer.append(delta)
+                yield delta
+        except LLMError:  # pragma: no cover - re-raise as-is
+            raise
+        except Exception as e:
+            logging.error(
+                f"LLM stream error: {type(e).__name__}: {e}",
+                exc_info=True,
+                extra={
+                    "event": "LLM:StreamError",
+                    "correlation_id": correlation_id,
+                },
+            )
+            raise LLMError(_friendly_llm_error(e), original=e) from e
+
+        latency = (time.time() - start) * 1000
+        if self.metrics:
+            self.metrics.record("llm", latency)
+        final = "".join(buffer).strip()
+        if final:
+            self.cache.set(prompt_hash, final)
