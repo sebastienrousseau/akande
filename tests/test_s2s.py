@@ -40,3 +40,24 @@ class TestResult:
         r = S2SResult(audio=b"x", fmt="wav")
         with pytest.raises(dataclasses.FrozenInstanceError):
             r.audio = b"y"  # type: ignore[misc]
+
+
+class TestOpenAIRealtimeHelpers:
+    def test_envelope(self):
+        import json
+
+        from akande.s2s.openai_realtime import _envelope
+
+        ev = _envelope("session.update", key="val")
+        data = json.loads(ev)
+        assert data["type"] == "session.update"
+        assert data["key"] == "val"
+
+    def test_decode_str_and_bytes(self):
+        from akande.s2s.openai_realtime import _decode
+
+        res1 = _decode('{"type": "response.done"}')
+        assert res1["type"] == "response.done"
+
+        res2 = _decode(b'{"type": "response.done"}')
+        assert res2["type"] == "response.done"

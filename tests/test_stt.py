@@ -44,3 +44,100 @@ class TestResultDataclass:
         r = STTResult(text="hi")
         with pytest.raises(dataclasses.FrozenInstanceError):
             r.text = "x"  # type: ignore[misc]
+
+
+class TestSpeechRecognitionBackend:
+    def test_transcribe_wav_success(self, monkeypatch):
+        from unittest.mock import MagicMock
+
+        from akande.stt.sr_backend import SpeechRecognitionBackend
+
+        backend = SpeechRecognitionBackend()
+        mock_rec = MagicMock()
+        mock_rec.recognize_google.return_value = "hello world"
+
+        monkeypatch.setattr(
+            "speech_recognition.Recognizer",
+            lambda: mock_rec,
+        )
+        monkeypatch.setattr(
+            "speech_recognition.AudioFile",
+            MagicMock(),
+        )
+
+        res = backend.transcribe(b"fake-wav-data", fmt="wav")
+        assert res.text == "hello world"
+        assert res.language == "en"
+
+    def test_transcribe_non_wav_converts(self, monkeypatch):
+        from unittest.mock import MagicMock, patch
+
+        from akande.stt.sr_backend import SpeechRecognitionBackend
+
+        backend = SpeechRecognitionBackend()
+        mock_rec = MagicMock()
+        mock_rec.recognize_google.return_value = "converted text"
+
+        monkeypatch.setattr(
+            "speech_recognition.Recognizer",
+            lambda: mock_rec,
+        )
+        monkeypatch.setattr(
+            "speech_recognition.AudioFile",
+            MagicMock(),
+        )
+
+        mock_segment = MagicMock()
+        with patch(
+            "pydub.AudioSegment.from_file", return_value=mock_segment
+        ):
+            res = backend.transcribe(b"fake-mp3-data", fmt="mp3")
+            assert res.text == "converted text"
+
+    def test_transcribe_unknown_value(self, monkeypatch):
+        from unittest.mock import MagicMock
+
+        import speech_recognition as sr
+
+        from akande.stt.sr_backend import SpeechRecognitionBackend
+
+        backend = SpeechRecognitionBackend()
+        mock_rec = MagicMock()
+        mock_rec.recognize_google.side_effect = sr.UnknownValueError()
+
+        monkeypatch.setattr(
+            "speech_recognition.Recognizer",
+            lambda: mock_rec,
+        )
+        monkeypatch.setattr(
+            "speech_recognition.AudioFile",
+            MagicMock(),
+        )
+
+        res = backend.transcribe(b"fake-wav-data")
+        assert res.text == ""
+
+    def test_transcribe_request_error(self, monkeypatch):
+        from unittest.mock import MagicMock
+
+        import speech_recognition as sr
+
+        from akande.stt.sr_backend import SpeechRecognitionBackend
+
+        backend = SpeechRecognitionBackend()
+        mock_rec = MagicMock()
+        mock_rec.recognize_google.side_effect = sr.RequestError(
+            "offline"
+        )
+
+        monkeypatch.setattr(
+            "speech_recognition.Recognizer",
+            lambda: mock_rec,
+        )
+        monkeypatch.setattr(
+            "speech_recognition.AudioFile",
+            MagicMock(),
+        )
+
+        res = backend.transcribe(b"fake-wav-data")
+        assert res.text == ""

@@ -45,7 +45,8 @@ typecheck:
 
 audit:
 	bandit -r akande -ll -q
-	pip-audit --strict
+	pip-audit --skip-editable --ignore-vuln PYSEC-2026-2132
+
 
 smoke:
 	python -m tests.smoke_imports

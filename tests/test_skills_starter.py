@@ -5,6 +5,8 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from akande.skills import (
     BriefingSkill,
     FinanceSkill,
@@ -165,6 +167,73 @@ class TestFinanceSkillHandle:
         assert "Not investment advice" in result.content
 
 
+class TestFinanceInternals:
+    def test_quote_http_error(self):
+        import urllib.error
+
+        from akande.skills.finance import FinanceSkill, _FetchError
+
+        skill = FinanceSkill()
+        with patch(
+            "akande.skills.finance.urllib.request.urlopen",
+            side_effect=urllib.error.HTTPError(
+                "url",
+                404,
+                "Not Found",
+                {},
+                None,  # type: ignore[arg-type]
+            ),
+        ):
+            with pytest.raises(_FetchError, match="HTTP 404"):
+                skill._quote("AAPL")
+
+    def test_quote_url_error(self):
+        import urllib.error
+
+        from akande.skills.finance import FinanceSkill, _FetchError
+
+        skill = FinanceSkill()
+        with patch(
+            "akande.skills.finance.urllib.request.urlopen",
+            side_effect=urllib.error.URLError("timed out"),
+        ):
+            with pytest.raises(_FetchError, match="network error"):
+                skill._quote("AAPL")
+
+    def test_quote_json_error(self):
+        from unittest.mock import MagicMock
+
+        from akande.skills.finance import FinanceSkill, _FetchError
+
+        skill = FinanceSkill()
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = b"not json"
+        mock_resp.__enter__.return_value = mock_resp
+        with patch(
+            "akande.skills.finance.urllib.request.urlopen",
+            return_value=mock_resp,
+        ):
+            with pytest.raises(_FetchError, match="malformed JSON"):
+                skill._quote("AAPL")
+
+    def test_quote_empty_results(self):
+        from unittest.mock import MagicMock
+
+        from akande.skills.finance import FinanceSkill
+
+        skill = FinanceSkill()
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = (
+            b'{"quoteResponse": {"result": []}}'
+        )
+        mock_resp.__enter__.return_value = mock_resp
+        with patch(
+            "akande.skills.finance.urllib.request.urlopen",
+            return_value=mock_resp,
+        ):
+            assert skill._quote("AAPL") is None
+
+
 class TestWebSearchSkillHandle:
     def test_extracts_citations_from_render(self):
         skill = WebSearchSkill()
@@ -216,3 +285,25 @@ class TestBriefingSkillHandle:
             )
         assert result.content == "brief"
         assert result.metadata["provider"] == "openai"
+
+    def test_empty_choices_yields_empty_content(self):
+        from types import SimpleNamespace
+
+        from akande.skills.briefing import BriefingSkill
+
+        skill = BriefingSkill()
+        with patch("akande.skills.briefing.get_provider") as gp:
+            provider = MagicMock()
+            provider.provider_name = "openai"
+            provider.generate_response_sync.return_value = (
+                SimpleNamespace(choices=[])
+            )
+            gp.return_value = provider
+            result = skill.handle(
+                Intent(
+                    name="briefing",
+                    args={"text": "hello"},
+                ),
+                SkillContext(),
+            )
+        assert result.content == ""

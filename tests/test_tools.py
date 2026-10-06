@@ -155,6 +155,42 @@ class TestFetchURLTool:
             ):
                 tool.run({"url": url})
 
+    def test_rejects_hostname_resolving_to_private_ip(
+        self, monkeypatch
+    ):
+        import socket
+
+        tool = FetchURLTool()
+
+        fake_addrinfo = [
+            (
+                socket.AF_INET,
+                socket.SOCK_STREAM,
+                6,
+                "",
+                ("10.20.30.40", 443),
+            )
+        ]
+        monkeypatch.setattr(
+            socket, "getaddrinfo", lambda *a, **kw: fake_addrinfo
+        )
+        with pytest.raises(
+            ToolError, match="restricted destination address"
+        ):
+            tool.run({"url": "https://evil-resolved-domain.com/secret"})
+
+    def test_ignores_gaierror_on_unresolvable_host(self, monkeypatch):
+        import socket
+
+        def raise_gai(*a, **kw):
+            raise socket.gaierror("lookup failed")
+
+        monkeypatch.setattr(socket, "getaddrinfo", raise_gai)
+        # Should not raise ToolError from DNS lookup; will fail at urllib level
+        from akande.tools.fetch_url import _validate_safe_host
+
+        _validate_safe_host("unresolvable-domain.example", 443)
+
     def test_html_to_text_strips_tags(self):
         from akande.tools.fetch_url import _html_to_text
 
