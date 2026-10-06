@@ -23,6 +23,17 @@ from typing import Any
 from .base import LLMProvider
 from .response import ProviderResponse
 
+try:
+    from mistralai import Mistral  # type: ignore[attr-defined]
+except ImportError:
+    try:
+        import mistralai
+        from mistralai.client import Mistral
+
+        mistralai.Mistral = Mistral  # type: ignore[attr-defined]
+    except ImportError:
+        pass
+
 
 class MistralProvider(LLMProvider):
     """Mistral AI API provider.
@@ -36,8 +47,19 @@ class MistralProvider(LLMProvider):
 
     def __init__(self) -> None:
         try:
-            from mistralai import Mistral
-        except ImportError as exc:
+            import mistralai
+
+            if mistralai is None:
+                raise ImportError(
+                    "The 'mistralai' package is not installed."
+                )
+            try:
+                from mistralai import (  # type: ignore[attr-defined]
+                    Mistral,
+                )
+            except ImportError:
+                from mistralai.client import Mistral
+        except (ImportError, TypeError, AttributeError) as exc:
             raise ImportError(
                 "The 'mistralai' package is required for the "
                 "Mistral provider. "

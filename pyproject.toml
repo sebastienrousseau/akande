@@ -48,7 +48,7 @@ dependencies = [
 mic = ["pyaudio>=0.2.14"]
 anthropic = ["anthropic>=0.40,<2"]
 google = ["google-generativeai>=0.7,<1"]
-mistral = ["mistralai>=1.0,<2"]
+mistral = ["mistralai>=1.0,<4"]
 cohere = ["cohere>=5.13,<8"]
 huggingface = ["huggingface_hub>=0.24,<3"]
 offline-tts = ["pyttsx4>=3.0.0"]
@@ -78,7 +78,7 @@ mcp = ["mcp>=0.9,<3"]
 all = [
     "anthropic>=0.40,<2",
     "google-generativeai>=0.7,<1",
-    "mistralai>=1.0,<2",
+    "mistralai>=1.0,<4",
     "cohere>=5.13,<8",
     "huggingface_hub>=0.24,<3",
     "groq>=0.11,<2",
@@ -100,7 +100,7 @@ dev = [
     # exercised by the test suite — provider SDKs, MCP, mem0.
     "anthropic>=0.40,<2",
     "google-generativeai>=0.7,<1",
-    "mistralai>=1.0,<2",
+    "mistralai>=1.0,<4",
     "cohere>=5.13,<8",
     "huggingface_hub>=0.24,<3",
     "groq>=0.11,<2",
