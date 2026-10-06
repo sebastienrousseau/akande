@@ -2,9 +2,9 @@ name: regression
 
 on:
   push:
-    branches: [main, "feat/**"]
+    branches: [main, "feat/**", "chores/**"]
   pull_request:
-    branches: [main, "feat/**"]
+    branches: [main, "feat/**", "chores/**"]
   schedule:
     # Daily at 04:11 UTC to catch upstream breakage early.
     - cron: "11 4 * * *"
