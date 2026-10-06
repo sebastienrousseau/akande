@@ -136,6 +136,25 @@ class TestFetchURLTool:
         with pytest.raises(ToolError):
             FetchURLTool().run({"url": "https://"})
 
+    def test_rejects_private_and_loopback_hosts(self):
+        tool = FetchURLTool()
+        blocked_urls = [
+            "https://127.0.0.1/admin",
+            "https://169.254.169.254/latest/meta-data",
+            "https://10.0.0.1/internal",
+            "https://192.168.1.1/router",
+            "https://172.16.0.1/dashboard",
+            "https://[::1]/secret",
+            "https://localhost/api",
+            "https://service.internal/data",
+            "https://device.local/status",
+        ]
+        for url in blocked_urls:
+            with pytest.raises(
+                ToolError, match="restricted destination address"
+            ):
+                tool.run({"url": url})
+
     def test_html_to_text_strips_tags(self):
         from akande.tools.fetch_url import _html_to_text
 
