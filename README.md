@@ -11,20 +11,16 @@ Releases adhere strictly to https://github.com/sebastienrousseau/passmcp/release
 <h1 align="center">Àkàndé</h1>
 
 <p align="center">
-  A self-hosted, provider-agnostic voice assistant that delivers structured executive briefings via voice or text from 10 LLM providers.
+  A self-hosted, provider-agnostic voice assistant that delivers structured executive briefings via voice or text from 11 LLM providers.
 </p>
 
 <p align="center">
-  <a href="https://github.com/sebastienrousseau/akande/actions"><img src="https://github.com/sebastienrousseau/akande/workflows/ci/badge.svg?style=for-the-badge&logo=github" alt="Build" /></a>
+  <a href="https://github.com/sebastienrousseau/akande/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/sebastienrousseau/akande/ci.yml?branch=main&style=for-the-badge&logo=github&label=Build" alt="Build" /></a>
   <a href="https://pypi.org/project/akande/"><img src="https://img.shields.io/pypi/v/akande?style=for-the-badge&color=fc8d62&logo=pypi" alt="Registry" /></a>
-  <a href="https://github.com/sebastienrousseau/akande#documentation"><img src="https://img.shields.io/badge/docs-reference-blue.svg?style=for-the-badge&labelColor=555555&logo=read-the-docs" alt="Docs" /></a>
-  <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/akande"><img src="https://img.shields.io/ossf-scorecard/github.com/sebastienrousseau/akande?style=for-the-badge&label=OpenSSF%20Scorecard&logo=openssf" alt="OpenSSF Scorecard" /></a>
+  <a href="docs/README.md"><img src="https://img.shields.io/badge/docs-reference-blue.svg?style=for-the-badge&labelColor=555555&logo=read-the-docs" alt="Docs" /></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/akande"><img src="https://img.shields.io/badge/OpenSSF%20Scorecard-Monitored-blue?style=for-the-badge&logo=openssf" alt="OpenSSF Scorecard" /></a>
   <a href="LICENSE-APACHE"><img src="https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg?style=for-the-badge" alt="License: Apache-2.0 OR MIT" /></a>
-  <a href="https://github.com/sebastienrousseau/akande/blob/main/docs/POLICIES.md"><img src="https://img.shields.io/badge/python->=3.10-93450a.svg?style=for-the-badge&logo=python" alt="Python >= 3.10" /></a>
-</p>
-
-<p align="center">
-  <img src="512x512.png" alt="Àkàndé application visual demo" width="100%" />
+  <a href="docs/POLICIES.md"><img src="https://img.shields.io/badge/python->=3.10-93450a.svg?style=for-the-badge&logo=python" alt="Python >= 3.10" /></a>
 </p>
 
 ---
@@ -39,7 +35,7 @@ Releases adhere strictly to https://github.com/sebastienrousseau/passmcp/release
 
 **The Àkàndé ecosystem**
 
-- [The Àkàndé ecosystem](#the-%C3%A0k%C3%A0nd%C3%A9-ecosystem) : core CLI, web server, MCP, and TUI modules
+- [The Àkàndé ecosystem](#the-àkàndé-ecosystem) : core CLI, web server, MCP, and TUI modules
 
 **Library reference**
 
@@ -52,7 +48,7 @@ Releases adhere strictly to https://github.com/sebastienrousseau/passmcp/release
 
 **Operational**
 
-- [When not to use Àkàndé](#when-not-to-use-%C3%A0k%C3%A0nd%C3%A9) : limitations
+- [When not to use Àkàndé](#when-not-to-use-àkàndé) : limitations
 - [Development](#development) : make targets, fuzzing, CI
 - [Security](#security) : guarantees and compliance
 - [Documentation](#documentation) : all reference docs
@@ -107,7 +103,7 @@ import os
 from akande.pipeline import run_pipeline
 
 os.environ["LLM_PROVIDER"] = (
-    "ollama"  # or openai, anthropic, google, etc.
+    "ollama"  # or openai, anthropic, google, claude_cli, etc.
 )
 
 result = run_pipeline(
@@ -138,7 +134,7 @@ This runs the end-to-end Àkàndé pipeline: intent classification, safety wrapp
 
 | Area | Capability | Status |
 | :--- | :--- | :--- |
-| **Providers** | 10 LLM providers (OpenAI, Anthropic, Google, Mistral, Cohere, etc.) | Production |
+| **Providers** | 11 LLM providers (OpenAI, Anthropic, Google, Claude CLI, Mistral, Cohere, etc.) | Production |
 | **Speech-to-Text** | SpeechRecognition and Faster-Whisper backends | Production |
 | **Text-to-Speech** | gTTS and local Kokoro-82M ONNX offline synthesis | Production |
 | **Safety & Audit** | Input sanitization, safety envelopes, cryptographically verifiable PDF audits | Production |
@@ -150,7 +146,7 @@ This runs the end-to-end Àkàndé pipeline: intent classification, safety wrapp
 
 | Project | Self-Hosted | Multi-Provider | Voice STT/TTS | Article 50 Audit |
 | :--- | :---: | :---: | :---: | :---: |
-| **Àkàndé** | Yes | 10 providers | Yes (Native) | Yes (Cryptographic) |
+| **Àkàndé** | Yes | 11 providers | Yes (Native) | Yes (Cryptographic) |
 | **Open-WebUI** | Yes | Yes | Partial | No |
 | **LocalAI** | Yes | Local only | Yes | No |
 
@@ -172,7 +168,7 @@ See [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) for methodology and full results.
 
 ## Features
 
-- **10 LLM Providers** : Switch between OpenAI, Anthropic, Google Gemini, Mistral, Cohere, Groq, Ollama, LM Studio, Azure, and Claude Code CLI.
+- **11 LLM Providers** : Switch between OpenAI, Anthropic, Google Gemini, Claude Code CLI, Mistral, Cohere, Groq, Ollama, LM Studio, Azure, and Codex CLI.
 - **Safety Envelope** : Strict transcript sanitization, control character stripping, length clamping, and `<user_input>` boundary envelopes.
 - **SSRF Prevention** : Built-in host validation restricting loopbacks, private RFC 1918 subnets, link-local addresses, and cloud metadata services.
 - **Regulatory Transparency** : Full EU AI Act Article 50 compliance with machine-readable audit manifests and AudioSeal watermarking.
@@ -185,7 +181,7 @@ Set configuration through environment variables or `.env` files:
 
 ```bash
 # Provider selection
-export LLM_PROVIDER=openai  # anthropic, google, ollama, etc.
+export LLM_PROVIDER=openai  # anthropic, google, ollama, claude_cli, etc.
 
 # Operational profile
 export AKANDE_PROFILE=eu    # eu (strict compliance) or default
