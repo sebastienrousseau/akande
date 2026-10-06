@@ -75,6 +75,7 @@ memory = ["mem0ai>=0.1,<1"]
 # Àkàndé to Claude Desktop / Cursor / Continue) and `akande mcp
 # list` (the client side, introspecting upstream servers).
 mcp = ["mcp>=0.9,<3"]
+telemetry = ["opentelemetry-sdk>=1.20,<2"]
 all = [
     "anthropic>=0.40,<2",
     "google-generativeai>=0.7,<1",
@@ -83,6 +84,7 @@ all = [
     "huggingface_hub>=0.24,<3",
     "groq>=0.11,<2",
     "pyttsx4>=3.0.0",
+    "opentelemetry-sdk>=1.20,<2",
 ]
 dev = [
     "pytest>=9.0.3,<10",
@@ -106,6 +108,7 @@ dev = [
     "groq>=0.11,<2",
     "pyttsx4>=3.0.0",
     "mcp>=0.9,<3",
+    "opentelemetry-sdk>=1.20,<2",
     # mem0ai is intentionally excluded from [dev]: as of 2026-06
     # the latest release (0.1.118) carries four unfixed CVEs
     # (CVE-2026-31240/31241/31245, CVE-2026-7597 fixed only in
