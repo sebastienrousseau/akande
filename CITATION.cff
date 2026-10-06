@@ -5,13 +5,13 @@ type: software
 title: "Àkàndé: Self-Hosted Provider-Agnostic Voice Assistant"
 abstract: >-
   A self-hosted, provider-agnostic voice assistant that delivers structured
-  executive briefings via voice or text across 10 LLM providers with
+  executive briefings via voice or text across 11 LLM providers with
   EU AI Act Article 50 transparency controls and AudioSeal watermarking.
 authors:
   - family-names: Rousseau
     given-names: Sebastien
     email: sebastian.rousseau@gmail.com
-version: "0.0.7"
+version: "0.0.8"
 date-released: "2026-10-06"
 license: "Apache-2.0 OR MIT"
 repository-code: "https://github.com/sebastienrousseau/akande"

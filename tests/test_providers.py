@@ -793,6 +793,18 @@ class TestGoogleProvider:
 # Mistral Provider
 # ────────────────────────────────────────────────────────────
 
+try:
+    import mistralai
+
+    if not hasattr(mistralai, "Mistral"):
+        from mistralai.client import (
+            Mistral as _Mistral,  # type: ignore[no-redef]
+        )
+
+        mistralai.Mistral = _Mistral  # type: ignore[attr-defined]
+except ImportError:
+    pass
+
 
 class TestMistralProvider:
     @patch("mistralai.Mistral")

@@ -54,6 +54,7 @@ _meter: Any = None
 def _opentelemetry_available() -> bool:
     try:
         import opentelemetry.metrics  # noqa: F401
+        import opentelemetry.sdk  # noqa: F401
         import opentelemetry.trace  # noqa: F401
     except ImportError:  # pragma: no cover - dep-presence check
         return False

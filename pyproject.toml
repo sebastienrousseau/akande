@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "akande"
-version = "0.0.7"
-description = "A self-hosted, provider-agnostic voice assistant that delivers structured executive briefings via voice or text from 10 LLM providers."
+version = "0.0.8"
+description = "A self-hosted, provider-agnostic voice assistant that delivers structured executive briefings via voice or text from 11 LLM providers."
 readme = "README.md"
 # PEP 639 SPDX license expression — matches LICENSE-APACHE and
 # LICENSE-MIT in the repo root.  The legacy `License ::`
@@ -48,7 +48,7 @@ dependencies = [
 mic = ["pyaudio>=0.2.14"]
 anthropic = ["anthropic>=0.40,<2"]
 google = ["google-generativeai>=0.7,<1"]
-mistral = ["mistralai>=1.0,<2"]
+mistral = ["mistralai>=1.0,<4"]
 cohere = ["cohere>=5.13,<8"]
 huggingface = ["huggingface_hub>=0.24,<3"]
 offline-tts = ["pyttsx4>=3.0.0"]
@@ -75,14 +75,16 @@ memory = ["mem0ai>=0.1,<1"]
 # Àkàndé to Claude Desktop / Cursor / Continue) and `akande mcp
 # list` (the client side, introspecting upstream servers).
 mcp = ["mcp>=0.9,<3"]
+telemetry = ["opentelemetry-sdk>=1.20,<2"]
 all = [
     "anthropic>=0.40,<2",
     "google-generativeai>=0.7,<1",
-    "mistralai>=1.0,<2",
+    "mistralai>=1.0,<4",
     "cohere>=5.13,<8",
     "huggingface_hub>=0.24,<3",
     "groq>=0.11,<2",
     "pyttsx4>=3.0.0",
+    "opentelemetry-sdk>=1.20,<2",
 ]
 dev = [
     "pytest>=9.0.3,<10",
@@ -100,12 +102,13 @@ dev = [
     # exercised by the test suite — provider SDKs, MCP, mem0.
     "anthropic>=0.40,<2",
     "google-generativeai>=0.7,<1",
-    "mistralai>=1.0,<2",
+    "mistralai>=1.0,<4",
     "cohere>=5.13,<8",
     "huggingface_hub>=0.24,<3",
     "groq>=0.11,<2",
     "pyttsx4>=3.0.0",
     "mcp>=0.9,<3",
+    "opentelemetry-sdk>=1.20,<2",
     # mem0ai is intentionally excluded from [dev]: as of 2026-06
     # the latest release (0.1.118) carries four unfixed CVEs
     # (CVE-2026-31240/31241/31245, CVE-2026-7597 fixed only in
