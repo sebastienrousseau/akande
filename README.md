@@ -99,18 +99,27 @@ pip install -e ".[dev]"
 ## Quick Start
 
 ```python
+import asyncio
 import os
-from akande.pipeline import run_pipeline
+
+from akande.akande import Akande
+from akande.providers.registry import get_provider
 
 os.environ["LLM_PROVIDER"] = (
     "ollama"  # or openai, anthropic, google, claude_cli, etc.
 )
 
-result = run_pipeline(
-    "Provide a morning executive briefing on market trends."
-)
-print(f"Summary: {result.summary}")
-print(f"Response: {result.response}")
+
+async def main() -> None:
+    provider = get_provider()
+    assistant = Akande(openai_service=provider)
+    response = await assistant.generate_response(
+        "Provide a morning executive briefing on market trends."
+    )
+    print(response)
+
+
+asyncio.run(main())
 ```
 
 This runs the end-to-end Àkàndé pipeline: intent classification, safety wrapping, provider execution, and optional speech synthesis.
