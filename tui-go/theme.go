@@ -1,0 +1,407 @@
+// Copyright (C) 2026 Sebastien Rousseau.
+// Licensed under the Apache License, Version 2.0.
+
+package main
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/lipgloss"
+)
+
+// Theme centralises every Lipgloss style + render helper.  Chat
+// history is printed into the terminal scrollback (no alt-screen,
+// no viewport) so the styles here cover one-shot blocks rather
+// than full-frame panels.
+type Theme struct {
+	BgPanel     lipgloss.Color
+	TextPrimary lipgloss.Color
+	TextMuted   lipgloss.Color
+	TextDim     lipgloss.Color
+	AccentUser  lipgloss.Color
+	AccentAI    lipgloss.Color
+	AccentInfo  lipgloss.Color
+	AccentOK    lipgloss.Color
+	AccentWarn  lipgloss.Color
+	AccentError lipgloss.Color
+}
+
+func newTheme() Theme {
+	return Theme{
+		BgPanel:     "#1a1a1d",
+		TextPrimary: "#f5f5f7",
+		TextMuted:   "#98989d",
+		TextDim:     "#636366",
+		// Apple HIG system blue for the assistant accent
+		// (banner title, ❯ akande prefix, status dot, help
+		// key labels).  User accent is a lighter sky blue so
+		// `❯ you` and `❯ akande` stay distinguishable when
+		// both turns scroll past in the history.
+		AccentUser:  "#64d2ff",
+		AccentAI:    "#0a84ff",
+		AccentInfo:  "#5ac8fa",
+		AccentOK:    "#32d74b",
+		AccentWarn:  "#ff9f0a",
+		AccentError: "#ff453a",
+	}
+}
+
+// dot renders the live "online" marker for the status bar.
+func (t Theme) dot() string {
+	return lipgloss.NewStyle().
+		Foreground(t.AccentAI).
+		Bold(true).
+		Render("●")
+}
+
+func (t Theme) warn(s string) string {
+	return lipgloss.NewStyle().
+		Foreground(t.AccentWarn).
+		Render("⚠ " + s)
+}
+
+// banner is the one-time welcome string printed into scrollback
+// before the first prompt.
+func (t Theme) banner(cfg Config) string {
+	title := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(t.AccentAI).
+		Render(" Àkàndé ")
+	sub := lipgloss.NewStyle().
+		Foreground(t.TextMuted).
+		Render(" Executive briefing assistant ")
+	meta := lipgloss.NewStyle().
+		Foreground(t.TextDim).
+		Render(fmt.Sprintf(
+			"   provider · %s   model · %s   %s",
+			cfg.Provider, cfg.Model, cfg.ServerURL))
+	hint := lipgloss.NewStyle().
+		Foreground(t.TextDim).
+		Render("   Enter to send · Esc to quit · " +
+			"/help for commands")
+	return strings.Join([]string{
+		"",
+		title,
+		sub,
+		meta,
+		hint,
+		"",
+	}, "\n")
+}
+
+// renderUser is the bubble printed into scrollback when the user
+// submits a question.  Minimal, single coloured glyph + text.
+func (t Theme) renderUser(text string) string {
+	label := lipgloss.NewStyle().
+		Foreground(t.AccentUser).
+		Bold(true).
+		Render("❯ you ")
+	body := lipgloss.NewStyle().
+		Foreground(t.TextPrimary).
+		Render(text)
+	return label + body
+}
+
+// renderAssistant is the bubble printed into scrollback once the
+// assistant's stream completes.  We render the markdown with
+// glamour so headings, code blocks, lists, tables and inline
+// styles land fully styled in scrollback.
+func (t Theme) renderAssistant(
+	r *glamour.TermRenderer, markdown string,
+) string {
+	label := lipgloss.NewStyle().
+		Foreground(t.AccentAI).
+		Bold(true).
+		Render("❯ akande")
+	var body string
+	if r != nil {
+		rendered, err := r.Render(markdown)
+		if err == nil && rendered != "" {
+			body = strings.TrimRight(rendered, "\n")
+		}
+	}
+	if body == "" {
+		body = lipgloss.NewStyle().
+			Foreground(t.TextPrimary).
+			Render(markdown)
+	}
+	return label + "\n" + body
+}
+
+// renderStreamingPreview is what shows above the composer while
+// a stream is in flight.  We re-render with glamour every refresh
+// so the partial markdown stays legible.
+func (t Theme) renderStreamingPreview(
+	r *glamour.TermRenderer, partial string, width int,
+) string {
+	if partial == "" {
+		return lipgloss.NewStyle().
+			Foreground(t.TextDim).
+			Padding(0, 1).
+			Render("⠋ thinking…")
+	}
+	var body string
+	if r != nil {
+		rendered, err := r.Render(partial)
+		if err == nil && rendered != "" {
+			body = strings.TrimRight(rendered, "\n")
+		}
+	}
+	if body == "" {
+		body = lipgloss.NewStyle().
+			Foreground(t.TextPrimary).
+			Render(partial)
+	}
+	// Clamp the live preview to a few lines so the composer +
+	// status stay visible.  Long previews trim to the last ~8
+	// lines; the full response lands in scrollback at end.
+	lines := strings.Split(body, "\n")
+	if len(lines) > 8 {
+		lines = append([]string{
+			lipgloss.NewStyle().
+				Foreground(t.TextDim).
+				Render(fmt.Sprintf(
+					"  ⋯ (%d lines above)",
+					len(lines)-8)),
+		}, lines[len(lines)-8:]...)
+		body = strings.Join(lines, "\n")
+	}
+	border := lipgloss.NewStyle().
+		Foreground(t.AccentAI).
+		Bold(true).
+		Render("❯ akande")
+	return border + "\n" + body
+}
+
+// renderComposer wraps the textarea view in a rounded border.
+func (t Theme) renderComposer(view string, width int) string {
+	style := lipgloss.NewStyle().
+		Padding(0, 1).
+		Margin(1, 0, 0, 0).
+		Foreground(t.TextPrimary).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(t.TextDim)
+	if width > 4 {
+		style = style.Width(width - 2)
+	}
+	return style.Render(view)
+}
+
+// renderStatus renders the one-line status bar at the bottom of
+// the program's footer.
+func (t Theme) renderStatus(left, right string, width int) string {
+	if width < 4 {
+		return left + "  " + right
+	}
+	gap := width - lipgloss.Width(left) - lipgloss.Width(right) - 2
+	if gap < 1 {
+		gap = 1
+	}
+	combined := left + strings.Repeat(" ", gap) + right
+	return lipgloss.NewStyle().
+		Padding(0, 1).
+		Foreground(t.TextMuted).
+		Render(combined)
+}
+
+// renderHelp is the dim shortcut row below the status bar.
+func (t Theme) renderHelp(width int) string {
+	keyStyle := lipgloss.NewStyle().
+		Foreground(t.AccentAI).
+		Bold(true)
+	descStyle := lipgloss.NewStyle().
+		Foreground(t.TextDim)
+	pairs := []struct{ k, d string }{
+		{"Enter", "send"},
+		{"Esc", "quit / cancel"},
+		{"Ctrl+C", "quit"},
+	}
+	var parts []string
+	for _, p := range pairs {
+		parts = append(parts,
+			keyStyle.Render(p.k)+" "+descStyle.Render(p.d))
+	}
+	return lipgloss.NewStyle().
+		Padding(0, 2).
+		Render(strings.Join(parts, "   "))
+}
+
+// renderPicker draws the startup provider-selection panel that
+// replaces the launcher script's `Choice (1-N):` shell prompt.
+// It fits the rest of the TUI's visual language: rounded
+// border, highlighted current row, dim descriptions, numeric
+// quick-pick (1–9), and a help footer.
+func (t Theme) renderPicker(
+	cands []ProviderCandidate, selected, width int,
+) string {
+	if len(cands) == 0 {
+		return ""
+	}
+	title := lipgloss.NewStyle().
+		Foreground(t.AccentAI).
+		Bold(true).
+		Render(" Pick your provider ")
+	sub := lipgloss.NewStyle().
+		Foreground(t.TextMuted).
+		Render(
+			"   detected on this machine · " +
+				"↑↓ to nav · Enter to confirm · " +
+				"1-9 to pick directly · Esc to quit",
+		)
+
+	keyStyle := lipgloss.NewStyle().
+		Foreground(t.AccentAI).
+		Bold(true)
+	descStyle := lipgloss.NewStyle().
+		Foreground(t.TextMuted)
+	dimStyle := lipgloss.NewStyle().
+		Foreground(t.TextDim)
+	selStyle := lipgloss.NewStyle().
+		Foreground(t.TextPrimary).
+		Background(t.BgPanel).
+		Bold(true)
+
+	var rows []string
+	for i, c := range cands {
+		num := fmt.Sprintf("%d", i+1)
+		modelHint := ""
+		if c.Model != "" {
+			modelHint = "  " + dimStyle.Render(
+				"· "+c.Model)
+		}
+		nameCol := fmt.Sprintf("%-20s", c.Name)
+		descCol := c.Description
+		if i == selected {
+			rows = append(rows,
+				"▌ "+selStyle.Render(
+					fmt.Sprintf("%s. %s  %s",
+						num, nameCol, descCol))+
+					modelHint)
+			continue
+		}
+		rows = append(rows,
+			"  "+keyStyle.Render(num+". "+nameCol)+
+				"  "+descStyle.Render(descCol)+
+				modelHint)
+	}
+
+	box := lipgloss.NewStyle().
+		Foreground(t.TextPrimary).
+		Background(t.BgPanel).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(t.AccentAI).
+		Padding(1, 2).
+		Margin(1, 0, 1, 0)
+	if width > 6 {
+		box = box.Width(width - 4)
+	}
+	body := title + "\n" + sub + "\n\n" +
+		strings.Join(rows, "\n")
+	return box.Render(body)
+}
+
+// renderNote is a labelled scrollback note (e.g. for AI
+// disclosures or tool-call events).
+func (t Theme) renderNote(label, content string) string {
+	tag := lipgloss.NewStyle().
+		Foreground(t.AccentInfo).
+		Bold(true).
+		Render("• " + label)
+	body := lipgloss.NewStyle().
+		Foreground(t.TextMuted).
+		Render(content)
+	return tag + "\n" + body
+}
+
+// renderSuggestions draws the inline autocomplete popup that
+// appears above the composer when the user starts typing a slash
+// command.  ``selected`` is the highlighted index — Up / Down
+// nav, Tab accepts, Esc dismisses, Enter sends.
+func (t Theme) renderSuggestions(
+	cmds []Command, selected int, width int,
+) string {
+	if len(cmds) == 0 {
+		return ""
+	}
+	keyStyle := lipgloss.NewStyle().
+		Foreground(t.AccentAI).
+		Bold(true)
+	hintStyle := lipgloss.NewStyle().
+		Foreground(t.TextMuted)
+	dimStyle := lipgloss.NewStyle().
+		Foreground(t.TextDim)
+	selStyle := lipgloss.NewStyle().
+		Foreground(t.TextPrimary).
+		Background(t.BgPanel).
+		Bold(true)
+	var rows []string
+	for i, c := range cmds {
+		left := "/" + c.Name
+		if c.Args != "" {
+			left += " " + c.Args
+		}
+		// Reserve a leading column for the selection caret so
+		// the layout stays stable as the highlight moves.
+		caret := "  "
+		styledLeft := keyStyle.Render(
+			fmt.Sprintf("%-18s", left))
+		styledRight := hintStyle.Render(c.Description)
+		if i == selected {
+			caret = selStyle.Render("▌ ")
+			styledRight = selStyle.Render(c.Description)
+		}
+		rows = append(rows,
+			caret+styledLeft+"  "+styledRight)
+	}
+	hint := dimStyle.Render(
+		"  ↑↓ to navigate · Tab to accept · " +
+			"Esc to dismiss")
+	box := lipgloss.NewStyle().
+		Foreground(t.TextPrimary).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(t.AccentAI).
+		Padding(0, 1)
+	if width > 4 {
+		box = box.Width(width - 2)
+	}
+	body := strings.Join(rows, "\n") + "\n" + hint
+	return box.Render(body)
+}
+
+// helpTitle is the section heading inside the `/help` block.
+func (t Theme) helpTitle(s string) string {
+	return lipgloss.NewStyle().
+		Foreground(t.AccentAI).
+		Bold(true).
+		Render(s)
+}
+
+// helpRow is a `  /name      description` row inside `/help`.
+func (t Theme) helpRow(left, right string) string {
+	pad := 18 - lipgloss.Width(left)
+	if pad < 1 {
+		pad = 1
+	}
+	return "  " + lipgloss.NewStyle().
+		Foreground(t.TextPrimary).
+		Bold(true).
+		Render(left) +
+		strings.Repeat(" ", pad) +
+		lipgloss.NewStyle().
+			Foreground(t.TextMuted).
+			Render(right)
+}
+
+// renderError prints a labelled error block into scrollback.
+func (t Theme) renderError(msg string) string {
+	tag := lipgloss.NewStyle().
+		Foreground(t.AccentError).
+		Bold(true).
+		Render("✗ error")
+	body := lipgloss.NewStyle().
+		Foreground(t.AccentError).
+		Render(msg)
+	return tag + "\n" + body
+}

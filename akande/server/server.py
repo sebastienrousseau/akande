@@ -166,6 +166,23 @@ def _sanitise_filename(name: str) -> str:
     return re.sub(r'["\r\n\\]', "_", name)
 
 
+def _sanitise_transcript(text: str) -> str:
+    """Normalise an STT transcript before it reaches the LLM.
+
+    Drops non-printable control characters (a transcript can contain
+    bidi marks or null bytes if the STT backend mis-decodes a chunk)
+    and collapses any run of whitespace into a single space, then
+    clamps to ``MAX_QUESTION_LENGTH``.  The result is what we hash
+    for the cache and what gets wrapped with
+    :func:`akande.safety.wrap_user_input` before the LLM call.
+    """
+    cleaned = "".join(
+        ch for ch in text if ch.isprintable() or ch.isspace()
+    )
+    collapsed = re.sub(r"\s+", " ", cleaned).strip()
+    return collapsed[:MAX_QUESTION_LENGTH]
+
+
 class SecurityHeadersTool(cherrypy.Tool):
     """CherryPy tool to add security headers to all responses."""
 
@@ -752,9 +769,16 @@ class AkandeServer:
                     {"response": strip_markdown(cached)}
                 )
 
+            # #12 hardening: wrap user-supplied text inside the
+            # safety envelope before it reaches the model.  Cache
+            # key remains the raw question so cache hits are stable
+            # across `safety_envelope` profile changes.
+            wrapped_question, _ = wrap_user_input(
+                question, profile=active_profile()
+            )
             response_object = (
                 self.openai_service.generate_response_sync(
-                    question,
+                    wrapped_question,
                     SYSTEM_PROMPT,
                     OPENAI_DEFAULT_MODEL,
                     None,
@@ -872,7 +896,12 @@ class AkandeServer:
                         }
                     )
 
-                question = processed_result.get("text", "")
+                # #12 hardening: drop control chars, collapse
+                # whitespace, and clamp the STT transcript to
+                # MAX_QUESTION_LENGTH before any downstream use.
+                question = _sanitise_transcript(
+                    processed_result.get("text", "") or ""
+                )
                 if not question:
                     return self._json_response(
                         {"error": "No speech detected"}
@@ -904,9 +933,15 @@ class AkandeServer:
                         {"response": strip_markdown(cached)}
                     )
 
+                # #12 hardening: wrap the sanitised transcript
+                # inside the safety envelope before sending to the
+                # model.  Cache key stays on the raw transcript.
+                wrapped_question, _ = wrap_user_input(
+                    question, profile=active_profile()
+                )
                 response_object = (
                     self.openai_service.generate_response_sync(
-                        question,
+                        wrapped_question,
                         SYSTEM_PROMPT,
                         OPENAI_DEFAULT_MODEL,
                         None,

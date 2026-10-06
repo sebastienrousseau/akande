@@ -113,7 +113,27 @@ def run():
 
     # Use --classic flag to fall back to the plain CLI
     if "--classic" in sys.argv:  # pragma: no cover - interactive
-        asyncio.run(main())
+        # Reconfigure logging so the classic CLI is not flooded by
+        # provider / CherryPy INFO chatter — keep the log file at
+        # INFO but raise the console threshold to WARNING+.
+        basic_config(
+            filename=str(file_path),
+            level=log_level,
+            log_format=log_format,
+            console_level=logging.WARNING,
+        )
+        for name in ("cherrypy", "cherrypy.error", "cherrypy.access"):
+            logging.getLogger(name).setLevel(logging.WARNING)
+        try:
+            asyncio.run(main())
+        except KeyboardInterrupt:
+            # The inner ``await akande.stop_server()`` already
+            # caught the in-coroutine cancellation; this handler
+            # absorbs the second KeyboardInterrupt raised by
+            # ``asyncio.run`` itself so the user sees a clean
+            # "Goodbye." instead of a stack trace.
+            print("\n  Goodbye.")
+            sys.exit(130)
         return
 
     # In TUI mode, reconfigure logging to file-only so log lines

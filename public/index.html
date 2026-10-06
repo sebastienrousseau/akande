@@ -1417,26 +1417,101 @@
 				setProcessing(true);
 				showTyping();
 
+				/* v0.0.7-dev.11: stream tokens via the /stream SSE
+				 * endpoint so the user sees deltas as they arrive
+				 * instead of staring at the typing indicator for
+				 * 10+ seconds.  The endpoint emits events of the
+				 * shape { type: "meta" | "disclosure" | "delta" |
+				 * "done" | "error", ... }; we ignore the meta /
+				 * disclosure events for now and grow a single
+				 * assistant bubble on delta. */
+				var assistantEl = null;
+				var assistantBuf = '';
+				function appendDelta(text) {
+					if (!assistantEl) {
+						hideTyping();
+						assistantEl = addMessage('assistant', '');
+					}
+					assistantBuf += text;
+					var body = assistantEl.querySelector('.body')
+						|| assistantEl;
+					body.textContent = assistantBuf;
+				}
+
 				try {
-					var res = await fetch('/process_question', {
+					var res = await fetch('/stream', {
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json',
 							'X-Requested-With': 'AkandeApp'
 						},
-						body: JSON.stringify({ question: question })
+						body: JSON.stringify({
+							question: question,
+							conversation_id: activeConvId
+						})
 					});
-					var data = await res.json();
-					hideTyping();
-					if (res.ok && data.response) {
-						addMessage('assistant', data.response);
-					} else {
-						addMessage('error', data.error || 'Something went wrong.');
+					if (!res.ok) {
+						var err = {};
+						try { err = await res.json(); } catch (_) {}
+						hideTyping();
+						addMessage('error',
+							err.error || 'Something went wrong.');
+						return;
+					}
+
+					var reader = res.body.getReader();
+					var decoder = new TextDecoder('utf-8');
+					var carry = '';
+					while (true) {
+						var chunk = await reader.read();
+						if (chunk.done) break;
+						carry += decoder.decode(chunk.value, {stream: true});
+						// SSE events are separated by a blank line.
+						var parts = carry.split('\n\n');
+						carry = parts.pop();
+						for (var i = 0; i < parts.length; i++) {
+							var part = parts[i];
+							// Strip optional ``data: `` prefix per
+							// event line; ignore comment lines.
+							var dataLines = part.split('\n')
+								.filter(function (line) {
+									return line.indexOf('data:') === 0;
+								})
+								.map(function (line) {
+									return line.slice(5).trimStart();
+								});
+							if (!dataLines.length) continue;
+							var payload;
+							try {
+								payload = JSON.parse(dataLines.join('\n'));
+							} catch (_) { continue; }
+							if (payload.type === 'delta') {
+								appendDelta(payload.content || '');
+							} else if (payload.type === 'disclosure') {
+								if (!assistantEl) {
+									hideTyping();
+									assistantEl = addMessage(
+										'assistant', ''
+									);
+								}
+								appendDelta(
+									(payload.content || '')
+									+ '\n\n'
+								);
+							} else if (payload.type === 'error') {
+								hideTyping();
+								addMessage('error',
+									payload.message
+									|| 'Stream failed.');
+							}
+						}
 					}
 				} catch (_) {
 					hideTyping();
-					addMessage('error', 'Unable to connect. Check your network.');
+					addMessage('error',
+						'Unable to connect. Check your network.');
 				} finally {
+					hideTyping();
 					setProcessing(false);
 					input.focus();
 				}

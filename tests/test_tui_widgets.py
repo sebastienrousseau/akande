@@ -53,16 +53,32 @@ class TestAkandeAppInit:
 
 
 class TestWriteHelpers:
-    def test_helpers_dont_crash(self, app):
+    def test_helpers_mount_bubbles(self, app):
+        """v0.0.7-dev.13: the write helpers each mount a
+        MessageBubble into the chat scroll container."""
         with patch.object(app, "query_one") as q:
-            log = MagicMock()
-            q.return_value = log
+            chat = MagicMock()
+            q.return_value = chat
             app._write_user("hello")
             app._write_assistant("hi")
             app._write_file("/tmp/x.pdf")
             app._write_error("oops")
             app._write_status("status")
-        assert log.write.called
+        # Each writer mounts a bubble + scrolls the chat to the end.
+        assert chat.mount.call_count == 5
+        assert chat.scroll_end.call_count == 5
+        # Bubbles are tagged with the requested role class.
+        from akande.tui import MessageBubble
+
+        bubbles = [c.args[0] for c in chat.mount.call_args_list]
+        assert all(isinstance(b, MessageBubble) for b in bubbles)
+        assert [b._role for b in bubbles] == [
+            "user",
+            "assistant",
+            "file",
+            "error",
+            "status",
+        ]
 
     def test_hide_welcome_invokes_query(self, app):
         with patch.object(app, "query_one") as q:

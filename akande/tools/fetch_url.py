@@ -12,8 +12,10 @@ pulling in lxml just for one tool.
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 import re
+import socket
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -35,6 +37,60 @@ ALLOWED_CONTENT_TYPES = (
     "text/csv",
 )
 USER_AGENT = "akande/0.0.6 (+fetch_url)"
+
+
+def _validate_safe_host(hostname: str, port: int = 443) -> None:
+    """Validate that host does not resolve to private or loopback IP."""
+    clean_host = hostname.strip("[]").lower()
+    if clean_host in (
+        "localhost",
+        "localhost.localdomain",
+    ) or clean_host.endswith((".local", ".internal", ".localhost")):
+        raise ToolError(
+            f"fetch_url request to {hostname} blocked: "
+            "restricted destination address"
+        )
+
+    # Check if host is directly an IP literal
+    try:
+        ip = ipaddress.ip_address(clean_host)
+        if (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+        ):
+            raise ToolError(
+                f"fetch_url request to {hostname} blocked: "
+                "restricted destination address"
+            )
+        return
+    except ValueError:
+        pass
+
+    # Resolve hostname to inspect resolved IPs
+    try:
+        addr_info = socket.getaddrinfo(
+            clean_host, port, proto=socket.IPPROTO_TCP
+        )
+        for res in addr_info:
+            ip_str = res[4][0]
+            ip = ipaddress.ip_address(ip_str)
+            if (
+                ip.is_private
+                or ip.is_loopback
+                or ip.is_link_local
+                or ip.is_reserved
+                or ip.is_multicast
+            ):
+                raise ToolError(
+                    f"fetch_url request to {hostname} ({ip_str}) "
+                    "blocked: restricted destination address"
+                )
+    except socket.gaierror:
+        # Offline runner or unresolvable test host
+        pass
 
 
 class FetchURLTool(Tool):
@@ -76,8 +132,9 @@ class FetchURLTool(Tool):
         parsed = urllib.parse.urlparse(url)
         if parsed.scheme != "https":
             raise ToolError("fetch_url requires an https:// URL")
-        if not parsed.netloc:
+        if not parsed.netloc or not parsed.hostname:
             raise ToolError("fetch_url URL is missing a host")
+        _validate_safe_host(parsed.hostname, parsed.port or 443)
 
         req = urllib.request.Request(
             url,

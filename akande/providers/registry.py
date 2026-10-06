@@ -62,6 +62,22 @@ _PROVIDER_MAP: dict[str, tuple] = {
         ".huggingface_provider",
         "HuggingFaceProvider",
     ),
+    "claude_cli": (
+        ".claude_cli_provider",
+        "ClaudeCliProvider",
+    ),
+    "codex_cli": (
+        ".codex_cli_provider",
+        "CodexCliProvider",
+    ),
+    "copilot_cli": (
+        ".copilot_cli_provider",
+        "CopilotCliProvider",
+    ),
+    "antigravity_cli": (
+        ".antigravity_cli_provider",
+        "AntigravityCliProvider",
+    ),
 }
 
 

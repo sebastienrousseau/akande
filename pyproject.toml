@@ -1,5 +1,6 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
+# setuptools 77+ for PEP 639 SPDX `license` field support.
+requires = ["setuptools>=77.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +8,11 @@ name = "akande"
 version = "0.0.7"
 description = "A self-hosted, provider-agnostic voice assistant that delivers structured executive briefings via voice or text from 10 LLM providers."
 readme = "README.md"
-license = {text = "Apache Software License"}
+# PEP 639 SPDX license expression — matches LICENSE-APACHE and
+# LICENSE-MIT in the repo root.  The legacy `License ::`
+# classifier is intentionally omitted (PEP 639 forbids both).
+license = "Apache-2.0 OR MIT"
+license-files = ["LICENSE-APACHE", "LICENSE-MIT"]
 requires-python = ">=3.10"
 authors = [
     {name = "Sebastien Rousseau", email = "sebastian.rousseau@gmail.com"},
@@ -15,7 +20,6 @@ authors = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -33,7 +37,7 @@ dependencies = [
     "cherrypy>=18.8.0",
     "pydub>=0.25.1",
     "textual>=0.80,<8",
-    "cryptography>=46.0.7,<51",
+    "cryptography>=48.0.1,<51",
 ]
 
 [project.optional-dependencies]
@@ -46,7 +50,7 @@ anthropic = ["anthropic>=0.40,<2"]
 google = ["google-generativeai>=0.7,<1"]
 mistral = ["mistralai>=1.0,<2"]
 cohere = ["cohere>=5.13,<8"]
-huggingface = ["huggingface_hub>=0.24,<2"]
+huggingface = ["huggingface_hub>=0.24,<3"]
 offline-tts = ["pyttsx4>=3.0.0"]
 groq = ["groq>=0.11,<2"]
 redis = ["redis>=5.0,<9"]
@@ -76,7 +80,7 @@ all = [
     "google-generativeai>=0.7,<1",
     "mistralai>=1.0,<2",
     "cohere>=5.13,<8",
-    "huggingface_hub>=0.24,<2",
+    "huggingface_hub>=0.24,<3",
     "groq>=0.11,<2",
     "pyttsx4>=3.0.0",
 ]
@@ -98,7 +102,7 @@ dev = [
     "google-generativeai>=0.7,<1",
     "mistralai>=1.0,<2",
     "cohere>=5.13,<8",
-    "huggingface_hub>=0.24,<2",
+    "huggingface_hub>=0.24,<3",
     "groq>=0.11,<2",
     "pyttsx4>=3.0.0",
     "mcp>=0.9,<3",

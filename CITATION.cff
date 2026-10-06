@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+cff-version: 1.2.0
+message: "If you use Àkàndé in research or production write-ups, please cite it as below."
+type: software
+title: "Àkàndé: Self-Hosted Provider-Agnostic Voice Assistant"
+abstract: >-
+  A self-hosted, provider-agnostic voice assistant that delivers structured
+  executive briefings via voice or text across 10 LLM providers with
+  EU AI Act Article 50 transparency controls and AudioSeal watermarking.
+authors:
+  - family-names: Rousseau
+    given-names: Sebastien
+    email: sebastian.rousseau@gmail.com
+version: "0.0.7"
+date-released: "2026-10-06"
+license: "Apache-2.0 OR MIT"
+repository-code: "https://github.com/sebastienrousseau/akande"
+keywords:
+  - voice-assistant
+  - llm
+  - text-to-speech
+  - speech-to-text
+  - artificial-intelligence
+  - privacy

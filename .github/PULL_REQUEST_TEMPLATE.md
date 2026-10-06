@@ -1,61 +1,54 @@
-<!-- Thanks for the contribution. Please fill in the sections below. -->
+<!--
+PR description template. Global rule: see ~/Code/AGENTS.md "PR Descriptions"
+and "Release Page Format" (aligned with https://github.com/sebastienrousseau/passmcp/releases/tag/v0.0.5).
+Rules baked into this shape:
+  - A two-line BLUF (bottom line up front) that announces the PR: line 1 begins
+    "This PR " and says what it does; line 2 says why it matters or the outcome.
+    Separate line 1 and line 2 each with a blank line: a single newline soft-wraps
+    into one paragraph in Markdown, so a blank line is what makes each render on
+    its own line. No paragraph above.
+  - Never use the em dash character in the body. Use commas, colons, parentheses,
+    or a spaced hyphen instead.
+  - Write like a person wrote it: direct, concrete, friendly, no filler, no AI tells.
+  - For external upstream maintainers, open with a bare-name greeting on its
+    own line: exactly "Hi <name>," and nothing more, no thanks or extra clause.
+    If the repository is the user's own (Sebastien), omit the greeting entirely
+    and start directly with the BLUF.
+  - No "Generated with Claude Code" or other tool-attribution footer.
+Keep the sections and their order. Fill every {{PLACEHOLDER}} from real evidence.
+-->
 
-## Summary
+{{OPTIONAL_UPSTREAM_GREETING: Hi <name>,}}
 
-<!-- One or two sentences describing what changed and why. -->
+This PR {{announces what it does, in one plain line}}.
 
-## Type of change
+{{BLUF_LINE_2: why it matters or the outcome, in one plain line}}
 
-<!-- Tick all that apply. -->
+## Highlights ⭐️
 
-- [ ] `feat`: new user-visible capability
-- [ ] `fix`: bug fix
-- [ ] `perf`: performance improvement
-- [ ] `refactor`: code change with no functional impact
-- [ ] `docs`: documentation only
-- [ ] `test`: test-only change
-- [ ] `chore` / `ci`: tooling, deps, CI
-- [ ] `security`: security-relevant change
+* **{{HEADLINE}}**: {{one or two plain sentences on what changed for the user}}.
+* **{{HEADLINE}}**: {{one or two plain sentences}}.
+* **{{HEADLINE}}**: {{one or two plain sentences}}.
 
-## Linked issues
+## What's Changed
 
-<!-- e.g. Closes #123 -->
+* `{{COMMIT_SUBJECT}}` by @{{AUTHOR}}
 
-## How was this tested?
+{{OPTIONAL: a few detail bullets naming files and the concrete change}}
 
-<!-- Manual steps, new tests added, etc. Paste the relevant pytest
-     summary or a screenshot for UI changes. -->
+## Validation
 
-## Quality gates
+* `{{COMMAND}}`: {{result, with numbers}}.
+* `npm run build`: clean; build self-checks pass.
 
-- [ ] `flake8` passes
-- [ ] `mypy akande` passes
-- [ ] `pytest --cov` passes (coverage ≥ 95 %)
-- [ ] `bandit -r akande -ll -q` clean
-- [ ] `pip-audit --strict` clean
-- [ ] README / docs updated where applicable
+## Checksums
 
-## Scope
+SHA-256 of the artifacts produced by `npm run build` on this branch:
 
-- [ ] This change is in scope for the current v0.0.6 release plan
-      (see `~/Drop/akande-ip.md` or the project board).
-- [ ] If out of scope, I have flagged it for v0.0.7+ consideration.
+```text
+{{SHA256}}  dist/index.html
+{{SHA256}}  dist/worker.js
+{{SHA256}}  dist/worker.mjs
+```
 
-## Breaking change?
-
-- [ ] No
-- [ ] Yes — described below, with migration notes for users:
-
-<!-- Describe migration here if applicable. -->
-
-## Compliance / Security review
-
-<!-- Tick if the change touches any of these areas. -->
-
-- [ ] Touches authentication, rate limiting, or input validation
-- [ ] Touches PII handling, logging, or cache contents
-- [ ] Touches voice cloning, watermarking, or AI disclosure
-- [ ] Touches EU AI Act Article 50 controls
-
-<!-- If any of the above are ticked, please add `@security-review` to
-     reviewers and reference the relevant section of SECURITY.md. -->
+**Full Changelog**: {{COMPARE_URL}}

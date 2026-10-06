@@ -18,6 +18,7 @@ from .audit import verify_command, verify_watermark_command
 from .data import data_command
 from .install_local import install_local_command
 from .mcp import mcp_command
+from .server import server_command
 from .skill import skill_command
 
 KNOWN_SUBCOMMANDS = {
@@ -28,6 +29,7 @@ KNOWN_SUBCOMMANDS = {
     "mcp",
     "install-local",
     "skill",
+    "server",
 }
 
 
@@ -174,6 +176,26 @@ def _build_parser() -> argparse.ArgumentParser:
             "present (default 0.5)"
         ),
     )
+
+    server_parser = sub.add_parser(
+        "server",
+        help=(
+            "Start the CherryPy briefing server in the "
+            "foreground (used by the Go TUI and headless "
+            "deployments)"
+        ),
+    )
+    server_parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Bind host (default 127.0.0.1)",
+    )
+    server_parser.add_argument(
+        "--port",
+        type=int,
+        default=8080,
+        help="Bind port (default 8080)",
+    )
     return parser
 
 
@@ -226,5 +248,7 @@ def dispatch_subcommand(
         return install_local_command(ns)
     if ns.command == "skill":  # pragma: no cover - tested directly
         return skill_command(ns)
+    if ns.command == "server":  # pragma: no cover - boots a real server
+        return server_command(ns)
     parser.print_help()  # pragma: no cover - argparse rejects unknown earlier
     return 2  # pragma: no cover

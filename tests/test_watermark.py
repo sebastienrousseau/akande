@@ -53,6 +53,25 @@ class TestFailOpen:
         assert present is False
         assert confidence == 0.0
 
+    def test_audioseal_available_true(self):
+        import sys
+        from unittest.mock import MagicMock
+
+        with patch.dict(sys.modules, {"audioseal": MagicMock()}):
+            assert _audioseal_available() is True
+
+    def test_detect_watermark_exception(self):
+        with patch(
+            "akande.watermark._audioseal_available", return_value=True
+        ):
+            with patch(
+                "akande.watermark._bytes_to_tensor",
+                side_effect=RuntimeError("simulated detection failure"),
+            ):
+                present, conf = detect_watermark(b"data", fmt="wav")
+                assert present is False
+                assert conf == 0.0
+
 
 class TestWarnThrottle:
     def test_first_call_warns(self, caplog):

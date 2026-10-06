@@ -69,6 +69,7 @@ def basic_config(
     level: int,
     log_format: str,
     console: bool = True,
+    console_level: int | None = None,
 ) -> None:
     """
     Configure logging with file and optional console handlers.
@@ -77,12 +78,16 @@ def basic_config(
     format for console output.
 
     :param filename: The name of the log file.
-    :param level: The logging level.
+    :param level: The logging level for the file handler.
     :param log_format: The format of the log messages (used for
         console output).
     :param console: Whether to add a console (stdout) handler.
         Set to False when running inside a TUI to prevent log
         lines from corrupting the display.
+    :param console_level: Threshold for the console handler.
+        Defaults to ``logging.INFO`` so existing callers keep their
+        current behaviour; raise to ``logging.WARNING`` for the
+        classic CLI so the menu is not buried in INFO chatter.
     :return: None
     """
     root = logging.getLogger()
@@ -103,7 +108,9 @@ def basic_config(
         # Console handler uses human-readable format
         console_formatter = logging.Formatter(log_format)
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.INFO)
+        console_handler.setLevel(
+            console_level if console_level is not None else logging.INFO
+        )
         console_handler.setFormatter(console_formatter)
         root.addHandler(console_handler)
 

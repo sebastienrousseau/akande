@@ -136,6 +136,61 @@ class TestFetchURLTool:
         with pytest.raises(ToolError):
             FetchURLTool().run({"url": "https://"})
 
+    def test_rejects_private_and_loopback_hosts(self):
+        tool = FetchURLTool()
+        blocked_urls = [
+            "https://127.0.0.1/admin",
+            "https://169.254.169.254/latest/meta-data",
+            "https://10.0.0.1/internal",
+            "https://192.168.1.1/router",
+            "https://172.16.0.1/dashboard",
+            "https://[::1]/secret",
+            "https://localhost/api",
+            "https://service.internal/data",
+            "https://device.local/status",
+        ]
+        for url in blocked_urls:
+            with pytest.raises(
+                ToolError, match="restricted destination address"
+            ):
+                tool.run({"url": url})
+
+    def test_rejects_hostname_resolving_to_private_ip(
+        self, monkeypatch
+    ):
+        import socket
+
+        tool = FetchURLTool()
+
+        fake_addrinfo = [
+            (
+                socket.AF_INET,
+                socket.SOCK_STREAM,
+                6,
+                "",
+                ("10.20.30.40", 443),
+            )
+        ]
+        monkeypatch.setattr(
+            socket, "getaddrinfo", lambda *a, **kw: fake_addrinfo
+        )
+        with pytest.raises(
+            ToolError, match="restricted destination address"
+        ):
+            tool.run({"url": "https://evil-resolved-domain.com/secret"})
+
+    def test_ignores_gaierror_on_unresolvable_host(self, monkeypatch):
+        import socket
+
+        def raise_gai(*a, **kw):
+            raise socket.gaierror("lookup failed")
+
+        monkeypatch.setattr(socket, "getaddrinfo", raise_gai)
+        # Should not raise ToolError from DNS lookup; will fail at urllib level
+        from akande.tools.fetch_url import _validate_safe_host
+
+        _validate_safe_host("unresolvable-domain.example", 443)
+
     def test_html_to_text_strips_tags(self):
         from akande.tools.fetch_url import _html_to_text
 
