@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "akande"
-version = "0.0.8"
+version = "0.0.9"
 description = "A self-hosted, provider-agnostic voice assistant that delivers structured executive briefings via voice or text from 11 LLM providers."
 readme = "README.md"
 # PEP 639 SPDX license expression — matches LICENSE-APACHE and
@@ -38,6 +38,7 @@ dependencies = [
     "pydub>=0.25.1",
     "textual>=0.80,<8",
     "cryptography>=48.0.1,<51",
+    "click>=8.3.3",
 ]
 
 [project.optional-dependencies]

@@ -7,13 +7,15 @@ Only the most recent minor release line receives security updates.
 | Version | Supported |
 |---------|-----------|
 | 0.0.x   | ✅        |
-| < 0.0.5 | ❌        |
+| < 0.0.9 | ❌        |
 
 ## Reporting a Vulnerability
 
 Please **do not** open a public GitHub issue for security problems.
 
-Email **sebastian.rousseau@gmail.com** with subject prefix
+You can report vulnerabilities privately through GitHub at [Private Vulnerability Reporting](https://github.com/sebastienrousseau/akande/security/advisories/new).
+
+Alternatively, email **sebastian.rousseau@gmail.com** with subject prefix
 `[security][akande]`. Include:
 
 - Type of issue (e.g. prompt injection, RCE, SSRF, auth bypass, path

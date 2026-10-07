@@ -13,12 +13,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
+permissions: read-all
 
 jobs:
   fresh-install:
-    name: Fresh install — Py ${{ matrix.python-version }} on ${{ matrix.os }}
+    name: Fresh install - Py ${{ matrix.python-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
