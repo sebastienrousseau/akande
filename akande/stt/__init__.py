@@ -1,20 +1,20 @@
 # Copyright (C) 2026 Sebastien Rousseau.
 #
 # Licensed under the Apache License, Version 2.0 (the "License").
-"""STT backend abstraction — mirrors :mod:`akande.tts`.
+"""STT backend abstraction: mirrors :mod:`akande.tts`.
 
 Two backends ship today:
 
-- :class:`SpeechRecognitionBackend` — wraps the v0.0.5 path through
+- :class:`SpeechRecognitionBackend`: wraps the v0.0.5 path through
   ``speech_recognition``.  Cloud-backed (Google Speech), no extra
   install, exact byte-for-byte behaviour preservation for callers
   that don't opt in to a local backend.
-- :class:`FasterWhisperBackend` — wraps ``faster-whisper`` for fully
+- :class:`FasterWhisperBackend`: wraps ``faster-whisper`` for fully
   local transcription.  Selected with ``AKANDE_STT=faster_whisper``;
   fails loud when the optional dep is missing.
 
-The barge-in + VAD-driven streaming variants land in v0.0.6-dev.8
-on top of this same ABC.
+VoiceActivityDetector provides real-time voice activity detection
+and barge-in interruption triggers.
 """
 
 from __future__ import annotations
@@ -24,11 +24,13 @@ import os
 
 from .base import STTBackend, STTResult
 from .sr_backend import SpeechRecognitionBackend
+from .vad import VoiceActivityDetector
 
 __all__ = [
     "STTBackend",
     "STTResult",
     "SpeechRecognitionBackend",
+    "VoiceActivityDetector",
     "get_stt_backend",
 ]
 
