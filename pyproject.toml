@@ -38,7 +38,6 @@ dependencies = [
     "pydub>=0.25.1",
     "textual>=0.80,<8",
     "cryptography>=48.0.1,<51",
-    "click>=8.3.3",
 ]
 
 [project.optional-dependencies]
