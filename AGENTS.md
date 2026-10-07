@@ -16,6 +16,7 @@ Everything here applies equally to humans and automated agents. It is addressed 
 5. **Single source of truth**: The version in `pyproject.toml` (`[project] version`) is the single source of truth. It must agree with `akande/__init__.py` and `CITATION.cff`.
 6. **Input sanitization & safety**: All audio and text inputs are sanitized, length-clamped, and wrapped in the safety envelope before calling any LLM provider.
 7. **SSRF prevention**: Network tools such as `fetch_url` must strictly validate destination hosts and IPs against RFC 1918 subnets, loopbacks, link-local addresses, and cloud metadata services.
+8. **Release Page Format**: Every tag MUST have a published GitHub release following the ecosystem format modelled on https://github.com/sebastienrousseau/passmcp/releases/tag/v0.0.5: title `<PROJECT_NAME> <VERSION>` without the `v`, Highlights with two to four bullets, generated What's Changed, SHA-256 Checksums, and Full Changelog link. Em dashes (`—`) are forbidden in titles and bodies.
 
 ## 2. Before You Claim To Be Done (Verification Gates)
 

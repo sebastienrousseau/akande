@@ -23,6 +23,10 @@ Releases adhere strictly to https://github.com/sebastienrousseau/passmcp/release
   <a href="docs/POLICIES.md"><img src="https://img.shields.io/badge/python->=3.10-93450a.svg?style=for-the-badge&logo=python" alt="Python >= 3.10" /></a>
 </p>
 
+<p align="center">
+  <img src=".github/demo.gif" alt="Àkàndé Demo" width="100%" />
+</p>
+
 ---
 
 ## Contents
