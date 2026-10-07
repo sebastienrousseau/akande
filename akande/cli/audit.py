@@ -63,7 +63,7 @@ def verify_watermark_command(
 
     if not _audioseal_available():
         print(
-            "audioseal not installed — cannot verify "
+            "audioseal not installed - cannot verify "
             "watermark.  Install with: pip install audioseal",
             file=sys.stderr,
         )

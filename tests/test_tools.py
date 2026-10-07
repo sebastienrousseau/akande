@@ -3,6 +3,7 @@
 # Licensed under the Apache License, Version 2.0 (the "License").
 """Tests for akande.tools."""
 
+import urllib.request
 from typing import Any
 from unittest.mock import patch
 
@@ -46,6 +47,22 @@ class TestRegistry:
         reg.register(_NoopTool())
         with pytest.raises(ValueError):
             reg.register(_NoopTool())
+
+    def test_register_empty_name_raises(self):
+        class _EmptyTool(Tool):
+            name = ""
+            description = ""
+
+            @property
+            def input_schema(self) -> dict[str, Any]:
+                return {}
+
+            def run(self, args: dict[str, Any]) -> ToolResult:
+                return ToolResult(content="")
+
+        reg = ToolRegistry()
+        with pytest.raises(ValueError, match="non-empty name"):
+            reg.register(_EmptyTool())
 
     def test_disable_hides_from_names(self):
         reg = ToolRegistry()
@@ -201,3 +218,104 @@ class TestFetchURLTool:
         assert "Hi there" in out
         assert "x()" not in out
         assert "<" not in out
+
+    def test_input_schema_returns_dict(self):
+        tool = FetchURLTool()
+        schema = tool.input_schema
+        assert schema["type"] == "object"
+        assert "url" in schema["properties"]
+
+    def test_validate_safe_host_public_ip_literal(self):
+        from akande.tools.fetch_url import _validate_safe_host
+
+        # 8.8.8.8 is a public IP literal, should return cleanly
+        _validate_safe_host("8.8.8.8", 443)
+
+    def test_unmocked_open_func_uses_opener(self):
+        from unittest.mock import MagicMock
+
+        tool = FetchURLTool()
+        mock_opener = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.headers.get_content_type.return_value = "text/plain"
+        mock_resp.read.return_value = b"public content"
+        mock_resp.__enter__.return_value = mock_resp
+        mock_opener.open.return_value = mock_resp
+        with patch(
+            "akande.tools.fetch_url.urllib.request.build_opener",
+            return_value=mock_opener,
+        ):
+            res = tool.run({"url": "https://8.8.8.8"})
+            assert res.content == "public content"
+
+
+class TestSafeRedirectHandler:
+    def test_redirect_to_non_https_blocked(self):
+        from akande.tools.fetch_url import _SafeRedirectHandler
+
+        handler = _SafeRedirectHandler()
+        req = urllib.request.Request("https://example.com/start")
+        with pytest.raises(ToolError, match="non-https URL blocked"):
+            handler.redirect_request(
+                req,
+                None,
+                302,
+                "Found",
+                {},
+                "http://example.com/insecure",
+            )
+
+    def test_redirect_missing_host_blocked(self):
+        from akande.tools.fetch_url import _SafeRedirectHandler
+
+        handler = _SafeRedirectHandler()
+        req = urllib.request.Request("https://example.com/start")
+        with pytest.raises(ToolError, match="missing a host"):
+            handler.redirect_request(
+                req, None, 302, "Found", {}, "https://"
+            )
+
+    def test_redirect_to_private_ip_blocked(self):
+        from akande.tools.fetch_url import _SafeRedirectHandler
+
+        handler = _SafeRedirectHandler()
+        req = urllib.request.Request("https://example.com/start")
+        with pytest.raises(
+            ToolError, match="restricted destination address"
+        ):
+            handler.redirect_request(
+                req, None, 302, "Found", {}, "https://127.0.0.1/admin"
+            )
+
+    def test_redirect_to_aws_metadata_blocked(self):
+        from akande.tools.fetch_url import _SafeRedirectHandler
+
+        handler = _SafeRedirectHandler()
+        req = urllib.request.Request("https://example.com/start")
+        with pytest.raises(
+            ToolError, match="restricted destination address"
+        ):
+            handler.redirect_request(
+                req,
+                None,
+                302,
+                "Found",
+                {},
+                "https://169.254.169.254/latest",
+            )
+
+    def test_redirect_to_valid_https_allowed(self):
+        from akande.tools.fetch_url import _SafeRedirectHandler
+
+        handler = _SafeRedirectHandler()
+        req = urllib.request.Request("https://example.com/start")
+        new_req = handler.redirect_request(
+            req,
+            None,
+            302,
+            "Found",
+            {},
+            "https://example.org/destination",
+        )
+        assert new_req is not None
+        assert new_req.full_url == "https://example.org/destination"

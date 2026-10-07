@@ -12,6 +12,7 @@ from akande.server.server import (
     RATE_LIMIT_WINDOW,
     AkandeServer,
     RateLimiter,
+    _csv_safe,
     _detect_audio_format,
     _hash_ip,
 )
@@ -308,3 +309,24 @@ class TestConstants:
 
     def test_rate_limit_max_requests(self):
         assert RATE_LIMIT_MAX_REQUESTS == 20
+
+
+class TestCsvSafe:
+    def test_safe_strings_unchanged(self):
+        assert _csv_safe("hello") == "hello"
+        assert _csv_safe("12345") == "12345"
+        assert _csv_safe("") == ""
+
+    def test_formula_triggers_prefixed(self):
+        assert _csv_safe("=cmd|' /C calc'!A0") == "'=cmd|' /C calc'!A0"
+        assert _csv_safe("+SUM(A1:A10)") == "'+SUM(A1:A10)"
+        assert _csv_safe("-10+20") == "'-10+20"
+        assert _csv_safe("@admin") == "'@admin"
+        assert _csv_safe("\tcmd") == "'\tcmd"
+        assert _csv_safe("\rcmd") == "'\rcmd"
+
+    def test_formula_triggers_with_leading_whitespace_prefixed(self):
+        assert _csv_safe("   =cmd") == "'   =cmd"
+        assert _csv_safe(" \t+123") == "' \t+123"
+        assert _csv_safe("\t\r-calc") == "'\t\r-calc"
+        assert _csv_safe("   @SUM") == "'   @SUM"
