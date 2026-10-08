@@ -15,7 +15,7 @@ permissions: read-all
 jobs:
   ci:
     name: Python CI
-    uses: sebastienrousseau/pipelines/.github/workflows/python-ci.yml@main
+    uses: sebastienrousseau/pipelines/.github/workflows/python-ci.yml@7061363af0a1da9d60c5901bd2874ac83ff7e34e # main
     with:
       # `python-version` drives the lint + mypy step (single pin).
       # `python-versions` drives the test matrix.  Expanded for

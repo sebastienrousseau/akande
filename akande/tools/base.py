@@ -28,7 +28,7 @@ class ToolResult:
 
     ``content`` is the human-readable answer (returned to the LLM
     and ultimately to the user).  ``metadata`` is an arbitrary dict
-    for tracing / cost / debugging — never shown to the user.
+    for tracing / cost / debugging - never shown to the user.
     """
 
     content: str

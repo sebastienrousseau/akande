@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1.7
 
 # -----------------------------------------------------------------------------
-# Stage 1: builder — build wheels for akande and its runtime dependencies
+# Stage 1: builder - build wheels for akande and its runtime dependencies
 # -----------------------------------------------------------------------------
-FROM python:3.12-slim-bookworm AS builder
+FROM python:3.12-slim-bookworm@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258 AS builder
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -32,9 +32,9 @@ RUN python -m pip install --upgrade "pip>=26.1.2" setuptools wheel build \
     && python -m pip wheel --wheel-dir /wheels .
 
 # -----------------------------------------------------------------------------
-# Stage 2: runtime — minimal image with only what's needed at run time
+# Stage 2: runtime - minimal image with only what's needed at run time
 # -----------------------------------------------------------------------------
-FROM python:3.12-slim-bookworm AS runtime
+FROM python:3.12-slim-bookworm@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258 AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

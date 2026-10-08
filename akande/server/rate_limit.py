@@ -34,14 +34,14 @@ class RateLimiterBackend(Protocol):
     window: int
     max_requests: int
 
-    def is_allowed(self, key: str) -> bool: ...
+    def is_allowed(self, key: str) -> bool: ...  # pragma: no cover
 
 
 class InMemoryRateLimiter:
     """Thread-safe sliding-window limiter, per-process.
 
     Suitable for single-instance deployments and tests.  Not suitable
-    behind a load balancer — use ``RedisRateLimiter`` instead.
+    behind a load balancer - use ``RedisRateLimiter`` instead.
     """
 
     def __init__(self, window: int, max_requests: int) -> None:
@@ -177,7 +177,7 @@ def build_rate_limiter(
         return limiter  # pragma: no cover
     except Exception as exc:
         logger.warning(
-            "Falling back to in-memory rate limiter — "
+            "Falling back to in-memory rate limiter: "
             "Redis backend unavailable",
             extra={
                 "event": "RateLimiter:RedisUnavailable",
