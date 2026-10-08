@@ -5,7 +5,7 @@
 #   curl -fsSL https://akande.co/install.sh | sh
 #
 # What this does:
-#   1. Detects the host OS and Python interpreter (3.10+).
+#   1. Detects the host OS and Python interpreter (3.11+).
 #   2. Tries the strongly-preferred install paths in order:
 #        a) pipx install akande         (the right answer on most machines)
 #        b) uv tool install akande      (when uv is on PATH and pipx isn't)
@@ -70,10 +70,10 @@ require_python() {
     elif command -v python >/dev/null 2>&1; then
         PY=python
     else
-        fail "Python 3.10+ is required but no python interpreter was found."
+        fail "Python 3.11+ is required but no python interpreter was found."
     fi
-    if ! "$PY" -c 'import sys; sys.exit(0 if sys.version_info >= (3,10) else 1)' >/dev/null 2>&1; then
-        fail "Python 3.10+ required; found $(${PY} --version 2>&1)."
+    if ! "$PY" -c 'import sys; sys.exit(0 if sys.version_info >= (3,11) else 1)' >/dev/null 2>&1; then
+        fail "Python 3.11+ required; found $(${PY} --version 2>&1)."
     fi
     info "Using $(${PY} --version 2>&1)"
 }

@@ -6,9 +6,9 @@ This document establishes the toolchain baseline, versioning standards, and oper
 
 ## 1. Toolchain Support Policy
 
-### Python Floor: Python >= 3.10
-- Àkàndé supports all non-end-of-life Python releases from `3.10` upwards.
-- Tested and verified CI matrix: `3.10`, `3.11`, `3.12`, `3.13`, `3.14`.
+### Python Floor: Python >= 3.11
+- Àkàndé supports all non-end-of-life Python releases from `3.11` upwards.
+- Tested and verified CI matrix: `3.11`, `3.12`, `3.13`, `3.14`.
 - **Policy for Raising the Floor**:
   - The minimum supported Python version is raised only when the oldest supported release reaches official upstream end-of-life (EOL).
   - Bumping the Python floor is treated as a breaking change and occurs only with advance deprecation notices.

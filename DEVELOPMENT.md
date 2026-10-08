@@ -9,7 +9,7 @@ reproduce every CI gate locally, where tests live, and how releases happen.
 
 | Tool | Version | Where it is pinned |
 | :--- | :--- | :--- |
-| Python | 3.12 for local development; 3.10 is the floor | `pyproject.toml` (`requires-python = ">=3.10"`), CI matrix 3.10 to 3.14 |
+| Python | 3.12 for local development; 3.11 is the floor | `pyproject.toml` (`requires-python = ">=3.11"`), CI matrix 3.11 to 3.14 |
 | uv / pip | Latest | `requirements.txt` for pinned dependencies; `pyproject.toml` for ranges |
 
 ```bash
