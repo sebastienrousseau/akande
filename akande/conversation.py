@@ -241,7 +241,7 @@ class ConversationStore:
     def _fetch_conversation(self, conv_id: str) -> Conversation:
         result = self.get(conv_id)
         if result is None:
-            # Should not happen — we just inserted.
+            # Should not happen - we just inserted.
             raise RuntimeError(
                 f"conversation {conv_id!r} vanished after insert"
             )

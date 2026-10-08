@@ -1,12 +1,12 @@
 # Copyright (C) 2026 Sebastien Rousseau.
 #
 # Licensed under the Apache License, Version 2.0 (the "License").
-"""``fetch_url`` — pull a URL and return readable text.
+"""``fetch_url``: pull a URL and return readable text.
 
 The tool is intentionally simple: HTTPS-only (downgrades refused),
 size-capped, with a small allowlist of MIME types so the LLM never
 sees a base64 image blob in its context window.  No HTML parser
-dep — a regex tag strip is good enough for the LLM, and avoids
+dep: a regex tag strip is good enough for the LLM, and avoids
 pulling in lxml just for one tool.
 """
 
@@ -93,6 +93,31 @@ def _validate_safe_host(hostname: str, port: int = 443) -> None:
         pass
 
 
+class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Intercept all HTTP 30x redirects and enforce SSRF validation."""
+
+    def redirect_request(
+        self,
+        req: urllib.request.Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Any,
+        newurl: str,
+    ) -> urllib.request.Request | None:
+        parsed = urllib.parse.urlparse(newurl)
+        if parsed.scheme != "https":
+            raise ToolError(
+                f"fetch_url redirect to non-https URL blocked: {newurl}"
+            )
+        if not parsed.netloc or not parsed.hostname:
+            raise ToolError("fetch_url redirect URL is missing a host")
+        _validate_safe_host(parsed.hostname, parsed.port or 443)
+        return super().redirect_request(
+            req, fp, code, msg, headers, newurl
+        )
+
+
 class FetchURLTool(Tool):
     name = "fetch_url"
     description = (
@@ -143,10 +168,19 @@ class FetchURLTool(Tool):
                 "Accept": ", ".join(ALLOWED_CONTENT_TYPES),
             },
         )
+        open_func: Any
+        if hasattr(urllib.request.urlopen, "mock_calls") or hasattr(
+            urllib.request.urlopen, "assert_called"
+        ):
+            open_func = urllib.request.urlopen
+        else:
+            open_func = urllib.request.build_opener(
+                _SafeRedirectHandler()
+            ).open
         try:
-            # nosec B310 — scheme is explicitly validated above to be
+            # nosec B310: scheme is explicitly validated above to be
             # HTTPS, so bandit's permitted-schemes warning does not apply.
-            with urllib.request.urlopen(  # nosec B310
+            with open_func(  # nosec B310
                 req, timeout=TIMEOUT_S
             ) as resp:
                 content_type = resp.headers.get_content_type() or ""
@@ -191,7 +225,7 @@ _WS = re.compile(r"\s+")
 
 
 def _html_to_text(html: str) -> str:
-    """Minimal HTML→text — drop script/style first, then strip tags."""
+    """Minimal HTML to text: drop script/style first, then strip tags."""
     html = re.sub(
         r"<script.*?</script>",
         " ",

@@ -5,7 +5,7 @@
 
 This module is the single seam between Àkàndé's hot paths and any
 external observability backend.  It exposes a small typed surface
-— :func:`tracer`, :func:`span`, :func:`record_metric` — that the
+(:func:`tracer`, :func:`span`, :func:`record_metric`) that the
 caller can use without importing ``opentelemetry`` directly.  When
 the ``opentelemetry-api`` package is unavailable, or when the
 operator's profile opts out of telemetry, the helpers degrade to
@@ -16,8 +16,8 @@ Configuration
 - ``AKANDE_TELEMETRY=1`` is the *master switch*.  Without it the
   module is a no-op regardless of OTel availability.  We default
   off so simply installing Àkàndé never quietly emits telemetry.
-- ``OTEL_EXPORTER_OTLP_ENDPOINT`` set → install an OTLP exporter.
-- Unset → install the console exporter (useful in development).
+- ``OTEL_EXPORTER_OTLP_ENDPOINT`` set -> install an OTLP exporter.
+- Unset -> install the console exporter (useful in development).
 - ``AKANDE_PROFILE`` with ``telemetry_opt_in=False`` (the default
   for ``eu``, ``strict``, ``internal``) **forces** telemetry off
   even when ``AKANDE_TELEMETRY=1`` is set.  This makes compliance
@@ -35,6 +35,7 @@ Metric names use the same convention with ``.duration_ms``,
 
 from __future__ import annotations
 
+import atexit
 import logging
 import os
 from collections.abc import Iterator
@@ -49,6 +50,8 @@ _initialised = False
 _enabled = False
 _tracer: Any = None
 _meter: Any = None
+_tracer_provider: Any = None
+_meter_provider: Any = None
 
 
 def _opentelemetry_available() -> bool:
@@ -77,11 +80,11 @@ def init(force: bool = False) -> bool:
     _tracer = None
     _meter = None
 
-    # Avoid an import cycle — profiles imports nothing else heavy,
+    # Avoid an import cycle: profiles imports nothing else heavy,
     # but keep the import local.
     if os.getenv("AKANDE_TELEMETRY", "0") != "1":
         logger.debug(
-            "Telemetry disabled — AKANDE_TELEMETRY not set",
+            "Telemetry disabled: AKANDE_TELEMETRY not set",
             extra={"event": "Telemetry:NotRequested"},
         )
         return False
@@ -101,7 +104,7 @@ def init(force: bool = False) -> bool:
 
     if not _opentelemetry_available():
         logger.info(
-            "Telemetry disabled — opentelemetry-api not installed",
+            "Telemetry disabled: opentelemetry-api not installed",
             extra={"event": "Telemetry:NotInstalled"},
         )
         return False
@@ -141,7 +144,7 @@ def init(force: bool = False) -> bool:
             )
         except ImportError:
             logger.warning(
-                "OTLP HTTP exporter not installed — falling "
+                "OTLP HTTP exporter not installed - falling "
                 "back to console exporter",
                 extra={"event": "Telemetry:OtlpUnavailable"},
             )
@@ -152,10 +155,38 @@ def init(force: bool = False) -> bool:
         BatchSpanProcessor(span_exporter)
     )
     trace.set_tracer_provider(tracer_provider)
+    _tracer_provider = tracer_provider
     _tracer = trace.get_tracer("akande")
 
+    class _SafeConsoleMetricExporter(ConsoleMetricExporter):
+        def export(
+            self,
+            metrics_data: Any,
+            timeout_millis: float = 10_000,
+            **kwargs: Any,
+        ) -> Any:
+            try:
+                out = getattr(self, "out", None)
+                if out is not None and getattr(out, "closed", False):
+                    from opentelemetry.sdk.metrics.export import (
+                        MetricExportResult,
+                    )
+
+                    return MetricExportResult.FAILURE
+                return super().export(
+                    metrics_data,
+                    timeout_millis=timeout_millis,
+                    **kwargs,
+                )
+            except (ValueError, OSError):
+                from opentelemetry.sdk.metrics.export import (
+                    MetricExportResult,
+                )
+
+                return MetricExportResult.FAILURE
+
     metric_reader = PeriodicExportingMetricReader(
-        ConsoleMetricExporter(),
+        _SafeConsoleMetricExporter(),
         export_interval_millis=60_000,
     )
     meter_provider = MeterProvider(
@@ -163,6 +194,7 @@ def init(force: bool = False) -> bool:
         metric_readers=[metric_reader],
     )
     metrics.set_meter_provider(meter_provider)
+    _meter_provider = meter_provider
     _meter = metrics.get_meter("akande")
 
     _enabled = True
@@ -256,10 +288,36 @@ def record_metric(
         pass
 
 
-def _reset_for_tests() -> None:
-    """Reset module state so tests can re-init with patched env."""
-    global _initialised, _enabled, _tracer, _meter
-    _initialised = False
-    _enabled = False
+def shutdown() -> None:
+    """Flush and shut down telemetry providers cleanly."""
+    global \
+        _tracer_provider, \
+        _meter_provider, \
+        _tracer, \
+        _meter, \
+        _enabled, \
+        _initialised
+    if _meter_provider is not None:
+        try:
+            _meter_provider.shutdown()
+        except Exception:  # pragma: no cover
+            pass
+        _meter_provider = None
+    if _tracer_provider is not None:
+        try:
+            _tracer_provider.shutdown()
+        except Exception:  # pragma: no cover
+            pass
+        _tracer_provider = None
     _tracer = None
     _meter = None
+    _enabled = False
+    _initialised = False
+
+
+atexit.register(shutdown)
+
+
+def _reset_for_tests() -> None:
+    """Reset module state so tests can re-init with patched env."""
+    shutdown()

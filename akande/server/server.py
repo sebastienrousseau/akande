@@ -129,7 +129,7 @@ def _sync_iter_async(async_iter: AsyncIterator[str]):
     ``LLMProvider.generate_stream`` is async.  We create a dedicated
     event loop per request, advance the async iterator one item at a
     time, and yield each delta to the caller.  This is intentionally
-    simple — production-grade backpressure / cancellation would need
+    simple; production-grade backpressure / cancellation would need
     a queue + background thread, which we'll layer in when the
     realtime pipeline lands.
     """
@@ -152,11 +152,17 @@ def _csv_safe(value: str) -> str:
     """Prevent CSV formula injection.
 
     Cells starting with ``=``, ``+``, ``-``, ``@``, ``\\t``,
-    or ``\\r`` can be interpreted as formulas by spreadsheet
-    applications.  Prefixing with a single-quote neutralises
-    this without altering the visible content in most apps.
+    or ``\\r`` (including after leading whitespace) can be
+    interpreted as formulas by spreadsheet applications. Prefixing
+    with a single-quote neutralises this without altering the
+    visible content in most apps.
     """
-    if value and value[0] in ("=", "+", "-", "@", "\t", "\r"):
+    if not value:
+        return value
+    if value[0] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + value
+    stripped = value.lstrip(" ")
+    if stripped and stripped[0] in ("=", "+", "-", "@", "\t", "\r"):
         return "'" + value
     return value
 
@@ -257,7 +263,7 @@ class AkandeServer:
         # Multi-turn conversation store (SQLite-backed; separate from
         # the response cache so retention policies can diverge).
         self.conversations = ConversationStore()
-        # Long-term memory façade — no-op when AKANDE_MEMORY is unset
+        # Long-term memory façade - no-op when AKANDE_MEMORY is unset
         # or mem0ai is not installed.  The constructor never raises.
         self.memory = MemoryStore()
         # Best-effort telemetry init.  Honours AKANDE_TELEMETRY + the
@@ -266,7 +272,7 @@ class AkandeServer:
 
         if not AKANDE_API_KEY:
             self.logger.warning(
-                "AKANDE_API_KEY is not set — /api routes are "
+                "AKANDE_API_KEY is not set: /api routes are "
                 "OPEN. Set AKANDE_API_KEY in your environment "
                 "before exposing this server beyond localhost.",
                 extra={

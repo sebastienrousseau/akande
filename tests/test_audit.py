@@ -155,3 +155,21 @@ class TestSidecar:
         body = json.loads(sidecar.read_text())
         assert "signature" in body
         assert isinstance(body["signature"]["sig_b64"], str)
+
+    def test_sidecar_perms_600(self, isolated_keys, tmp_path):
+        import os
+
+        if os.name == "nt":
+            pytest.skip("Windows permissions differ")
+        m = build_manifest(
+            prompt="x",
+            response="y",
+            provider="p",
+            model="m",
+            profile="eu",
+        )
+        fake_pdf = tmp_path / "x.pdf"
+        fake_pdf.write_text("dummy")
+        sidecar = write_sidecar(m, fake_pdf)
+        mode = os.stat(sidecar).st_mode & 0o777
+        assert mode == 0o600

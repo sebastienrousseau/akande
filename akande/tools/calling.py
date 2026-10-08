@@ -1,7 +1,7 @@
 # Copyright (C) 2026 Sebastien Rousseau.
 #
 # Licensed under the Apache License, Version 2.0 (the "License").
-"""LLM tool-calling glue — the loop that lets the model use tools.
+"""LLM tool-calling glue - the loop that lets the model use tools.
 
 OpenAI-style ``tools=[{type:"function", function:{...}}]`` is the
 de-facto interchange shape in 2026; every provider in

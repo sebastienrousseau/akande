@@ -7,13 +7,15 @@ Only the most recent minor release line receives security updates.
 | Version | Supported |
 |---------|-----------|
 | 0.0.x   | ✅        |
-| < 0.0.5 | ❌        |
+| < 0.0.9 | ❌        |
 
 ## Reporting a Vulnerability
 
 Please **do not** open a public GitHub issue for security problems.
 
-Email **sebastian.rousseau@gmail.com** with subject prefix
+You can report vulnerabilities privately through GitHub at [Private Vulnerability Reporting](https://github.com/sebastienrousseau/akande/security/advisories/new).
+
+Alternatively, email [sebastian.rousseau@gmail.com](mailto:sebastian.rousseau@gmail.com) with subject prefix
 `[security][akande]`. Include:
 
 - Type of issue (e.g. prompt injection, RCE, SSRF, auth bypass, path
@@ -24,10 +26,11 @@ Email **sebastian.rousseau@gmail.com** with subject prefix
 - Proof-of-concept code where possible.
 - Impact assessment: what an attacker can achieve.
 
-We will acknowledge receipt within 72 hours, share a triage decision
-within 7 days, and aim to ship a fix within 30 days for high-severity
-issues. Coordinated disclosure is preferred; we will credit you in the
-release notes unless you ask otherwise.
+We follow the [OpenSSF Coordinated Vulnerability Disclosure Guide](https://github.com/ossf/oss-vulnerability-guide/blob/main/maintainer-guide.md).
+We will acknowledge receipt of vulnerability reports within 72 hours (3 days),
+share a triage decision within 7 days, and disclose and publish a fix within
+30 to 90 days for confirmed vulnerabilities. Coordinated disclosure is preferred;
+we will credit you in the release notes unless you ask otherwise.
 
 ## Security model (v0.0.5 baseline)
 
@@ -54,7 +57,7 @@ The Web UI ships with:
   TTL reduced from 7 days to 24 hours.
 - Optional PII redaction in cache via `AKANDE_CACHE_REDACT_PII=1`.
 - EU AI Act Article 50 controls (AI-disclosure, audio watermarking,
-  consent log) — see [docs/compliance/eu.md](docs/compliance/eu.md).
+  consent log): see [docs/compliance/eu.md](docs/compliance/eu.md).
 - Signed audit trail (Ed25519) embedded in briefing PDFs.
 
 ## Threats considered out of scope
@@ -62,11 +65,11 @@ The Web UI ships with:
 - Physical access to a machine running Àkàndé.
 - A user with valid `AKANDE_API_KEY` access misusing the server (use
   per-key quotas if this is a concern).
-- LLM-provider-side data handling — see your provider's data policy.
+- LLM-provider-side data handling: see your provider's data policy.
 - Side-channel attacks on speech recognition (e.g. acoustic leakage).
 
 ## Vulnerability disclosures
 
 | ID | Severity | Fixed in | Notes |
 |----|----------|----------|-------|
-| — | — | — | None disclosed to date |
+| N/A | N/A | N/A | None disclosed to date |

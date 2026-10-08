@@ -20,8 +20,8 @@ settled.
 Keys live in ``$AKANDE_HOME/keys/`` (default
 ``~/.akande/keys/``):
 
-- ``signing.ed25519`` — private key, 0600
-- ``signing.pub``     — public key,  0644
+- ``signing.ed25519``: private key, 0600
+- ``signing.pub``: public key, 0644
 
 Both files are PEM-encoded.  The keypair is generated lazily on
 first sign / verify call; rotation is supported by deleting the
@@ -215,7 +215,9 @@ class KeyManager:
             format=serialization.PrivateFormat.PKCS8,
             encryption_algorithm=serialization.NoEncryption(),
         )
-        with path.open("wb") as fh:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+        fd = os.open(str(path), flags, 0o600)
+        with open(fd, "wb") as fh:
             fh.write(data)
         try:
             os.chmod(path, 0o600)
@@ -335,7 +337,9 @@ def write_sidecar(
     """
     body = sign_manifest(manifest, manager=manager)
     sidecar = Path(str(pdf_path) + AUDIT_SUFFIX)
-    with sidecar.open("w", encoding="utf-8") as fh:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    fd = os.open(str(sidecar), flags, 0o600)
+    with open(fd, "w", encoding="utf-8") as fh:
         json.dump(
             body,
             fh,

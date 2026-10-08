@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Àkàndé regression suite — validates a fully fresh install from a
+# Àkàndé regression suite: validates a fully fresh install from a
 # clean repo state.  Designed for the answer to the question "does
 # this library actually operate end-to-end on someone else's box?"
 #
@@ -187,13 +187,13 @@ else
   # PYSEC-2026-2132: command injection in click.edit() (click <= 8.3.2,
   # fixed in 8.3.3). We cannot take the fix: gTTS pins click<8.2,>=7.1
   # on every published release up to 2.5.4, which caps us at 8.1.8.
-  # The finding is unreachable here — akande never imports click (it
+  # The finding is unreachable here: akande never imports click (it
   # arrives transitively via gTTS / uvicorn) and never calls
   # click.edit(). Drop this ignore once gTTS relaxes its click cap.
   #
   # --strict is deliberately NOT used. It fails the audit whenever any
   # distribution cannot be resolved, and phase 2 installs this project
-  # with `pip install -e`, so akande itself is always unresolvable —
+  # with `pip install -e`, so akande itself is always unresolvable:
   # either "marked as editable" or, on a release branch, "not found on
   # PyPI" because the bumped version is not published yet. That made
   # the gate fail on every version bump. Dropping --strict costs

@@ -1,7 +1,7 @@
 # Copyright (C) 2026 Sebastien Rousseau.
 #
 # Licensed under the Apache License, Version 2.0 (the "License").
-"""Final-final coverage boost — `verify-audit` happy path + mcp branches."""
+"""Final-final coverage boost: `verify-audit` happy path + mcp branches."""
 
 from __future__ import annotations
 
@@ -67,6 +67,14 @@ class TestVerifyAuditCLI:
         ns = argparse.Namespace(path=str(pdf))
         rc = verify_command(ns)
         assert rc == 1
+
+    def test_verify_audit_file_not_found(self, tmp_path):
+        import argparse
+
+        from akande.cli.audit import verify_command
+
+        ns = argparse.Namespace(path=str(tmp_path / "nonexistent.pdf"))
+        assert verify_command(ns) == 2
 
 
 class TestMCPCLIBranches:
