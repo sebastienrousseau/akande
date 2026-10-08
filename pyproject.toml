@@ -5,10 +5,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "akande"
-version = "0.0.9"
+version = "0.0.10"
 description = "A self-hosted, provider-agnostic voice assistant that delivers structured executive briefings via voice or text from 11 LLM providers."
 readme = "README.md"
-# PEP 639 SPDX license expression — matches LICENSE-APACHE and
+# PEP 639 SPDX license expression: matches LICENSE-APACHE and
 # LICENSE-MIT in the repo root.  The legacy `License ::`
 # classifier is intentionally omitted (PEP 639 forbids both).
 license = "Apache-2.0 OR MIT"

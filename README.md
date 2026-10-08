@@ -67,7 +67,7 @@ Releases adhere strictly to https://github.com/sebastienrousseau/passmcp/release
 
 ```toml
 [dependencies]
-akande = "^0.0.9"
+akande = "^0.0.10"
 ```
 
 ```bash
