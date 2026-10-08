@@ -20,6 +20,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from html import unescape
+from html.parser import HTMLParser
 from typing import Any
 
 from .base import Tool, ToolError, ToolResult
@@ -222,17 +223,42 @@ class FetchURLTool(Tool):
 
 _TAG = re.compile(r"<[^>]+>")
 _WS = re.compile(r"\s+")
-_SCRIPT_TAG = re.compile(
-    r"<script\b[^>]*>.*?</script\s*>", flags=re.DOTALL | re.IGNORECASE
-)
-_STYLE_TAG = re.compile(
-    r"<style\b[^>]*>.*?</style\s*>", flags=re.DOTALL | re.IGNORECASE
-)
+
+
+class _HTMLTextExtractor(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self._pieces: list[str] = []
+        self._ignore_depth = 0
+
+    def handle_starttag(
+        self, tag: str, attrs: list[tuple[str, str | None]]
+    ) -> None:
+        if tag.lower() in ("script", "style", "noscript"):
+            self._ignore_depth += 1
+
+    def handle_endtag(self, tag: str) -> None:
+        if (
+            tag.lower() in ("script", "style", "noscript")
+            and self._ignore_depth > 0
+        ):
+            self._ignore_depth -= 1
+
+    def handle_data(self, data: str) -> None:
+        if self._ignore_depth == 0:
+            self._pieces.append(data)
+
+    def get_text(self) -> str:
+        return _WS.sub(" ", " ".join(self._pieces)).strip()
 
 
 def _html_to_text(html: str) -> str:
-    """Minimal HTML to text: drop script/style first, then strip tags."""
-    html = _SCRIPT_TAG.sub(" ", html)
-    html = _STYLE_TAG.sub(" ", html)
-    text = unescape(_TAG.sub(" ", html))
-    return _WS.sub(" ", text).strip()
+    """Minimal HTML to text: drop script/style, extract visible text."""
+    try:
+        parser = _HTMLTextExtractor()
+        parser.feed(html)
+        parser.close()
+        return parser.get_text()
+    except Exception:
+        text = unescape(_TAG.sub(" ", html))
+        return _WS.sub(" ", text).strip()
