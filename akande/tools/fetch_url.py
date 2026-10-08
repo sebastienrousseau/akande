@@ -222,18 +222,17 @@ class FetchURLTool(Tool):
 
 _TAG = re.compile(r"<[^>]+>")
 _WS = re.compile(r"\s+")
+_SCRIPT_TAG = re.compile(
+    r"<script\b[^>]*>.*?</script\s*>", flags=re.DOTALL | re.IGNORECASE
+)
+_STYLE_TAG = re.compile(
+    r"<style\b[^>]*>.*?</style\s*>", flags=re.DOTALL | re.IGNORECASE
+)
 
 
 def _html_to_text(html: str) -> str:
     """Minimal HTML to text: drop script/style first, then strip tags."""
-    html = re.sub(
-        r"<script.*?</script>",
-        " ",
-        html,
-        flags=re.DOTALL | re.IGNORECASE,
-    )
-    html = re.sub(
-        r"<style.*?</style>", " ", html, flags=re.DOTALL | re.IGNORECASE
-    )
+    html = _SCRIPT_TAG.sub(" ", html)
+    html = _STYLE_TAG.sub(" ", html)
     text = unescape(_TAG.sub(" ", html))
     return _WS.sub(" ", text).strip()

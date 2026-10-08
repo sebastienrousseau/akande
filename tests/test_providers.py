@@ -454,7 +454,7 @@ class TestGroqProvider:
         )
 
         p = GroqProvider()
-        assert "groq.com" in p._base_url
+        assert p._base_url == "https://api.groq.com/openai/v1"
 
     @patch("openai.OpenAI")
     @patch.dict("os.environ", {"GROQ_API_KEY": "gsk_testkey123"})

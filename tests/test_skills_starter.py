@@ -253,7 +253,7 @@ class TestWebSearchSkillHandle:
                 ),
                 SkillContext(),
             )
-        assert "https://example.com" in result.citations
+        assert result.citations == ["https://example.com"]
 
 
 class TestBriefingSkillHandle:
