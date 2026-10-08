@@ -213,10 +213,13 @@ class TestFetchURLTool:
 
         out = _html_to_text(
             "<html><body><p>Hi <b>there</b></p>"
-            "<script>x()</script></body></html>"
+            "<script type='text/javascript'>x()</script >"
+            "<style >body { color: red; }</style >"
+            "</body></html>"
         )
         assert "Hi there" in out
         assert "x()" not in out
+        assert "color: red" not in out
         assert "<" not in out
 
     def test_input_schema_returns_dict(self):

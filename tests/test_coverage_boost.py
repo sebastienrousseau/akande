@@ -133,7 +133,7 @@ class TestWebSearchBackends:
         )
 
         wrapped = "/l/?uddg=https%3A%2F%2Fexample.com%2F"
-        assert _unwrap_duckduckgo_url(wrapped).endswith("example.com/")
+        assert _unwrap_duckduckgo_url(wrapped) == "https://example.com/"
         assert _unwrap_duckduckgo_url("https://plain.com") == (
             "https://plain.com"
         )
