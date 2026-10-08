@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.9](https://github.com/sebastienrousseau/akande/compare/v0.0.8...v0.0.9) (2026-10-08)
+
+
+### Features
+
+* release iteration 0.0.9 ([22987d6](https://github.com/sebastienrousseau/akande/commit/22987d63562b02d45c2e673584c901e802cd2266))
+
 ## [0.0.8](https://github.com/sebastienrousseau/akande/compare/v0.0.7...v0.0.8) (2026-10-06)
 
 
