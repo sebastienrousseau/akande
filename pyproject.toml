@@ -13,7 +13,7 @@ readme = "README.md"
 # classifier is intentionally omitted (PEP 639 forbids both).
 license = "Apache-2.0 OR MIT"
 license-files = ["LICENSE-APACHE", "LICENSE-MIT"]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     {name = "Sebastien Rousseau", email = "sebastian.rousseau@gmail.com"},
 ]
@@ -22,7 +22,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -38,6 +37,11 @@ dependencies = [
     "pydub>=0.25.1",
     "textual>=0.80,<8",
     "cryptography>=48.0.1,<51",
+    # Transitive floors: reportlab pulls in pillow (CVE-2026-96636 and 41 more
+    # advisories in 12.x, fixed in 13.0.0, which needs Python 3.11), and the
+    # HTTP stack pulls in certifi (PYSEC-2026-4320, fixed in 2026.10.19).
+    "pillow>=13.0.0",
+    "certifi>=2026.10.19",
 ]
 
 [project.optional-dependencies]
@@ -129,7 +133,7 @@ include = ["akande*"]
 
 [tool.black]
 line-length = 72
-target-version = ["py310", "py311", "py312"]
+target-version = ["py311", "py312"]
 
 [tool.isort]
 profile = "black"
@@ -141,7 +145,7 @@ combine_as_imports = true
 known_first_party = "akande"
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 72
 src = ["akande", "tests"]
 

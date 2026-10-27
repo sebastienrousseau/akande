@@ -20,7 +20,7 @@ import re
 import sqlite3
 import threading
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 # Module-level regex patterns for PII redaction.  Kept conservative
@@ -187,7 +187,7 @@ class SQLiteCache:
                 # compares as fresh and nothing ever expires.
                 (
                     prompt_hash,
-                    datetime.now(timezone.utc).replace(tzinfo=None)
+                    datetime.now(UTC).replace(tzinfo=None)
                     - self.expiration,
                 ),
             )

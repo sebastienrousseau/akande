@@ -4,10 +4,11 @@
 # can prime /wheels before `pip install akande` in the image.
 # Regenerated for v0.0.6 to clear CVEs flagged by Dependabot
 # / pip-audit (idna < 3.15, urllib3 < 2.7, pillow < 12.2,
-# requests < 2.33, python-dotenv < 1.2.2).
+# requests < 2.33, python-dotenv < 1.2.2); pillow 13.0.0 and
+# certifi 2026.10.19 later, with requires-python raised to 3.11.
 annotated-types==0.8.0 ; python_version >= "3.10" and python_version < "4.0"
 anyio==4.15.1 ; python_version >= "3.10" and python_version < "4.0"
-certifi==2026.7.22 ; python_version >= "3.10" and python_version < "4.0"
+certifi==2026.10.19 ; python_version >= "3.10" and python_version < "4.0"
 charset-normalizer==3.5.2 ; python_version >= "3.10" and python_version < "4.0"
 colorama==0.4.6 ; python_version >= "3.10" and python_version < "4.0" and platform_system == "Windows"
 distro==1.9.0 ; python_version >= "3.10" and python_version < "4.0"
@@ -16,7 +17,7 @@ httpcore==1.0.9 ; python_version >= "3.10" and python_version < "4.0"
 httpx==0.28.1 ; python_version >= "3.10" and python_version < "4.0"
 idna==3.20 ; python_version >= "3.10" and python_version < "4.0"
 openai==1.109.1 ; python_version >= "3.10" and python_version < "4.0"
-pillow==12.3.0 ; python_version >= "3.10" and python_version < "4.0"
+pillow==13.0.0 ; python_version >= "3.11" and python_version < "4.0"
 pydantic-core==2.49.0 ; python_version >= "3.10" and python_version < "4.0"
 pydantic==2.14.1 ; python_version >= "3.10" and python_version < "4.0"
 python-dotenv==1.2.4 ; python_version >= "3.10" and python_version < "4.0"
