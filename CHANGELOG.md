@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.0](https://github.com/sebastienrousseau/akande/compare/v0.0.10...v0.1.0) (2026-10-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* **deps:** akande no longer supports Python 3.10.
+
+### Bug Fixes
+
+* **deps:** floor pillow at 13.0.0 and certifi at 2026.10.19, require Python 3.11 ([#114](https://github.com/sebastienrousseau/akande/issues/114)) ([bd88f4b](https://github.com/sebastienrousseau/akande/commit/bd88f4b396726a5efdfdbab44e4dbdbde3db02f9))
+
 ## [0.0.10](https://github.com/sebastienrousseau/akande/compare/v0.0.9...v0.0.10) (2026-10-08)
 
 
