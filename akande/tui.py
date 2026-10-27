@@ -15,7 +15,7 @@
 #
 import contextlib
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from rich.text import Text
 from textual import work
@@ -901,9 +901,9 @@ class AkandeApp(App):
                     {
                         "question": question,
                         "response": response,
-                        "timestamp": datetime.now(
-                            tz=timezone.utc
-                        ).strftime("%H:%M:%S"),
+                        "timestamp": datetime.now(tz=UTC).strftime(
+                            "%H:%M:%S"
+                        ),
                     }
                 )
 

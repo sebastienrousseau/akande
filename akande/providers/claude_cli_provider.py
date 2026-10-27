@@ -294,7 +294,7 @@ class ClaudeCliProvider(LLMProvider):
                         stdout.readline(),
                         timeout=API_CALL_TIMEOUT,
                     )
-                except asyncio.TimeoutError as exc:  # pragma: no cover
+                except TimeoutError as exc:  # pragma: no cover
                     proc.kill()
                     raise RuntimeError(
                         f"claude CLI stream timed out after "

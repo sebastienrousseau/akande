@@ -36,7 +36,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -130,7 +130,7 @@ def build_manifest(
     """Construct a manifest from the components of a briefing."""
     return AuditManifest(
         schema_version=AUDIT_SCHEMA_VERSION,
-        created_at=datetime.now(timezone.utc).isoformat(),
+        created_at=datetime.now(UTC).isoformat(),
         provider=provider,
         model=model,
         profile=profile,
