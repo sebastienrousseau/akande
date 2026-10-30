@@ -20,7 +20,7 @@ Releases adhere strictly to https://github.com/sebastienrousseau/passmcp/release
   <a href="docs/README.md"><img src="https://img.shields.io/badge/docs-reference-blue.svg?style=for-the-badge&labelColor=555555&logo=read-the-docs" alt="Docs" /></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/akande"><img src="https://img.shields.io/badge/OpenSSF%20Scorecard-Monitored-blue?style=for-the-badge&logo=openssf" alt="OpenSSF Scorecard" /></a>
   <a href="LICENSE-APACHE"><img src="https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg?style=for-the-badge" alt="License: Apache-2.0 OR MIT" /></a>
-  <a href="docs/POLICIES.md"><img src="https://img.shields.io/badge/python->=3.10-93450a.svg?style=for-the-badge&logo=python" alt="Python >= 3.10" /></a>
+  <a href="docs/POLICIES.md"><img src="https://img.shields.io/badge/python->=3.11-93450a.svg?style=for-the-badge&logo=python" alt="Python >= 3.11" /></a>
 </p>
 
 <p align="center">
@@ -67,7 +67,7 @@ Releases adhere strictly to https://github.com/sebastienrousseau/passmcp/release
 
 ```toml
 [dependencies]
-akande = "^0.0.10"
+akande = "^0.0.11"
 ```
 
 ```bash
@@ -93,7 +93,7 @@ pip install -e ".[dev]"
 
 | Requirement | Supported Version | Details |
 | :--- | :--- | :--- |
-| **Python** | `>= 3.10` (tested on 3.10, 3.11, 3.12, 3.13, 3.14) | Core runtime environment |
+| **Python** | `>= 3.11` (tested on 3.11, 3.12, 3.13, 3.14) | Core runtime environment |
 | **PortAudio** | `>= 19` (optional) | Required for microphone audio input (`akande[mic]`) |
 | **FFmpeg** | Any modern release (optional) | Required for MP3 / non-WAV audio transcoding |
 | **Platforms** | Linux (x86_64, aarch64), macOS (Intel, Apple Silicon), Windows | Platform-agnostic Python package |

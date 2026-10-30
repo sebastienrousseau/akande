@@ -3,7 +3,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: builder - build wheels for akande and its runtime dependencies
 # -----------------------------------------------------------------------------
-FROM python:3.12-slim-bookworm@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258 AS builder
+FROM python:3.15-slim-bookworm@sha256:575f8bc12ec26542e0678bc6b60e385218248019d433157ec327264a78c3a853 AS builder
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -27,14 +27,14 @@ COPY akande ./akande
 # Pin pip >=26.1.2 to clear PYSEC-2026-196, CVE-2025-8869, CVE-2026-1703,
 # CVE-2026-3219, CVE-2026-6357 (all in the bundled pip; runtime deps
 # are clean per pip-audit on the lockfile).
-RUN python -m pip install --upgrade "pip>=26.1.2" setuptools wheel build \
+RUN python -m pip install --upgrade "pip>=26.1.2" "setuptools>=84.1.0" wheel build \
     && python -m pip wheel --wheel-dir /wheels -r requirements.txt \
     && python -m pip wheel --wheel-dir /wheels .
 
 # -----------------------------------------------------------------------------
 # Stage 2: runtime - minimal image with only what's needed at run time
 # -----------------------------------------------------------------------------
-FROM python:3.12-slim-bookworm@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258 AS runtime
+FROM python:3.15-slim-bookworm@sha256:575f8bc12ec26542e0678bc6b60e385218248019d433157ec327264a78c3a853 AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
