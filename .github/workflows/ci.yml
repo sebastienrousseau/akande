@@ -29,3 +29,19 @@ jobs:
       coverage-threshold: 95
       package-manager: 'pip'
     secrets: inherit
+
+  ci-all:
+    # Branch protection requires this check by name. It stands for every
+    # leg of the ci matrix, so adding or dropping a version never
+    # renames a required check.
+    name: Python CI (all)
+    if: always()
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Every leg of the matrix passed
+        env:
+          RESULT: ${{ needs.ci.result }}
+        run: test "$RESULT" = success

@@ -60,3 +60,19 @@ jobs:
           name: regression-logs-${{ matrix.os }}-py${{ matrix.python-version }}
           path: .regression-logs/
           if-no-files-found: ignore
+
+  fresh-install-all:
+    # Branch protection requires this check by name. It stands for every
+    # leg of the fresh-install matrix, so adding or dropping a version never
+    # renames a required check.
+    name: Fresh install (all)
+    if: always()
+    needs: fresh-install
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Every leg of the matrix passed
+        env:
+          RESULT: ${{ needs.fresh-install.result }}
+        run: test "$RESULT" = success
