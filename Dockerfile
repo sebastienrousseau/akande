@@ -22,12 +22,14 @@ RUN apt-get update \
 WORKDIR /build
 
 COPY pyproject.toml requirements.txt setup.cfg setup.py README.md ./
+COPY docker/build-requirements.txt ./docker/
 COPY akande ./akande
 
 # Pin pip >=26.1.2 to clear PYSEC-2026-196, CVE-2025-8869, CVE-2026-1703,
 # CVE-2026-3219, CVE-2026-6357 (all in the bundled pip; runtime deps
-# are clean per pip-audit on the lockfile).
-RUN python -m pip install --upgrade "pip>=26.1.2" "setuptools>=84.1.0" wheel build \
+# are clean per pip-audit on the lockfile). The build tools are pinned
+# by hash in docker/build-requirements.txt (compiled from its .in file).
+RUN python -m pip install --require-hashes -r docker/build-requirements.txt \
     && python -m pip wheel --wheel-dir /wheels -r requirements.txt \
     && python -m pip wheel --wheel-dir /wheels .
 

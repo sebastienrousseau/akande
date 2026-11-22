@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Sebastien Rousseau <sebastian.rousseau@gmail.com>
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# Build tooling for the Dockerfile builder stage. pip >=26.1.2 clears
+# PYSEC-2026-196, CVE-2025-8869, CVE-2026-1703, CVE-2026-3219 and
+# CVE-2026-6357 in the image's bundled pip. Compile with:
+#   uv pip compile docker/build-requirements.in --generate-hashes \
+#     --python-version 3.15 --universal -o docker/build-requirements.txt
+pip>=26.1.2
+setuptools>=84.1.0
+wheel
+build
